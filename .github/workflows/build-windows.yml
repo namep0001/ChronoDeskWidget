@@ -1,0 +1,27 @@
+name: Build ChronoDesk Widget (Windows)
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Build application
+        shell: cmd
+        run: build.bat
+      - name: Upload executable artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ChronoDeskWidget-Windows
+          path: bin/Release/ChronoDeskWidget.exe
+          if-no-files-found: error
