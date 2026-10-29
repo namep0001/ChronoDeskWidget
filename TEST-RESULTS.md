@@ -18,6 +18,10 @@
 - Avoided automatic market-rate refresh while the rates widget is hidden.
 - Reduced redundant UI allocations using cached fonts, a shared tooltip, and disposal of dynamically recreated calendar/task controls.
 
+## Live-rate parsing fix
+
+The market-rate parser previously used double-escaped whitespace tokens inside C# verbatim regex strings (`\\s`), so the current-price label never matched. The parser now uses proper whitespace matching and supports TGJU's Persian current-rate label, the alternate Persian price label, and English current-price labels. It extracts only the first grouped price (so the adjacent daily-change percentage is not appended) and normalizes Persian/Arabic digits and thousands separators. Download requests now allow up to 12 seconds before timing out.
+
 ## Checks performed in this authoring environment
 
 - The downloaded ZIP project archive was listed and its files identified.
