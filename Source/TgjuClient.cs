@@ -40,10 +40,10 @@ namespace ChronoDeskWidget
             try
             {
                 string html = Download(definition.Url);
-                string text = Regex.Replace(html, "(?is)<(script|style|noscript)\b[^>]*>.*?</\1>", " ");
+                string text = Regex.Replace(html, "(?is)<(script|style|noscript)\\b[^>]*>.*?</\\1>", " ");
                 text = Regex.Replace(text, "(?s)<[^>]+>", " ");
                 text = WebUtility.HtmlDecode(text);
-                text = Regex.Replace(text, "\s+", " ");
+                text = Regex.Replace(text, "\\s+", " ");
                 string number = FindCurrentValue(text);
                 if (string.IsNullOrWhiteSpace(number))
                     throw new InvalidDataException("TGJU page format changed or did not contain a recognizable current price.");
