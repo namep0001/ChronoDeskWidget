@@ -124,7 +124,7 @@ namespace ChronoDeskWidget
             StartPosition = FormStartPosition.Manual;
             MinimumSize = new Size(390, 90);
             Size = new Size(450, Math.Min(860, Math.Max(120, Screen.PrimaryScreen.WorkingArea.Height - 16)));
-            ApplySystemTheme(true);
+            RefreshSystemTheme(true);
             Font = GetFont("Segoe UI", 9F, FontStyle.Regular, GraphicsUnit.Point);
             Opacity = 0.90;
             TopMost = _keepOnTop;
