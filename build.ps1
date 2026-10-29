@@ -1,5 +1,11 @@
 $ErrorActionPreference = 'Stop'
 Set-Location -LiteralPath $PSScriptRoot
+
+if (-not (Test-Path -LiteralPath (Join-Path $PSScriptRoot 'Source\MainForm.cs'))) {
+    Write-Host 'Restoring MainForm.cs from the verified compressed source...' -ForegroundColor Cyan
+    & (Join-Path $PSScriptRoot 'restore-mainform.ps1')
+}
+
 $sourceFiles = @(
     'Source\Program.cs',
     'Source\LocalStore.cs',
