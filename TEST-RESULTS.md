@@ -1,38 +1,44 @@
 # ChronoDesk Widget — validation report
 
-## Changes covered in this revision
+## Project files published
+
+- Added the WinForms project file, all supporting C# source files, build and launch scripts, README, and test checklist.
+- The main form source is stored as Source/MainForm.cs.gz.b64 because the connected upload action does not accept a local file path or direct raw-file transfer. restore-mainform.ps1 reconstructs Source/MainForm.cs and verifies SHA-256 before any compile is attempted.
+- Both build.bat and build.ps1 restore the main form automatically on a clean download.
+- A GitHub Actions workflow is included to restore and commit the readable MainForm.cs source when the workflow can run with contents-write permissions.
+
+## Feature changes in this revision
 
 - Added tray-menu visibility switches for Clock and dates, Calendar, Tasks, Pomodoro, Quick note, and Live market rates.
-- Saved each visibility choice in `%LOCALAPPDATA%\ChronoDeskWidget\settings.ini` with all six widgets enabled by default for existing installations.
-- Removed the visible header/title strip and its language, always-on-top, and hide buttons. Those controls are available from the tray menu; tray options include Show, Hide, Language, Keep on top, Start with Windows, and Exit.
-- Added Windows theme detection using the Windows system light/dark preference, the Start/taskbar accent toggle under Personalize, and Windows accent color registry values. The palette refreshes on relevant Windows preference notifications and is checked every ten seconds as a fallback.
-- Kept the widget draggable from the clock/date labels, section headings, and blank card surfaces.
-- Converted source IRR integer values to toman by dividing by 10 before display. English uses `T`; Persian uses `تومان (T)`.
-- Cleared control references when rebuilding the sections, avoiding stale references when a widget is hidden while market-rate work is completing.
-- Avoided market-rate auto-refresh when the rate widget is disabled; manually enabling the rate widget refreshes it.
+- Saved each visibility choice in %LOCALAPPDATA%\ChronoDeskWidget\settings.ini with all six widgets enabled by default for existing installations.
+- Removed the visible header/title strip and its language, always-on-top, and hide buttons. Those controls are in the tray menu.
+- Added Windows theme detection using the Windows system light/dark preference, the Start/taskbar accent toggle, and Windows accent color registry values.
+- Kept the widget draggable from clock/date labels, section headings, and blank card surfaces.
+- Converted market rates from IRR to toman by dividing displayed values by ten.
+- Avoided automatic market-rate refresh while the rates widget is hidden.
+- Reduced redundant UI allocations using cached fonts, a shared tooltip, and disposal of dynamically recreated calendar/task controls.
 
-## Checks completed in the authoring environment
+## Checks performed in this authoring environment
 
-- ZIP archive integrity check.
-- Project XML parses successfully.
-- Static source checks confirm all six tray visibility entries map to the six section keys and each section is conditionally constructed.
-- Static source check confirms market values are divided by ten and the visible labels/status no longer refer to IRR/ریال.
-- Static source check confirms the old title-bar and header-button fields/methods are absent.
-- C# delimiter/brace scan completed.
+- The downloaded ZIP project archive was listed and its files identified.
+- Repository access, source file commits, project file commits, and README/script updates were confirmed through GitHub.
+- The compressed MainForm source is guarded by a SHA-256 check against the original source hash: 18b1deade3907d820f20d4931c146a6299d081bd6f5e67384b801551cae981c0.
+- The build scripts call the restoration script before compiling on a clean repository download.
 
 ## Not verified here
 
-The authoring environment is Linux and has no Windows C# compiler, MSBuild, or .NET Framework toolchain installed. The modified Windows executable could not be compiled or GUI-tested in this environment. Build the source on Windows using `build.bat`, then run the smoke tests below.
+The authoring environment is Linux and has no Windows C# compiler, MSBuild, or .NET Framework toolchain installed. The modified Windows executable could not be compiled or GUI-tested in this environment. Build on Windows 10/11 and run the smoke tests below.
 
 ## Windows smoke-test checklist
 
-1. Run `build.bat`, then launch `bin\Release\ChronoDeskWidget.exe`.
-2. Confirm there is no visible header, title, icon, or language/topmost/close button on the widget.
-3. Right-click the tray icon and toggle each of the six widget sections; confirm each choice persists after restarting.
-4. Turn all sections off, then turn one back on through the tray. Confirm the widget hides when no sections are enabled and reappears when a widget is enabled.
-5. Drag the widget using the clock/date labels or blank card surfaces.
-6. Change Windows between light and dark taskbar styles, and enable/disable the taskbar accent color. Confirm the widget palette updates without restarting.
-7. Check that the dollar, euro, and 18K gold values are divided by ten and labeled as T / تومان (T).
-8. Change language, toggle always-on-top, hide/show, exit, and toggle Windows startup from the tray.
-9. With Tasks, Notes, and Pomodoro enabled, verify their existing add/complete/remove, persistence, and timer functions still work.
-10. Measure working set and idle CPU in Task Manager after several minutes idle.
+1. From a clean GitHub Code → Download ZIP extraction, run Start-Widget.bat and confirm the source restoration checksum passes.
+2. Run build.bat, then launch bin\Release\ChronoDeskWidget.exe.
+3. Confirm there is no visible header, title, icon, or language/topmost/close button on the widget.
+4. Right-click the tray icon and toggle each of the six widget sections; confirm each choice persists after restarting.
+5. Turn all sections off, then turn one back on through the tray. Confirm the widget hides when no sections are enabled and reappears when a widget is enabled.
+6. Drag the widget using clock/date labels or blank card surfaces.
+7. Change Windows between light and dark taskbar styles, and enable/disable the taskbar accent color. Confirm the palette updates without restarting.
+8. Check that dollar, euro, and 18K gold values are divided by ten and labeled as T / تومان (T).
+9. Change language, toggle always-on-top, hide/show, exit, and toggle Windows startup from the tray.
+10. With Tasks, Notes, and Pomodoro enabled, verify add/complete/remove, persistence, and timer functions still work.
+11. Measure working set and idle CPU in Task Manager after several minutes idle.
