@@ -3,7 +3,7 @@ Set-Location -LiteralPath $PSScriptRoot
 
 $encodedPath = Join-Path $PSScriptRoot 'Source\MainForm.cs.gz.b64'
 $destination = Join-Path $PSScriptRoot 'Source\MainForm.cs'
-$expectedSha256 = '18b1deade3907d820f20d4931c146a6299d081bd6f5e67384b801551cae981c0'
+$expectedSha256 = 'c26ecdf5118b078335eed58aa462d5c862a8bdfa92887a27a1f48c9d8dfb6e0e'
 
 if (Test-Path -LiteralPath $destination) {
     $existingHash = (Get-FileHash -LiteralPath $destination -Algorithm SHA256).Hash.ToLowerInvariant()
@@ -27,6 +27,10 @@ try {
     $gzipStream = New-Object IO.Compression.GZipStream($inputStream, [IO.Compression.CompressionMode]::Decompress)
     $gzipStream.CopyTo($outputStream)
     $sourceBytes = $outputStream.ToArray()
+    # Compatibility patch for the older compressed source snapshot.
+    $sourceText = [System.Text.Encoding]::UTF8.GetString($sourceBytes)
+    $sourceText = $sourceText.Replace('ApplySystemTheme(true);', 'RefreshSystemTheme(true);')
+    $sourceBytes = (New-Object System.Text.UTF8Encoding($false)).GetBytes($sourceText)
 }
 finally {
     if ($gzipStream) { $gzipStream.Dispose() }
