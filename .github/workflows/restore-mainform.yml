@@ -26,7 +26,9 @@ jobs:
             exit 0
           fi
           base64 --decode Source/MainForm.cs.gz.b64 | gzip --decompress > Source/MainForm.cs
-          echo "18b1deade3907d820f20d4931c146a6299d081bd6f5e67384b801551cae981c0  Source/MainForm.cs" | sha256sum --check
+          # Patch the older compressed snapshot to call the current theme method.
+          sed -i 's/ApplySystemTheme(true);/RefreshSystemTheme(true);/' Source/MainForm.cs
+          echo "c26ecdf5118b078335eed58aa462d5c862a8bdfa92887a27a1f48c9d8dfb6e0e  Source/MainForm.cs" | sha256sum --check
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add Source/MainForm.cs
