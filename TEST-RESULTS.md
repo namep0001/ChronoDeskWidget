@@ -22,7 +22,7 @@
 
 - The downloaded ZIP project archive was listed and its files identified.
 - Repository access, source file commits, project file commits, and README/script updates were confirmed through GitHub.
-- The compressed MainForm source is guarded by a SHA-256 check against the original source hash: 18b1deade3907d820f20d4931c146a6299d081bd6f5e67384b801551cae981c0.
+- The restored MainForm source is guarded by a SHA-256 check against the current source hash: c26ecdf5118b078335eed58aa462d5c862a8bdfa92887a27a1f48c9d8dfb6e0e.
 - The build scripts call the restoration script before compiling on a clean repository download.
 
 ## Not verified here
