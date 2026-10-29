@@ -1,6 +1,11 @@
 @echo off
 setlocal
 cd /d "%~dp0"
+if not exist "Source\MainForm.cs" (
+  echo Restoring MainForm.cs from the verified compressed source...
+  powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0restore-mainform.ps1"
+  if errorlevel 1 goto :fail
+)
 set "CSC="
 if exist "%WINDIR%\Microsoft.NET\Framework64\v4.0.30319\csc.exe" set "CSC=%WINDIR%\Microsoft.NET\Framework64\v4.0.30319\csc.exe"
 if not defined CSC if exist "%WINDIR%\Microsoft.NET\Framework\v4.0.30319\csc.exe" set "CSC=%WINDIR%\Microsoft.NET\Framework\v4.0.30319\csc.exe"
