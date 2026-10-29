@@ -3,7 +3,6 @@ using System.IO;
 using System.Net;
 using System.Text;
 using System.Text.RegularExpressions;
-using System.Net.Security;
 
 namespace ChronoDeskWidget
 {
@@ -41,10 +40,10 @@ namespace ChronoDeskWidget
             try
             {
                 string html = Download(definition.Url);
-                string text = Regex.Replace(html, "(?is)<(script|style|noscript)\\b[^>]*>.*?</\\1>", " ");
+                string text = Regex.Replace(html, "(?is)<(script|style|noscript)\b[^>]*>.*?</\1>", " ");
                 text = Regex.Replace(text, "(?s)<[^>]+>", " ");
                 text = WebUtility.HtmlDecode(text);
-                text = Regex.Replace(text, "\\s+", " ");
+                text = Regex.Replace(text, "\s+", " ");
                 string number = FindCurrentValue(text);
                 if (string.IsNullOrWhiteSpace(number))
                     throw new InvalidDataException("TGJU page format changed or did not contain a recognizable current price.");
@@ -67,8 +66,8 @@ namespace ChronoDeskWidget
             request.Accept = "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8";
             request.Headers[HttpRequestHeader.AcceptLanguage] = "fa-IR,fa;q=0.9,en;q=0.7";
             request.AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate;
-            request.Timeout = 9000;
-            request.ReadWriteTimeout = 9000;
+            request.Timeout = 12000;
+            request.ReadWriteTimeout = 12000;
             using (HttpWebResponse response = (HttpWebResponse)request.GetResponse())
             {
                 if (response.StatusCode != HttpStatusCode.OK)
@@ -81,15 +80,24 @@ namespace ChronoDeskWidget
 
         private static string FindCurrentValue(string text)
         {
-            Match match = Regex.Match(text,
-                @"نرخ\\s*فعلی\\s*[:：|]*\\s*([0-9۰-۹٠-٩][0-9۰-۹٠-٩٬, ]{3,})",
-                RegexOptions.IgnoreCase);
-            if (match.Success) return match.Groups[1].Value;
+            if (string.IsNullOrWhiteSpace(text)) return null;
 
-            match = Regex.Match(text,
-                @"(?:Last|Current\\s+price)\\s*[:：]*\\s*([0-9۰-۹٠-٩][0-9۰-۹٠-٩٬, ]{3,})",
+            // TGJU currently exposes the current quote as Persian text such as
+            // "نرخ فعلی:: 1,854,000 0.27". Parse only the first formatted price,
+            // avoiding the following daily-change value.
+            const string price = @"(?<price>[0-9۰-۹٠-٩]+(?:[,٬][0-9۰-۹٠-٩]{3})+|[0-9۰-۹٠-٩]{4,})";
+            Match match = Regex.Match(
+                text,
+                @"(?:نرخ\s*فعلی|قیمت\s*فعلی)\s*[:：|]*\s*" + price,
                 RegexOptions.IgnoreCase);
-            if (match.Success) return match.Groups[1].Value;
+            if (match.Success) return match.Groups["price"].Value;
+
+            match = Regex.Match(
+                text,
+                @"(?:Last\s+price|Current\s+price)\s*[:：|]*\s*" + price,
+                RegexOptions.IgnoreCase);
+            if (match.Success) return match.Groups["price"].Value;
+
             return null;
         }
 
