@@ -1,0 +1,34 @@
+name: Restore MainForm source
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  restore:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+
+      - name: Restore and verify C# source
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ -f Source/MainForm.cs ]]; then
+            echo "Source/MainForm.cs already exists; nothing to do."
+            exit 0
+          fi
+          base64 --decode Source/MainForm.cs.gz.b64 | gzip --decompress > Source/MainForm.cs
+          echo "18b1deade3907d820f20d4931c146a6299d081bd6f5e67384b801551cae981c0  Source/MainForm.cs" | sha256sum --check
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add Source/MainForm.cs
+          git commit -m "Restore MainForm C# source"
+          git push
