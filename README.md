@@ -4,29 +4,32 @@ A lightweight Windows 10/11 desktop widget built with WinForms and .NET Framewor
 
 ## Features
 
-- Frameless, draggable widget with three paired rows: Clock / Calendar, Tasks / Pomodoro, and Quick Notes / Market Rates.
-- Responsive tile layout. The window contracts to one tile when only one widget is visible in a row and expands when its paired widget is enabled.
-- Clock displays Gregorian and Solar Hijri dates together. The compact calendar switches between Solar Hijri and Gregorian views.
-- Rounded, clipped card surfaces with monochrome vector icons, title-case headings, and Windows accent-color details.
-- Windows light/dark theme adaptation and saved window position.
-- Widget opacity choices from 50% to 100%; no backdrop blur option.
+- Frameless, draggable desktop widget with a compact, responsive two-column flow.
+- Visible widgets retain their order: Clock, Calendar, Tasks, Pomodoro, Quick Notes, Market Rates. Hiding a widget pulls the following tiles upward to fill its position. An odd final tile spans the row.
+- The window contracts to a single-tile width when only one widget is visible.
+- Clock displays Gregorian and Solar Hijri dates together. The calendar switches between Solar Hijri and Gregorian views.
+- Rounded card surfaces with explicitly painted outer corners, monochrome vector section icons, and Windows accent-color details.
+- Tray theme selector: System, Light, or Dark. System follows the Windows app theme; Light and Dark override the surface palette. The accent color continues to follow Windows automatically in all three modes.
+- Saved window position and widget opacity from 50% to 100%. No backdrop blur option.
 - Persistent local tasks with completion counts, add/complete/remove, and a scrollable list.
-- Pomodoro focus/rest timer (25-minute focus / 5-minute rest), with circular progress, Start/Pause, Reset, and a focus/rest switch.
+- Pomodoro focus/rest timer (25-minute focus / 5-minute rest), with a circular remaining-time ring, centered timer text, and vector Play/Pause, Reset, and Rest controls. The ring begins full and shrinks to empty as the timer counts down.
 - Persistent quick notes with automatic local saving and Save As export to a UTF-8 .txt file.
 - Live USD, EUR, and 18-karat gold-per-gram quotes. Choose display currency independently of interface language: Dollar ($) or Toman (T).
+- Colored circular currency badges for USD, EUR, and gold; the widget-heading icons and Pomodoro controls use monochrome vector artwork.
 - English and Persian interface.
-- Tray submenus for visible widgets, widget opacity, market-rate refresh and currency, language, and font; also includes always-on-top, Windows startup, and exit.
+- Tray submenus for visible widgets, widget opacity, theme, market-rate refresh and currency, language, and font; also includes always-on-top, Windows startup, and exit.
 
 ## Appearance controls
 
 The tray menu provides:
 - **Visible widgets** — independently show or hide Clock, Calendar, Tasks, Pomodoro, Quick Note, and Market Rates.
 - **Widget opacity** — 100%, 90%, 80%, 70%, 60%, or 50%.
+- **Theme** — System, Light, or Dark.
 - **Market rates** — refresh quotes and choose Dollar ($) or Toman (T).
 - **Language** — English or Persian.
 - **Font** — Segoe UI, Arial, Calibri, Tahoma, Verdana, or Microsoft YaHei UI.
 
-The application follows the Windows app light/dark preference and Windows accent color. Opacity, font, widget visibility, currency choice, and window position are stored locally.
+The accent color is read from Windows and remains automatic even when a Light or Dark theme override is selected. Theme, opacity, font, widget visibility, currency choice, and window position are stored locally.
 
 ## Download
 
