@@ -180,7 +180,7 @@ namespace ChronoDeskWidget
             };
             LocationChanged += delegate
             {
-                if (_positionSaveTimer == null || _positionSaveTimer.IsDisposed) return;
+                if (_positionSaveTimer == null) return;
                 _positionSaveTimer.Stop();
                 _positionSaveTimer.Start();
             };
