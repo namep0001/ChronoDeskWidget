@@ -2175,161 +2175,10 @@ namespace ChronoDeskWidget
     internal sealed class VectorIconView : Control
     {
         public string Kind { get; private set; }
+
         public VectorIconView(string kind)
         {
             Kind = kind ?? "clock";
-            SetStyle(ControlStyles.AllPaintingInWmPaint | ControlStyles.OptimizedDoubleBuffer | ControlStyles.UserPaint | ControlStyles.SupportsTransparentBackColor, true);
-            BackColor = Color.Transparent;
-            TabStop = false;
-        }
-        protected override void OnPaint(PaintEventArgs e)
-        {
-            base.OnPaint(e);
-            Graphics g = e.Graphics;
-            g.SmoothingMode = SmoothingMode.AntiAlias;
-            float scale = Math.Min(Width, Height) / 24F;
-            if (scale <= 0) return;
-            g.TranslateTransform((Width - 24F * scale) / 2F, (Height - 24F * scale) / 2F);
-            g.ScaleTransform(scale, scale);
-            using (Pen pen = new Pen(ForeColor, 1.7F))
-            using (Pen thin = new Pen(ForeColor, 1.35F))
-            using (Brush brush = new SolidBrush(ForeColor))
-            {
-                pen.StartCap = LineCap.Round; pen.EndCap = LineCap.Round; pen.LineJoin = LineJoin.Round;
-                thin.StartCap = LineCap.Round; thin.EndCap = LineCap.Round; thin.LineJoin = LineJoin.Round;
-                switch (Kind)
-                {
-                    case "clock":
-                        g.DrawEllipse(pen, 3.5F, 3.5F, 17, 17);
-                        g.DrawLine(pen, 12, 7, 12, 12); g.DrawLine(pen, 12, 12, 16, 14.5F);
-                        break;
-                    case "calendar":
-                        using (GraphicsPath calendar = RoundedRectangle(4, 5, 16, 15, 2)) g.DrawPath(pen, calendar);
-                        g.DrawLine(pen, 4, 9, 20, 9); g.DrawLine(pen, 8, 3, 8, 7); g.DrawLine(pen, 16, 3, 16, 7);
-                        g.FillEllipse(brush, 7.2F, 12, 1.8F, 1.8F); g.FillEllipse(brush, 11.2F, 12, 1.8F, 1.8F);
-                        g.FillEllipse(brush, 15.2F, 12, 1.8F, 1.8F); g.FillEllipse(brush, 7.2F, 16, 1.8F, 1.8F);
-                        g.FillEllipse(brush, 11.2F, 16, 1.8F, 1.8F);
-                        break;
-                    case "tasks":
-                        using (GraphicsPath list = RoundedRectangle(4, 4, 16, 16, 2)) g.DrawPath(pen, list);
-                        g.DrawLine(pen, 7, 9, 9, 11); g.DrawLine(pen, 9, 11, 12, 7.5F); g.DrawLine(thin, 14, 9, 18, 9);
-                        g.DrawLine(thin, 7, 16, 9, 18); g.DrawLine(thin, 9, 18, 12, 14.5F); g.DrawLine(thin, 14, 16, 18, 16);
-                        break;
-                    case "pomodoro":
-                        g.DrawEllipse(pen, 5, 7, 14, 14);
-                        g.DrawLine(pen, 12, 7, 12, 4);
-                        g.DrawLine(pen, 9, 3, 15, 3);
-                        g.DrawLine(pen, 12, 4, 12, 7);
-                        g.DrawLine(pen, 12, 11, 12, 15);
-                        g.DrawLine(pen, 12, 15, 16, 17);
-                        break;
-                    case "notes":
-                        PointF[] paper = { new PointF(6, 3), new PointF(15, 3), new PointF(19, 7), new PointF(19, 21), new PointF(6, 21) };
-                        g.DrawPolygon(pen, paper); g.DrawLine(pen, 15, 3, 15, 7); g.DrawLine(pen, 15, 7, 19, 7);
-                        g.DrawLine(thin, 9, 11, 16, 11); g.DrawLine(thin, 9, 14, 16, 14); g.DrawLine(thin, 9, 17, 14, 17);
-                        break;
-                    case "rates":
-                        g.DrawLine(pen, 4, 4, 4, 20); g.DrawLine(pen, 4, 20, 21, 20);
-                        PointF[] chart = { new PointF(6, 16), new PointF(10, 12), new PointF(13, 14), new PointF(19, 7) };
-                        g.DrawLines(pen, chart); g.FillEllipse(brush, 17.5F, 5.5F, 3, 3);
-                        break;
-                    default: g.DrawEllipse(pen, 4, 4, 16, 16); break;
-                }
-            }
-        }
-        private static GraphicsPath RoundedRectangle(float x, float y, float width, float height, float radius)
-        {
-            GraphicsPath path = new GraphicsPath();
-            float d = radius * 2;
-            path.AddArc(x, y, d, d, 180, 90); path.AddArc(x + width - d, y, d, d, 270, 90);
-            path.AddArc(x + width - d, y + height - d, d, d, 0, 90); path.AddArc(x, y + height - d, d, d, 90, 90);
-            path.CloseFigure();
-            return path;
-        }
-    }
-
-    internal sealed class VectorIconButton : Button
-    {
-        private string _kind;
-        private bool _hovered;
-        public string Kind { get { return _kind; } set { _kind = value ?? "play"; Invalidate(); } }
-
-        public VectorIconButton(string kind)
-        {
-            _kind = kind ?? "play";
-            Text = string.Empty;
-            FlatStyle = FlatStyle.Flat;
-            FlatAppearance.BorderSize = 0;
-            UseVisualStyleBackColor = false;
-            SetStyle(ControlStyles.AllPaintingInWmPaint | ControlStyles.OptimizedDoubleBuffer |
-                ControlStyles.UserPaint | ControlStyles.ResizeRedraw, true);
-            BackColor = SystemColors.Control;
-            TabStop = false;
-        }
-
-        protected override void OnMouseEnter(EventArgs e) { _hovered = true; Invalidate(); base.OnMouseEnter(e); }
-        protected override void OnMouseLeave(EventArgs e) { _hovered = false; Invalidate(); base.OnMouseLeave(e); }
-
-        protected override void OnPaint(PaintEventArgs e)
-        {
-            Graphics g = e.Graphics;
-            g.SmoothingMode = SmoothingMode.AntiAlias;
-            using (SolidBrush background = new SolidBrush(_hovered ? ControlPaint.Light(BackColor, 0.12F) : BackColor))
-                g.FillEllipse(background, 1, 1, Width - 3, Height - 3);
-            using (Pen pen = new Pen(ForeColor, 1.8F))
-            using (SolidBrush brush = new SolidBrush(ForeColor))
-            {
-                pen.StartCap = LineCap.Round;
-                pen.EndCap = LineCap.Round;
-                pen.LineJoin = LineJoin.Round;
-                switch (_kind)
-                {
-                    case "play":
-                        PointF[] triangle = { new PointF(13, 8), new PointF(22, 17), new PointF(13, 26) };
-                        g.FillPolygon(brush, triangle);
-                        break;
-                    case "pause":
-                        using (GraphicsPath bars = new GraphicsPath())
-                        {
-                            bars.AddRectangle(new Rectangle(10, 8, 4, 18));
-                            bars.AddRectangle(new Rectangle(18, 8, 4, 18));
-                            g.FillPath(brush, bars);
-                        }
-                        break;
-                    case "reset":
-                        g.DrawArc(pen, 8, 9, 17, 16, 35, 295);
-                        PointF[] arrow = { new PointF(7, 8), new PointF(15, 8), new PointF(10, 15) };
-                        g.FillPolygon(brush, arrow);
-                        break;
-                    case "rest":
-                        g.DrawLine(pen, 10, 8, 10, 12);
-                        g.DrawLine(pen, 18, 7, 18, 12);
-                        using (GraphicsPath cup = new GraphicsPath())
-                        {
-                            cup.AddLine(7, 14, 19, 14);
-                            cup.AddLine(19, 14, 18, 23);
-                            cup.AddLine(18, 23, 9, 23);
-                            cup.CloseFigure();
-                            g.DrawPath(pen, cup);
-                        }
-                        g.DrawArc(pen, 16, 15, 7, 6, 270, 180);
-                        g.DrawLine(pen, 9, 26, 20, 26);
-                        break;
-                }
-            }
-        }
-    }
-
-    internal sealed class CurrencyBadgeIcon : Control
-    {
-        private readonly string _kind;
-        private readonly Color _badgeColor;
-
-        public CurrencyBadgeIcon(string kind)
-        {
-            _kind = kind ?? "usd";
-            _badgeColor = _kind == "usd" ? Color.FromArgb(39, 153, 105) :
-                (_kind == "eur" ? Color.FromArgb(55, 112, 194) : Color.FromArgb(190, 143, 39));
             SetStyle(ControlStyles.AllPaintingInWmPaint | ControlStyles.OptimizedDoubleBuffer |
                 ControlStyles.UserPaint | ControlStyles.SupportsTransparentBackColor, true);
             BackColor = Color.Transparent;
@@ -2341,20 +2190,432 @@ namespace ChronoDeskWidget
             base.OnPaint(e);
             Graphics g = e.Graphics;
             g.SmoothingMode = SmoothingMode.AntiAlias;
-            int diameter = Math.Min(Width, Height) - 2;
-            Rectangle circle = new Rectangle((Width - diameter) / 2, (Height - diameter) / 2, diameter, diameter);
-            using (SolidBrush badge = new SolidBrush(_badgeColor))
-            using (SolidBrush white = new SolidBrush(Color.White))
-            using (Font font = new Font("Segoe UI", _kind == "gold" ? 7.1F : 10.5F, FontStyle.Bold, GraphicsUnit.Point))
-            using (StringFormat centered = new StringFormat())
+            float scale = Math.Min(Width, Height) / 24F;
+            if (scale <= 0F) return;
+            g.TranslateTransform((Width - 24F * scale) / 2F, (Height - 24F * scale) / 2F);
+            g.ScaleTransform(scale, scale);
+            using (Pen pen = new Pen(ForeColor, 2.35F))
+            using (Pen thin = new Pen(ForeColor, 1.95F))
+            using (Brush brush = new SolidBrush(ForeColor))
             {
-                centered.Alignment = StringAlignment.Center;
-                centered.LineAlignment = StringAlignment.Center;
-                g.FillEllipse(badge, circle);
-                string symbol = _kind == "usd" ? "$" : (_kind == "eur" ? "€" : "Au");
-                g.DrawString(symbol, font, white, circle, centered);
+                pen.StartCap = LineCap.Round; pen.EndCap = LineCap.Round; pen.LineJoin = LineJoin.Round;
+                thin.StartCap = LineCap.Round; thin.EndCap = LineCap.Round; thin.LineJoin = LineJoin.Round;
+                switch (Kind)
+                {
+                    case "clock":
+                        g.DrawEllipse(pen, 3.2F, 3.2F, 17.6F, 17.6F);
+                        g.DrawLine(pen, 12, 6.5F, 12, 12);
+                        g.DrawLine(pen, 12, 12, 16.5F, 14.5F);
+                        break;
+                    case "calendar":
+                        using (GraphicsPath calendar = RoundedRectangle(3.5F, 5, 17, 16, 2.2F)) g.DrawPath(pen, calendar);
+                        g.DrawLine(pen, 3.5F, 9, 20.5F, 9);
+                        g.DrawLine(pen, 8, 3, 8, 7);
+                        g.DrawLine(pen, 16, 3, 16, 7);
+                        g.FillEllipse(brush, 7, 12, 2.2F, 2.2F);
+                        g.FillEllipse(brush, 11, 12, 2.2F, 2.2F);
+                        g.FillEllipse(brush, 15, 12, 2.2F, 2.2F);
+                        g.FillEllipse(brush, 7, 16, 2.2F, 2.2F);
+                        g.FillEllipse(brush, 11, 16, 2.2F, 2.2F);
+                        break;
+                    case "tasks":
+                        using (GraphicsPath list = RoundedRectangle(3.5F, 3.5F, 17, 17, 2.2F)) g.DrawPath(pen, list);
+                        g.DrawLine(pen, 6.5F, 9, 9, 11.5F);
+                        g.DrawLine(pen, 9, 11.5F, 12.5F, 7.5F);
+                        g.DrawLine(thin, 14.5F, 9, 18, 9);
+                        g.DrawLine(pen, 6.5F, 16, 9, 18.5F);
+                        g.DrawLine(pen, 9, 18.5F, 12.5F, 14.5F);
+                        g.DrawLine(thin, 14.5F, 16, 18, 16);
+                        break;
+                    case "pomodoro":
+                        g.DrawEllipse(pen, 4.5F, 7, 15, 14);
+                        g.DrawLine(pen, 12, 7, 12, 4);
+                        g.DrawLine(pen, 9, 3, 15, 3);
+                        g.DrawLine(pen, 12, 4, 12, 7);
+                        g.DrawLine(pen, 12, 11, 12, 15);
+                        g.DrawLine(pen, 12, 15, 16, 17);
+                        break;
+                    case "notes":
+                        PointF[] paper = { new PointF(5, 3), new PointF(15, 3), new PointF(19, 7), new PointF(19, 21), new PointF(5, 21) };
+                        g.DrawPolygon(pen, paper);
+                        g.DrawLine(pen, 15, 3, 15, 7);
+                        g.DrawLine(pen, 15, 7, 19, 7);
+                        g.DrawLine(thin, 8.5F, 11, 16.5F, 11);
+                        g.DrawLine(thin, 8.5F, 14.5F, 16.5F, 14.5F);
+                        g.DrawLine(thin, 8.5F, 18, 14.5F, 18);
+                        break;
+                    case "rates":
+                        g.DrawLine(pen, 4, 4, 4, 20);
+                        g.DrawLine(pen, 4, 20, 21, 20);
+                        PointF[] chart = { new PointF(6, 16), new PointF(10, 11), new PointF(13, 14), new PointF(19, 6) };
+                        g.DrawLines(pen, chart);
+                        g.FillEllipse(brush, 17.5F, 4.5F, 3.5F, 3.5F);
+                        break;
+                    case "save":
+                        using (GraphicsPath disk = RoundedRectangle(4, 3, 16, 18, 2)) g.DrawPath(pen, disk);
+                        g.DrawLine(pen, 8, 4, 8, 10);
+                        g.DrawLine(pen, 16, 4, 16, 10);
+                        g.DrawLine(pen, 8, 10, 16, 10);
+                        g.DrawLine(pen, 8, 15, 16, 15);
+                        g.DrawLine(pen, 8, 18, 16, 18);
+                        break;
+                    default:
+                        g.DrawEllipse(pen, 4, 4, 16, 16);
+                        break;
+                }
             }
         }
+
+        private static GraphicsPath RoundedRectangle(float x, float y, float width, float height, float radius)
+        {
+            GraphicsPath path = new GraphicsPath();
+            float d = radius * 2;
+            path.AddArc(x, y, d, d, 180, 90);
+            path.AddArc(x + width - d, y, d, d, 270, 90);
+            path.AddArc(x + width - d, y + height - d, d, d, 0, 90);
+            path.AddArc(x, y + height - d, d, d, 90, 90);
+            path.CloseFigure();
+            return path;
+        }
+    }
+
+    internal sealed class VectorIconButton : Button
+    {
+        private string _kind;
+        private bool _hovered;
+        public string Kind { get { return _kind; } set { _kind = value ?? "play"; Invalidate(); } }
+        public bool ShowBackground { get; set; }
+
+        public VectorIconButton(string kind)
+        {
+            _kind = kind ?? "play";
+            ShowBackground = true;
+            Text = string.Empty;
+            FlatStyle = FlatStyle.Flat;
+            FlatAppearance.BorderSize = 0;
+            UseVisualStyleBackColor = false;
+            SetStyle(ControlStyles.AllPaintingInWmPaint | ControlStyles.OptimizedDoubleBuffer |
+                ControlStyles.UserPaint | ControlStyles.ResizeRedraw | ControlStyles.SupportsTransparentBackColor, true);
+            BackColor = Color.Transparent;
+            TabStop = false;
+        }
+
+        protected override void OnMouseEnter(EventArgs e) { _hovered = true; Invalidate(); base.OnMouseEnter(e); }
+        protected override void OnMouseLeave(EventArgs e) { _hovered = false; Invalidate(); base.OnMouseLeave(e); }
+
+        protected override void OnPaint(PaintEventArgs e)
+        {
+            Graphics g = e.Graphics;
+            g.SmoothingMode = SmoothingMode.AntiAlias;
+            if (ShowBackground)
+            {
+                Color backgroundColor = _hovered ? ControlPaint.Light(BackColor, 0.10F) : BackColor;
+                using (SolidBrush background = new SolidBrush(backgroundColor))
+                    g.FillEllipse(background, 1, 1, Width - 3, Height - 3);
+            }
+            else if (_hovered)
+            {
+                Color parentColor = Parent == null ? BackColor : Parent.BackColor;
+                using (SolidBrush background = new SolidBrush(ControlPaint.Light(parentColor, 0.07F)))
+                    g.FillEllipse(background, 1, 1, Width - 3, Height - 3);
+            }
+
+            float scale = Math.Min(Width, Height) / 34F;
+            if (scale <= 0F) return;
+            g.TranslateTransform((Width - 34F * scale) / 2F, (Height - 34F * scale) / 2F);
+            g.ScaleTransform(scale, scale);
+            using (Pen pen = new Pen(ForeColor, 2.25F))
+            using (SolidBrush brush = new SolidBrush(ForeColor))
+            {
+                pen.StartCap = LineCap.Round;
+                pen.EndCap = LineCap.Round;
+                pen.LineJoin = LineJoin.Round;
+                switch (_kind)
+                {
+                    case "play":
+                        PointF[] triangle = { new PointF(13, 8), new PointF(23, 17), new PointF(13, 26) };
+                        g.FillPolygon(brush, triangle);
+                        break;
+                    case "pause":
+                        using (GraphicsPath bars = new GraphicsPath())
+                        {
+                            bars.AddRectangle(new Rectangle(10, 8, 5, 18));
+                            bars.AddRectangle(new Rectangle(19, 8, 5, 18));
+                            g.FillPath(brush, bars);
+                        }
+                        break;
+                    case "reset":
+                        g.DrawArc(pen, 8, 8, 19, 19, 35, 295);
+                        PointF[] resetArrow = { new PointF(6, 8), new PointF(16, 8), new PointF(10, 16) };
+                        g.FillPolygon(brush, resetArrow);
+                        break;
+                    case "refresh":
+                        g.DrawArc(pen, 7, 7, 20, 20, 42, 285);
+                        PointF[] refreshArrow = { new PointF(23, 5), new PointF(28, 11), new PointF(20, 12) };
+                        g.FillPolygon(brush, refreshArrow);
+                        break;
+                    case "rest":
+                        g.DrawLine(pen, 11, 6, 11, 11);
+                        g.DrawLine(pen, 19, 6, 19, 11);
+                        using (GraphicsPath cup = new GraphicsPath())
+                        {
+                            cup.AddLine(8, 14, 21, 14);
+                            cup.AddLine(21, 14, 20, 24);
+                            cup.AddLine(20, 24, 10, 24);
+                            cup.CloseFigure();
+                            g.DrawPath(pen, cup);
+                        }
+                        g.DrawArc(pen, 18, 15, 8, 7, 270, 180);
+                        g.DrawLine(pen, 9, 27, 22, 27);
+                        break;
+                    case "export":
+                        g.DrawLine(pen, 17, 5, 17, 20);
+                        g.DrawLine(pen, 11, 14, 17, 20);
+                        g.DrawLine(pen, 23, 14, 17, 20);
+                        g.DrawLine(pen, 7, 25, 7, 29);
+                        g.DrawLine(pen, 7, 29, 27, 29);
+                        g.DrawLine(pen, 27, 29, 27, 25);
+                        break;
+                }
+            }
+        }
+    }
+
+    internal sealed class CurrencyBadgeIcon : Control
+    {
+        private readonly string _kind;
+
+        public CurrencyBadgeIcon(string kind)
+        {
+            _kind = kind ?? "usd";
+            SetStyle(ControlStyles.AllPaintingInWmPaint | ControlStyles.OptimizedDoubleBuffer |
+                ControlStyles.UserPaint | ControlStyles.SupportsTransparentBackColor, true);
+            BackColor = Color.Transparent;
+            TabStop = false;
+        }
+
+        protected override void OnPaint(PaintEventArgs e)
+        {
+            base.OnPaint(e);
+            Graphics g = e.Graphics;
+            g.SmoothingMode = SmoothingMode.AntiAlias;
+
+            if (_kind == "usd")
+            {
+                int diameter = Math.Min(Width, Height) - 2;
+                Rectangle circle = new Rectangle((Width - diameter) / 2, (Height - diameter) / 2, diameter, diameter);
+                GraphicsState state = g.Save();
+                using (GraphicsPath clip = new GraphicsPath())
+                {
+                    clip.AddEllipse(circle);
+                    g.SetClip(clip);
+                    using (SolidBrush white = new SolidBrush(Color.White)) g.FillRectangle(white, circle);
+                    using (SolidBrush red = new SolidBrush(Color.FromArgb(190, 42, 54)))
+                    {
+                        for (int i = 0; i < 7; i++) g.FillRectangle(red, circle.Left, circle.Top + 1 + i * 3, diameter, 1.6F);
+                    }
+                    using (SolidBrush navy = new SolidBrush(Color.FromArgb(33, 54, 105)))
+                        g.FillRectangle(navy, circle.Left, circle.Top, diameter * 0.55F, diameter * 0.56F);
+                    using (SolidBrush stars = new SolidBrush(Color.White))
+                    {
+                        for (int row = 0; row < 3; row++)
+                            for (int col = 0; col < 3; col++)
+                                g.FillEllipse(stars, circle.Left + 2 + col * 3, circle.Top + 2 + row * 3, 1.2F, 1.2F);
+                    }
+                }
+                g.Restore(state);
+                using (Pen border = new Pen(Color.FromArgb(150, 255, 255, 255), 0.8F)) g.DrawEllipse(border, circle);
+            }
+            else if (_kind == "eur")
+            {
+                int diameter = Math.Min(Width, Height) - 2;
+                Rectangle circle = new Rectangle((Width - diameter) / 2, (Height - diameter) / 2, diameter, diameter);
+                using (SolidBrush blue = new SolidBrush(Color.FromArgb(28, 69, 151))) g.FillEllipse(blue, circle);
+                using (SolidBrush gold = new SolidBrush(Color.FromArgb(255, 207, 62)))
+                {
+                    float cx = circle.Left + circle.Width / 2F;
+                    float cy = circle.Top + circle.Height / 2F;
+                    float radius = diameter * 0.31F;
+                    for (int i = 0; i < 12; i++)
+                    {
+                        double angle = i * Math.PI / 6.0 - Math.PI / 2.0;
+                        float x = cx + (float)Math.Cos(angle) * radius - 1F;
+                        float y = cy + (float)Math.Sin(angle) * radius - 1F;
+                        g.FillEllipse(gold, x, y, 2F, 2F);
+                    }
+                }
+                using (Pen border = new Pen(Color.FromArgb(150, 255, 255, 255), 0.8F)) g.DrawEllipse(border, circle);
+            }
+            else
+            {
+                RectangleF shadowRect = new RectangleF(3, 15, Width - 6, 5);
+                PointF[] ingot = {
+                    new PointF(5, 7), new PointF(Width - 5, 7),
+                    new PointF(Width - 2, 13), new PointF(Width - 7, Height - 4),
+                    new PointF(7, Height - 4), new PointF(2, 13)
+                };
+                using (SolidBrush shadow = new SolidBrush(Color.FromArgb(55, 0, 0, 0))) g.FillEllipse(shadow, shadowRect);
+                using (GraphicsPath path = new GraphicsPath())
+                {
+                    path.AddPolygon(ingot);
+                    using (LinearGradientBrush gold = new LinearGradientBrush(
+                        new Rectangle(2, 5, Width - 4, Height - 8),
+                        Color.FromArgb(255, 231, 143), Color.FromArgb(165, 105, 28), 90F))
+                        g.FillPath(gold, path);
+                    using (Pen edge = new Pen(Color.FromArgb(226, 177, 77), 1F)) g.DrawPath(edge, path);
+                }
+                PointF[] topFacet = { new PointF(5, 7), new PointF(Width - 5, 7), new PointF(Width - 9, 12), new PointF(9, 12) };
+                using (LinearGradientBrush top = new LinearGradientBrush(
+                    new Rectangle(5, 7, Width - 10, 6), Color.FromArgb(255, 244, 185), Color.FromArgb(219, 166, 67), 90F))
+                    g.FillPolygon(top, topFacet);
+                using (Font stamp = new Font("Segoe UI", 5.5F, FontStyle.Bold, GraphicsUnit.Point))
+                using (SolidBrush ink = new SolidBrush(Color.FromArgb(120, 79, 25)))
+                using (StringFormat center = new StringFormat())
+                {
+                    center.Alignment = StringAlignment.Center;
+                    center.LineAlignment = StringAlignment.Center;
+                    g.DrawString("Au", stamp, ink, new RectangleF(6, 12, Width - 12, 9), center);
+                }
+            }
+        }
+    }
+
+    internal sealed class RoundedButton : Button
+    {
+        private bool _hovered;
+        private bool _pressed;
+
+        public RoundedButton()
+        {
+            FlatStyle = FlatStyle.Flat;
+            FlatAppearance.BorderSize = 0;
+            UseVisualStyleBackColor = false;
+            SetStyle(ControlStyles.AllPaintingInWmPaint | ControlStyles.OptimizedDoubleBuffer |
+                ControlStyles.UserPaint | ControlStyles.ResizeRedraw, true);
+            Cursor = Cursors.Hand;
+            TabStop = false;
+        }
+
+        protected override void OnMouseEnter(EventArgs e) { _hovered = true; Invalidate(); base.OnMouseEnter(e); }
+        protected override void OnMouseLeave(EventArgs e) { _hovered = false; _pressed = false; Invalidate(); base.OnMouseLeave(e); }
+        protected override void OnMouseDown(MouseEventArgs e) { if (e.Button == MouseButtons.Left) _pressed = true; Invalidate(); base.OnMouseDown(e); }
+        protected override void OnMouseUp(MouseEventArgs e) { _pressed = false; Invalidate(); base.OnMouseUp(e); }
+
+        protected override void OnPaint(PaintEventArgs e)
+        {
+            Graphics g = e.Graphics;
+            g.SmoothingMode = SmoothingMode.AntiAlias;
+            Color parentColor = Parent == null ? SystemColors.Control : Parent.BackColor;
+            using (SolidBrush outside = new SolidBrush(parentColor)) g.FillRectangle(outside, ClientRectangle);
+            Rectangle bounds = new Rectangle(1, 1, Math.Max(1, Width - 3), Math.Max(1, Height - 3));
+            using (GraphicsPath path = RoundedPath(bounds, 7))
+            using (SolidBrush fill = new SolidBrush(_pressed ? ControlPaint.Dark(BackColor, 0.08F) :
+                (_hovered ? ControlPaint.Light(BackColor, 0.08F) : BackColor)))
+            using (Pen border = new Pen(FlatAppearance.BorderColor.IsEmpty ? ControlPaint.Light(BackColor, 0.12F) : FlatAppearance.BorderColor, 0.8F))
+            {
+                g.FillPath(fill, path);
+                g.DrawPath(border, path);
+            }
+            TextRenderer.DrawText(g, Text, Font, ClientRectangle, Enabled ? ForeColor : SystemColors.GrayText,
+                TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPadding |
+                TextFormatFlags.SingleLine | TextFormatFlags.EndEllipsis);
+        }
+
+        private static GraphicsPath RoundedPath(Rectangle bounds, int radius)
+        {
+            GraphicsPath path = new GraphicsPath();
+            int d = Math.Min(radius * 2, Math.Min(bounds.Width, bounds.Height));
+            path.AddArc(bounds.Left, bounds.Top, d, d, 180, 90);
+            path.AddArc(bounds.Right - d, bounds.Top, d, d, 270, 90);
+            path.AddArc(bounds.Right - d, bounds.Bottom - d, d, d, 0, 90);
+            path.AddArc(bounds.Left, bounds.Bottom - d, d, d, 90, 90);
+            path.CloseFigure();
+            return path;
+        }
+    }
+
+    internal sealed class RoundedSurfacePanel : Panel
+    {
+        public Color FillColor { get; set; }
+        public Color BorderColor { get; set; }
+
+        public RoundedSurfacePanel()
+        {
+            SetStyle(ControlStyles.AllPaintingInWmPaint | ControlStyles.OptimizedDoubleBuffer |
+                ControlStyles.UserPaint | ControlStyles.ResizeRedraw, true);
+            BackColor = Color.Transparent;
+            FillColor = Color.FromArgb(30, 36, 48);
+            BorderColor = Color.FromArgb(70, 80, 96);
+        }
+
+        protected override void OnPaintBackground(PaintEventArgs e)
+        {
+            Color parentColor = Parent == null ? SystemColors.Control : Parent.BackColor;
+            e.Graphics.Clear(parentColor);
+            e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+            Rectangle bounds = new Rectangle(0, 0, Width - 1, Height - 1);
+            using (GraphicsPath path = RoundedPath(bounds, 8))
+            using (SolidBrush fill = new SolidBrush(FillColor))
+            using (Pen border = new Pen(BorderColor, 0.8F))
+            {
+                e.Graphics.FillPath(fill, path);
+                e.Graphics.DrawPath(border, path);
+            }
+        }
+
+        private static GraphicsPath RoundedPath(Rectangle bounds, int radius)
+        {
+            GraphicsPath path = new GraphicsPath();
+            int d = Math.Min(radius * 2, Math.Min(bounds.Width, bounds.Height));
+            path.AddArc(bounds.Left, bounds.Top, d, d, 180, 90);
+            path.AddArc(bounds.Right - d, bounds.Top, d, d, 270, 90);
+            path.AddArc(bounds.Right - d, bounds.Bottom - d, d, d, 0, 90);
+            path.AddArc(bounds.Left, bounds.Bottom - d, d, d, 90, 90);
+            path.CloseFigure();
+            return path;
+        }
+    }
+
+    internal sealed class WidgetColorTable : ProfessionalColorTable
+    {
+        private readonly Color _surface;
+        private readonly Color _surfaceAlt;
+        private readonly Color _text;
+        private readonly Color _muted;
+        private readonly Color _accent;
+        private readonly Color _border;
+
+        public WidgetColorTable(Color surface, Color surfaceAlt, Color text, Color muted, Color accent, Color border)
+        {
+            _surface = surface;
+            _surfaceAlt = surfaceAlt;
+            _text = text;
+            _muted = muted;
+            _accent = accent;
+            _border = border;
+            UseSystemColors = false;
+        }
+
+        public override Color ToolStripDropDownBackground { get { return _surface; } }
+        public override Color MenuBorder { get { return _border; } }
+        public override Color MenuItemSelected { get { return _surfaceAlt; } }
+        public override Color MenuItemBorder { get { return _accent; } }
+        public override Color ImageMarginGradientBegin { get { return _surface; } }
+        public override Color ImageMarginGradientMiddle { get { return _surface; } }
+        public override Color ImageMarginGradientEnd { get { return _surface; } }
+        public override Color SeparatorDark { get { return _border; } }
+        public override Color SeparatorLight { get { return _surface; } }
+        public override Color CheckBackground { get { return _surfaceAlt; } }
+        public override Color CheckSelectedBackground { get { return _surfaceAlt; } }
+        public override Color CheckPressedBackground { get { return _surfaceAlt; } }
+        public override Color ButtonSelectedGradientBegin { get { return _surfaceAlt; } }
+        public override Color ButtonSelectedGradientMiddle { get { return _surfaceAlt; } }
+        public override Color ButtonSelectedGradientEnd { get { return _surfaceAlt; } }
+        public override Color ButtonPressedGradientBegin { get { return _surfaceAlt; } }
+        public override Color ButtonPressedGradientMiddle { get { return _surfaceAlt; } }
+        public override Color ButtonPressedGradientEnd { get { return _surfaceAlt; } }
+        public override Color GripDark { get { return _muted; } }
+        public override Color GripLight { get { return _border; } }
     }
 
     internal sealed class CalendarDayButton : Button
