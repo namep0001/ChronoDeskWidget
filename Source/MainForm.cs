@@ -2152,14 +2152,17 @@ namespace ChronoDeskWidget
                 g.DrawArc(track, bounds, -90, 359.8F);
                 if (_progress > 0.001F)
                     g.DrawArc(progress, bounds, -90, Math.Min(359.8F, 360F * _progress));
-                using (Font modeFont = ModeFont ?? SystemFonts.DefaultFont)
-                using (Font timeFont = TimeFont ?? SystemFonts.DefaultFont)
-                {
-                    g.DrawString(ModeText ?? string.Empty, modeFont, modeBrush,
-                        new RectangleF(13, Height * 0.34F, Width - 26, 18), centered);
-                    g.DrawString(TimeText ?? string.Empty, timeFont, textBrush,
-                        new RectangleF(10, Height * 0.46F, Width - 20, 32), centered);
-                }
+                // ModeFont and TimeFont are borrowed from MainForm's shared font cache.
+                // Never dispose them here: OnPaint runs repeatedly and the cache owns their lifetime.
+                Font modeFont = ModeFont ?? SystemFonts.DefaultFont;
+                Font timeFont = TimeFont ?? SystemFonts.DefaultFont;
+
+                RectangleF modeBounds = new RectangleF(13, Height * 0.34F, Width - 26, 18);
+                RectangleF timeBounds = new RectangleF(10, Height * 0.46F, Width - 20, 32);
+                if (modeBounds.Width > 0F && modeBounds.Height > 0F)
+                    g.DrawString(ModeText ?? string.Empty, modeFont, modeBrush, modeBounds, centered);
+                if (timeBounds.Width > 0F && timeBounds.Height > 0F)
+                    g.DrawString(TimeText ?? string.Empty, timeFont, textBrush, timeBounds, centered);
             }
         }
     }
