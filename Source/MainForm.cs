@@ -1678,19 +1678,36 @@ namespace ChronoDeskWidget
         private ContextMenuStrip CreateTrayMenu()
         {
             ContextMenuStrip menu = new ContextMenuStrip();
+            menu.Font = GetUiFont(9F, FontStyle.Regular);
+            menu.Padding = new Padding(4);
+            menu.ImageScalingSize = new Size(18, 18);
+            menu.ShowImageMargin = true;
+            menu.ShowCheckMargin = true;
+            menu.Renderer = new ToolStripProfessionalRenderer(new WidgetColorTable(
+                _themeSurface, _themeSurfaceAlt, _themeText, _themeMutedText, _themeAccent, _themeBorder));
+
+            List<Image> ownedImages = new List<Image>();
+            menu.Disposed += delegate
+            {
+                foreach (Image image in ownedImages) image.Dispose();
+                ownedImages.Clear();
+            };
 
             ToolStripMenuItem showItem = new ToolStripMenuItem(T("Show widget", "نمایش ویجت"));
             showItem.Enabled = AnyWidgetVisible() && !Visible;
             showItem.Click += delegate { ShowFromTray(); };
+            AddTrayImage(showItem, "show", ownedImages);
             menu.Items.Add(showItem);
 
             ToolStripMenuItem hideItem = new ToolStripMenuItem(T("Hide widget", "مخفی‌کردن ویجت"));
             hideItem.Enabled = Visible;
             hideItem.Click += delegate { HideToTray(); };
+            AddTrayImage(hideItem, "hide", ownedImages);
             menu.Items.Add(hideItem);
             menu.Items.Add(new ToolStripSeparator());
 
             ToolStripMenuItem widgetsItem = new ToolStripMenuItem(T("Visible widgets", "بخش‌های قابل نمایش"));
+            AddTrayImage(widgetsItem, "widgets", ownedImages);
             AddWidgetToggle(widgetsItem, "clock", T("Clock and dates", "ساعت و تاریخ"));
             AddWidgetToggle(widgetsItem, "calendar", T("Calendar", "تقویم"));
             AddWidgetToggle(widgetsItem, "tasks", T("Tasks", "وظایف"));
@@ -1700,6 +1717,7 @@ namespace ChronoDeskWidget
             menu.Items.Add(widgetsItem);
 
             ToolStripMenuItem opacityItem = new ToolStripMenuItem(T("Widget opacity", "شفافیت ویجت"));
+            AddTrayImage(opacityItem, "opacity", ownedImages);
             int[] opacityOptions = { 100, 90, 80, 70, 60, 50 };
             foreach (int percent in opacityOptions)
             {
@@ -1712,6 +1730,7 @@ namespace ChronoDeskWidget
             menu.Items.Add(opacityItem);
 
             ToolStripMenuItem themeItem = new ToolStripMenuItem(T("Theme", "پوسته"));
+            AddTrayImage(themeItem, "theme", ownedImages);
             ToolStripMenuItem systemTheme = new ToolStripMenuItem(T("System", "هماهنگ با سیستم"));
             systemTheme.Checked = _themeMode == "system";
             systemTheme.Click += delegate { SetThemeMode("system"); };
@@ -1727,6 +1746,7 @@ namespace ChronoDeskWidget
             menu.Items.Add(themeItem);
 
             ToolStripMenuItem ratesItem = new ToolStripMenuItem(T("Market rates", "نرخ بازار"));
+            AddTrayImage(ratesItem, "rates", ownedImages);
             ToolStripMenuItem refreshItem = new ToolStripMenuItem(T("Refresh market rates", "به‌روزرسانی نرخ‌ها"));
             refreshItem.Enabled = IsWidgetVisible("rates");
             refreshItem.Click += delegate { RefreshRates(); };
@@ -1743,8 +1763,11 @@ namespace ChronoDeskWidget
             menu.Items.Add(ratesItem);
 
             ToolStripMenuItem languageItem = new ToolStripMenuItem(T("Language", "زبان"));
+            AddTrayImage(languageItem, "language", ownedImages);
             ToolStripMenuItem englishItem = new ToolStripMenuItem("English");
             ToolStripMenuItem persianItem = new ToolStripMenuItem("فارسی");
+            AddTrayImage(englishItem, "flag-en", ownedImages);
+            AddTrayImage(persianItem, "flag-fa", ownedImages);
             englishItem.Checked = _language == "en";
             persianItem.Checked = _language == "fa";
             englishItem.Click += delegate { SetLanguage("en"); };
@@ -1754,6 +1777,7 @@ namespace ChronoDeskWidget
             menu.Items.Add(languageItem);
 
             ToolStripMenuItem fontItem = new ToolStripMenuItem(T("Font", "قلم"));
+            AddTrayImage(fontItem, "font", ownedImages);
             foreach (string family in _fontFamilies)
             {
                 string selectedFamily = family;
@@ -1765,12 +1789,14 @@ namespace ChronoDeskWidget
             menu.Items.Add(fontItem);
 
             ToolStripMenuItem topItem = new ToolStripMenuItem(T("Keep on top", "همیشه روی پنجره‌ها"));
+            AddTrayImage(topItem, "pin", ownedImages);
             topItem.Checked = _keepOnTop;
             topItem.CheckOnClick = true;
             topItem.Click += delegate { SetTopmost(topItem.Checked); };
             menu.Items.Add(topItem);
 
             ToolStripMenuItem startupItem = new ToolStripMenuItem(T("Start with Windows", "اجرا هنگام ورود به ویندوز"));
+            AddTrayImage(startupItem, "startup", ownedImages);
             startupItem.Checked = IsStartupEnabled();
             startupItem.CheckOnClick = true;
             startupItem.Click += delegate { SetStartup(startupItem.Checked); };
@@ -1778,9 +1804,136 @@ namespace ChronoDeskWidget
 
             menu.Items.Add(new ToolStripSeparator());
             ToolStripMenuItem exitItem = new ToolStripMenuItem(T("Exit", "خروج"));
+            AddTrayImage(exitItem, "exit", ownedImages);
             exitItem.Click += delegate { ExitApplication(); };
             menu.Items.Add(exitItem);
             return menu;
+        }
+
+        private void AddTrayImage(ToolStripMenuItem item, string kind, List<Image> ownedImages)
+        {
+            Image image = CreateTrayImage(kind);
+            item.Image = image;
+            item.ImageTransparentColor = Color.Magenta;
+            ownedImages.Add(image);
+        }
+
+        private Image CreateTrayImage(string kind)
+        {
+            int width = kind == "flag-en" || kind == "flag-fa" ? 20 : 18;
+            Bitmap bitmap = new Bitmap(width, 18);
+            using (Graphics g = Graphics.FromImage(bitmap))
+            {
+                g.SmoothingMode = SmoothingMode.AntiAlias;
+                g.Clear(Color.Transparent);
+
+                if (kind == "flag-en")
+                {
+                    Rectangle flag = new Rectangle(1, 2, 18, 14);
+                    using (SolidBrush navy = new SolidBrush(Color.FromArgb(25, 45, 92))) g.FillRectangle(navy, flag);
+                    using (Pen whiteDiagonal = new Pen(Color.White, 4F))
+                    {
+                        g.DrawLine(whiteDiagonal, 1, 2, 19, 16);
+                        g.DrawLine(whiteDiagonal, 19, 2, 1, 16);
+                    }
+                    using (Pen redDiagonal = new Pen(Color.FromArgb(196, 48, 57), 1.6F))
+                    {
+                        g.DrawLine(redDiagonal, 1, 2, 19, 16);
+                        g.DrawLine(redDiagonal, 19, 2, 1, 16);
+                    }
+                    using (SolidBrush white = new SolidBrush(Color.White))
+                    {
+                        g.FillRectangle(white, 8, 2, 4, 14);
+                        g.FillRectangle(white, 1, 7, 18, 4);
+                    }
+                    using (SolidBrush red = new SolidBrush(Color.FromArgb(196, 48, 57)))
+                    {
+                        g.FillRectangle(red, 9, 2, 2, 14);
+                        g.FillRectangle(red, 1, 8, 18, 2);
+                    }
+                    using (Pen border = new Pen(Color.FromArgb(100, 255, 255, 255))) g.DrawRectangle(border, flag);
+                }
+                else if (kind == "flag-fa")
+                {
+                    Rectangle flag = new Rectangle(1, 2, 18, 14);
+                    using (SolidBrush green = new SolidBrush(Color.FromArgb(35, 138, 85))) g.FillRectangle(green, 1, 2, 18, 4);
+                    using (SolidBrush white = new SolidBrush(Color.White)) g.FillRectangle(white, 1, 6, 18, 5);
+                    using (SolidBrush red = new SolidBrush(Color.FromArgb(205, 55, 55))) g.FillRectangle(red, 1, 11, 18, 5);
+                    using (SolidBrush emblem = new SolidBrush(Color.FromArgb(205, 55, 55)))
+                    {
+                        PointF[] mark = { new PointF(10, 6), new PointF(12, 9), new PointF(10, 12), new PointF(8, 9) };
+                        g.FillPolygon(emblem, mark);
+                    }
+                    using (Pen border = new Pen(Color.FromArgb(100, 255, 255, 255))) g.DrawRectangle(border, flag);
+                }
+                else
+                {
+                    using (Pen pen = new Pen(_themeAccent, 1.8F))
+                    using (SolidBrush brush = new SolidBrush(_themeAccent))
+                    {
+                        pen.StartCap = LineCap.Round;
+                        pen.EndCap = LineCap.Round;
+                        pen.LineJoin = LineJoin.Round;
+                        switch (kind)
+                        {
+                            case "show":
+                                g.DrawEllipse(pen, 2, 5, 14, 8);
+                                g.FillEllipse(brush, 7, 7, 4, 4);
+                                break;
+                            case "hide":
+                                g.DrawEllipse(pen, 2, 5, 14, 8);
+                                g.DrawLine(pen, 2, 2, 16, 16);
+                                break;
+                            case "widgets":
+                                g.DrawRectangle(pen, 2, 2, 6, 6);
+                                g.DrawRectangle(pen, 10, 2, 6, 6);
+                                g.DrawRectangle(pen, 2, 10, 6, 6);
+                                g.DrawRectangle(pen, 10, 10, 6, 6);
+                                break;
+                            case "opacity":
+                                g.DrawEllipse(pen, 2, 2, 14, 14);
+                                g.FillPie(brush, 2, 2, 14, 14, -90, 180);
+                                break;
+                            case "theme":
+                                g.DrawArc(pen, 2, 2, 14, 14, 40, 280);
+                                g.FillEllipse(brush, 10, 2, 6, 6);
+                                break;
+                            case "rates":
+                                g.DrawLine(pen, 2, 15, 2, 3);
+                                g.DrawLine(pen, 2, 15, 16, 15);
+                                g.DrawLines(pen, new Point[] { new Point(4, 12), new Point(8, 8), new Point(11, 10), new Point(15, 4) });
+                                break;
+                            case "language":
+                                using (Font languageFont = new Font("Segoe UI", 10F, FontStyle.Bold, GraphicsUnit.Pixel))
+                                    g.DrawString("文", languageFont, brush, 0, 0);
+                                break;
+                            case "font":
+                                using (Font fontGlyph = new Font("Segoe UI", 11F, FontStyle.Bold, GraphicsUnit.Pixel))
+                                    g.DrawString("A", fontGlyph, brush, 1, 0);
+                                break;
+                            case "pin":
+                                g.DrawLine(pen, 6, 2, 12, 8);
+                                g.DrawLine(pen, 12, 8, 9, 11);
+                                g.DrawLine(pen, 9, 11, 6, 8);
+                                g.DrawLine(pen, 6, 8, 6, 2);
+                                g.DrawLine(pen, 9, 11, 5, 16);
+                                break;
+                            case "startup":
+                                g.DrawRectangle(pen, 2, 3, 14, 10);
+                                g.DrawLine(pen, 7, 15, 11, 15);
+                                g.DrawLine(pen, 9, 13, 9, 15);
+                                break;
+                            case "exit":
+                                g.DrawLine(pen, 2, 9, 12, 9);
+                                g.DrawLine(pen, 8, 5, 12, 9);
+                                g.DrawLine(pen, 8, 13, 12, 9);
+                                g.DrawLine(pen, 14, 3, 14, 15);
+                                break;
+                        }
+                    }
+                }
+            }
+            return bitmap;
         }
 
         private void AddWidgetToggle(ToolStripMenuItem parent, string key, string label)
