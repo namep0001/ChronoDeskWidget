@@ -1041,8 +1041,8 @@ namespace ChronoDeskWidget
             editorFrame.Controls.Add(_notesBox);
 
             VectorIconView savedIcon = new VectorIconView("save");
-            savedIcon.Size = new Size(16, 16);
-            savedIcon.Location = new Point(12, panel.Height - 24);
+            savedIcon.Size = new Size(18, 18);
+            savedIcon.Location = new Point(11, panel.Height - 25);
             savedIcon.ForeColor = _themeAccent;
             savedIcon.BackColor = Color.Transparent;
             panel.Controls.Add(savedIcon);
@@ -2334,12 +2334,22 @@ namespace ChronoDeskWidget
                         g.FillEllipse(brush, 17.5F, 4.5F, 3.5F, 3.5F);
                         break;
                     case "save":
-                        using (GraphicsPath disk = RoundedRectangle(4, 3, 16, 18, 2)) g.DrawPath(pen, disk);
-                        g.DrawLine(pen, 8, 4, 8, 10);
-                        g.DrawLine(pen, 16, 4, 16, 10);
-                        g.DrawLine(pen, 8, 10, 16, 10);
-                        g.DrawLine(pen, 8, 15, 16, 15);
-                        g.DrawLine(pen, 8, 18, 16, 18);
+                        using (GraphicsPath disk = RoundedRectangle(4, 3, 16, 18, 2))
+                            g.FillPath(brush, disk);
+                        Color surface = Parent == null ? Color.FromArgb(31, 39, 52) : Parent.BackColor;
+                        using (SolidBrush cutout = new SolidBrush(surface))
+                        {
+                            g.FillRectangle(cutout, 7, 4, 10, 5);
+                            g.FillRectangle(cutout, 7, 13, 10, 7);
+                        }
+                        using (Pen detail = new Pen(Color.FromArgb(175, 255, 255, 255), 1.5F))
+                        {
+                            detail.StartCap = LineCap.Round;
+                            detail.EndCap = LineCap.Round;
+                            g.DrawLine(detail, 9, 5, 15, 5);
+                            g.DrawLine(detail, 9, 15, 15, 15);
+                            g.DrawLine(detail, 9, 18, 15, 18);
+                        }
                         break;
                     default:
                         g.DrawEllipse(pen, 4, 4, 16, 16);
