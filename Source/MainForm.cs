@@ -116,41 +116,6 @@ namespace ChronoDeskWidget
         [DllImport("uxtheme.dll", CharSet = CharSet.Unicode)]
         private static extern int SetWindowTheme(IntPtr hwnd, string appName, string idList);
 
-        private const int WCA_ACCENT_POLICY = 19;
-        private const int ACCENT_ENABLE_BLUR_BEHIND = 3;
-        private const int ACCENT_ENABLE_ACRYLIC_BLUR_BEHIND = 4;
-
-        [StructLayout(LayoutKind.Sequential)]
-        private struct AccentPolicy
-        {
-            public int AccentState;
-            public int AccentFlags;
-            public uint GradientColor;
-            public int AnimationId;
-        }
-
-        [StructLayout(LayoutKind.Sequential)]
-        private struct WindowCompositionAttributeData
-        {
-            public int Attribute;
-            public IntPtr Data;
-            public int SizeOfData;
-        }
-
-        [DllImport("user32.dll", SetLastError = true)]
-        private static extern bool SetWindowCompositionAttribute(IntPtr hwnd, ref WindowCompositionAttributeData data);
-
-        [DllImport("gdi32.dll", SetLastError = true)]
-        private static extern IntPtr CreateRoundRectRgn(int left, int top, int right, int bottom, int width, int height);
-
-        [DllImport("user32.dll", SetLastError = true)]
-        private static extern int SetWindowRgn(IntPtr hWnd, IntPtr hRgn, bool redraw);
-
-        [DllImport("gdi32.dll")]
-        private static extern bool DeleteObject(IntPtr hObject);
-
-        private bool _glassBackdropActive;
-
         public MainForm(bool startHidden)
         {
             _startHidden = startHidden;
@@ -159,9 +124,9 @@ namespace ChronoDeskWidget
             _themeMode = LocalStore.LoadSetting("theme", "system").ToLowerInvariant();
             if (_themeMode != "light" && _themeMode != "dark") _themeMode = "system";
             _keepOnTop = LocalStore.LoadSetting("topmost", "1") == "1";
-            _opacityPercent = 90;
+            _opacityPercent = 100;
             int savedOpacity;
-            if (int.TryParse(LocalStore.LoadSetting("opacity", "90"), out savedOpacity))
+            if (int.TryParse(LocalStore.LoadSetting("opacity.normal", "100"), out savedOpacity))
                 _opacityPercent = Math.Max(50, Math.Min(100, savedOpacity));
             _rateUnit = LocalStore.LoadSetting("rates.unit", "T");
             if (_rateUnit != "$") _rateUnit = "T";
@@ -186,6 +151,7 @@ namespace ChronoDeskWidget
             Size = new Size(456, 520);
             RefreshSystemTheme(true);
             Font = GetUiFont(9F, FontStyle.Regular);
+            Opacity = _opacityPercent / 100.0;
             TopMost = _keepOnTop;
             PlaceOnDesktop();
 
@@ -285,26 +251,25 @@ namespace ChronoDeskWidget
 
             _themeSignature = signature;
             _themeUsesLightTaskbar = isLight;
-            // The outer glass layer is intentionally brighter than the individual widget cards.
-            _themeBackground = isLight ? Color.FromArgb(246, 248, 252) : Color.FromArgb(82, 96, 116);
-            _themeText = isLight ? Color.FromArgb(31, 38, 49) : Color.FromArgb(244, 247, 252);
-            _themeMutedText = isLight ? Color.FromArgb(105, 115, 130) : Color.FromArgb(170, 181, 197);
+            // Opaque conventional surfaces. Light mode uses dark foregrounds on every card.
+            _themeBackground = isLight ? Color.FromArgb(235, 239, 245) : Color.FromArgb(25, 31, 41);
+            _themeText = isLight ? Color.FromArgb(24, 29, 37) : Color.FromArgb(242, 245, 250);
+            _themeMutedText = isLight ? Color.FromArgb(83, 92, 104) : Color.FromArgb(166, 177, 192);
             _themeAccent = accent;
-            // Preserve the Windows accent hue. Only a small luminance adjustment is applied for legibility.
-            _themeAccentText = GetColorLuminance(accent) > 0.72
-                ? Blend(accent, Color.Black, 0.10)
+            _themeAccentText = isLight
+                ? Blend(accent, Color.Black, 0.28)
                 : Blend(accent, Color.White, 0.08);
-            _themeSurface = isLight ? Color.FromArgb(228, 234, 243) : Color.FromArgb(31, 39, 52);
-            _themeSurfaceAlt = isLight ? Color.FromArgb(237, 242, 249) : Color.FromArgb(41, 51, 67);
-            _themeButton = isLight ? Color.FromArgb(216, 224, 236) : Color.FromArgb(53, 64, 82);
-            _themeInput = isLight ? Color.FromArgb(249, 251, 254) : Color.FromArgb(25, 32, 44);
-            _themeBorder = isLight ? Color.FromArgb(207, 216, 229) : Color.FromArgb(67, 81, 101);
+            _themeSurface = isLight ? Color.White : Color.FromArgb(37, 46, 59);
+            _themeSurfaceAlt = _themeSurface;
+            _themeButton = isLight ? Color.FromArgb(232, 237, 244) : Color.FromArgb(52, 63, 80);
+            _themeInput = isLight ? Color.FromArgb(250, 251, 253) : Color.FromArgb(27, 34, 45);
+            _themeBorder = isLight ? Color.FromArgb(207, 214, 224) : Color.FromArgb(58, 70, 87);
             _themeSelection = accent;
             _themeSelectionText = ContrastText(accent);
 
             BackColor = _themeBackground;
             ForeColor = _themeText;
-            if (IsHandleCreated) ApplyGlassBackdrop();
+            Opacity = _opacityPercent / 100.0;
             if (_trayIcon != null && _generatedIcon != null)
             {
                 Icon previousIcon = _generatedIcon;
@@ -313,109 +278,6 @@ namespace ChronoDeskWidget
                 previousIcon.Dispose();
             }
             if (_content != null && !_content.IsDisposed && !_buildingContent) BuildContent();
-        }
-
-        protected override void OnHandleCreated(EventArgs e)
-        {
-            base.OnHandleCreated(e);
-            UpdateWindowShape();
-            ApplyGlassBackdrop();
-        }
-
-        protected override void OnSizeChanged(EventArgs e)
-        {
-            base.OnSizeChanged(e);
-            if (!IsHandleCreated || IsDisposed) return;
-            UpdateWindowShape();
-            ApplyGlassBackdrop();
-            Invalidate(true);
-        }
-
-        protected override void OnPaint(PaintEventArgs e)
-        {
-            base.OnPaint(e);
-            e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
-            Rectangle bounds = new Rectangle(1, 1, Math.Max(1, Width - 3), Math.Max(1, Height - 3));
-            using (GraphicsPath path = CreateRoundedPath(bounds, 30))
-            using (Pen edge = new Pen(_themeUsesLightTaskbar
-                ? Color.FromArgb(130, 255, 255, 255)
-                : Color.FromArgb(70, 235, 243, 255), 1F))
-                e.Graphics.DrawPath(edge, path);
-        }
-
-        private static GraphicsPath CreateRoundedPath(Rectangle bounds, int radius)
-        {
-            GraphicsPath path = new GraphicsPath();
-            int diameter = Math.Min(radius * 2, Math.Min(bounds.Width, bounds.Height));
-            path.AddArc(bounds.Left, bounds.Top, diameter, diameter, 180, 90);
-            path.AddArc(bounds.Right - diameter, bounds.Top, diameter, diameter, 270, 90);
-            path.AddArc(bounds.Right - diameter, bounds.Bottom - diameter, diameter, diameter, 0, 90);
-            path.AddArc(bounds.Left, bounds.Bottom - diameter, diameter, diameter, 90, 90);
-            path.CloseFigure();
-            return path;
-        }
-
-        protected override void OnPaintBackground(PaintEventArgs e)
-        {
-            if (_glassBackdropActive) return;
-
-            // Fallback material for Windows builds where the acrylic composition API is unavailable.
-            Rectangle bounds = ClientRectangle;
-            using (LinearGradientBrush glass = new LinearGradientBrush(bounds,
-                _themeUsesLightTaskbar ? Color.FromArgb(244, 247, 251) : Color.FromArgb(101, 117, 139),
-                _themeUsesLightTaskbar ? Color.FromArgb(220, 228, 239) : Color.FromArgb(58, 72, 91), 90F))
-                e.Graphics.FillRectangle(glass, bounds);
-            using (Pen edge = new Pen(_themeUsesLightTaskbar ? Color.FromArgb(180, 255, 255, 255) : Color.FromArgb(55, 255, 255, 255), 1F))
-                e.Graphics.DrawLine(edge, 18, 1, Math.Max(18, Width - 18), 1);
-        }
-
-        private void ApplyGlassBackdrop()
-        {
-            if (!IsHandleCreated || IsDisposed) return;
-
-            byte alpha = (byte)Math.Max(128, Math.Min(178, 105 + (int)Math.Round(_opacityPercent * 0.72)));
-            Color material = _themeUsesLightTaskbar
-                ? Color.FromArgb(236, 242, 250)
-                : Color.FromArgb(76, 90, 110);
-
-            AccentPolicy policy = new AccentPolicy();
-            policy.AccentState = ACCENT_ENABLE_ACRYLIC_BLUR_BEHIND;
-            policy.AccentFlags = 2;
-            policy.GradientColor = unchecked((uint)Color.FromArgb(alpha, material.R, material.G, material.B).ToArgb());
-            IntPtr memory = Marshal.AllocHGlobal(Marshal.SizeOf(typeof(AccentPolicy)));
-            try
-            {
-                Marshal.StructureToPtr(policy, memory, false);
-                WindowCompositionAttributeData data = new WindowCompositionAttributeData();
-                data.Attribute = WCA_ACCENT_POLICY;
-                data.Data = memory;
-                data.SizeOfData = Marshal.SizeOf(typeof(AccentPolicy));
-                _glassBackdropActive = SetWindowCompositionAttribute(Handle, ref data);
-
-                if (!_glassBackdropActive)
-                {
-                    policy.AccentState = ACCENT_ENABLE_BLUR_BEHIND;
-                    Marshal.StructureToPtr(policy, memory, false);
-                    _glassBackdropActive = SetWindowCompositionAttribute(Handle, ref data);
-                }
-            }
-            catch
-            {
-                _glassBackdropActive = false;
-            }
-            finally
-            {
-                Marshal.FreeHGlobal(memory);
-            }
-            Invalidate(true);
-        }
-
-        private void UpdateWindowShape()
-        {
-            if (!IsHandleCreated || Width < 40 || Height < 40) return;
-            IntPtr region = CreateRoundRectRgn(0, 0, Width + 1, Height + 1, 32, 32);
-            if (region == IntPtr.Zero) return;
-            if (SetWindowRgn(Handle, region, true) == 0) DeleteObject(region);
         }
 
         private void OnSystemPreferenceChanged(object sender, UserPreferenceChangedEventArgs e)
@@ -557,8 +419,6 @@ namespace ChronoDeskWidget
                 ClientSize = new Size(desiredWidth, desiredHeight);
                 _content.PerformLayout();
                 UpdateSectionWidths();
-                ApplyGlassBackdrop();
-                UpdateWindowShape();
                 Invalidate(true);
             }
             finally { _resizingToContent = false; }
@@ -620,7 +480,7 @@ namespace ChronoDeskWidget
             _content.CellBorderStyle = TableLayoutPanelCellBorderStyle.None;
             _content.Padding = new Padding(8);
             _content.Margin = new Padding(0);
-            _content.BackColor = Color.Transparent;
+            _content.BackColor = _themeBackground;
             _content.RightToLeft = RightToLeft.No;
             _content.MouseDown += StartWindowDrag;
             for (int column = 0; column < _layoutColumns; column++)
@@ -648,17 +508,15 @@ namespace ChronoDeskWidget
             _buildingContent = false;
             if (IsHandleCreated)
             {
-                ApplyGlassBackdrop();
-                UpdateWindowShape();
                 Invalidate(true);
             }
         }
 
         private Panel NewSection(string key, int height)
         {
-            SectionPanel panel = new SectionPanel();
+            Panel panel = new Panel();
+            panel.BorderStyle = BorderStyle.FixedSingle;
             panel.Tag = key;
-            panel.BorderColor = _themeBorder;
             panel.MouseDown += StartWindowDrag;
             panel.Height = height;
             panel.Width = 250;
@@ -721,7 +579,7 @@ namespace ChronoDeskWidget
         private void BuildClockSection()
         {
             Panel panel = NewSection("clock", 146);
-            panel.BackColor = _themeSurfaceAlt;
+            panel.BackColor = _themeSurface;
             AddSectionHeader(panel, "clock", T("Clock", "ساعت"), 0);
 
             _clockLabel = new Label();
@@ -1121,7 +979,7 @@ namespace ChronoDeskWidget
                 value.Location = new Point(108, rowY);
                 value.Size = new Size(panel.Width - 120, 27);
                 value.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
-                value.ForeColor = _themeAccent;
+                value.ForeColor = _themeAccentText;
                 value.Font = GetUiFont(8.1F, FontStyle.Bold);
                 value.TextAlign = _language == "fa" ? ContentAlignment.MiddleLeft : ContentAlignment.MiddleRight;
                 value.Tag = rate.Url;
@@ -1509,7 +1367,8 @@ namespace ChronoDeskWidget
             if (_pomodoroProgressIndicator == null || _pomodoroProgressIndicator.IsDisposed) return;
             int seconds = _remainingSeconds;
             if (_timerRunning) seconds = Math.Max(0, (int)Math.Ceiling((_timerEndsAt - DateTime.Now).TotalSeconds));
-            string display = (seconds / 60).ToString("00") + ":" + (seconds % 60).ToString("00");
+            string display = (seconds / 60).ToString(CultureInfo.InvariantCulture) + ":" +
+                (seconds % 60).ToString("00", CultureInfo.InvariantCulture);
             if (_language == "fa") display = ToPersianDigits(display);
 
             int total = _isBreak ? 5 * 60 : 25 * 60;
@@ -1681,8 +1540,8 @@ namespace ChronoDeskWidget
         private void SetWidgetOpacity(int percent)
         {
             _opacityPercent = Math.Max(50, Math.Min(100, percent));
-            ApplyGlassBackdrop();
-            LocalStore.SaveSetting("opacity", _opacityPercent.ToString(CultureInfo.InvariantCulture));
+            Opacity = _opacityPercent / 100.0;
+            LocalStore.SaveSetting("opacity.normal", _opacityPercent.ToString(CultureInfo.InvariantCulture));
             BuildTrayMenu();
         }
 
@@ -1986,12 +1845,19 @@ namespace ChronoDeskWidget
                                 g.DrawLines(pen, new Point[] { new Point(4, 12), new Point(8, 8), new Point(11, 10), new Point(15, 4) });
                                 break;
                             case "language":
-                                using (Font languageFont = new Font("Segoe UI", 10F, FontStyle.Bold, GraphicsUnit.Pixel))
-                                    g.DrawString("文", languageFont, brush, 0, 0);
+                                g.DrawEllipse(pen, 2, 2, 14, 14);
+                                g.DrawLine(pen, 9, 2, 9, 16);
+                                g.DrawArc(pen, 5, 2, 8, 14, 270, 180);
+                                g.DrawLine(pen, 3, 9, 15, 9);
                                 break;
                             case "font":
-                                using (Font fontGlyph = new Font("Segoe UI", 11F, FontStyle.Bold, GraphicsUnit.Pixel))
-                                    g.DrawString("A", fontGlyph, brush, 1, 0);
+                                using (Font fontGlyph = new Font("Segoe UI", 8.5F, FontStyle.Bold, GraphicsUnit.Pixel))
+                                using (StringFormat centered = new StringFormat())
+                                {
+                                    centered.Alignment = StringAlignment.Center;
+                                    centered.LineAlignment = StringAlignment.Center;
+                                    g.DrawString("Aa", fontGlyph, brush, new RectangleF(0, 0, 18, 18), centered);
+                                }
                                 break;
                             case "pin":
                                 g.DrawLine(pen, 6, 2, 12, 8);
@@ -2544,34 +2410,29 @@ namespace ChronoDeskWidget
             }
             else
             {
-                // Compact bullion illustration with a broad top face and beveled lower sides.
-                PointF[] body = {
-                    new PointF(4, 9), new PointF(Width - 4, 9),
-                    new PointF(Width - 2, 14), new PointF(Width - 6, Height - 3),
-                    new PointF(6, Height - 3), new PointF(2, 14)
-                };
-                using (SolidBrush shadow = new SolidBrush(Color.FromArgb(65, 0, 0, 0)))
+                // Compact stack-of-coins illustration for the 18K gold rate.
+                using (SolidBrush shadow = new SolidBrush(Color.FromArgb(50, 0, 0, 0)))
                     g.FillEllipse(shadow, new RectangleF(3, Height - 7, Width - 6, 5));
-                using (GraphicsPath path = new GraphicsPath())
+                using (LinearGradientBrush lower = new LinearGradientBrush(
+                    new Rectangle(4, 12, Width - 8, Height - 8),
+                    Color.FromArgb(255, 220, 105), Color.FromArgb(157, 91, 21), 90F))
+                using (Pen lowerEdge = new Pen(Color.FromArgb(164, 105, 28), 1F))
                 {
-                    path.AddPolygon(body);
-                    using (LinearGradientBrush gold = new LinearGradientBrush(
-                        new Rectangle(2, 8, Width - 4, Height - 10),
-                        Color.FromArgb(255, 224, 126), Color.FromArgb(170, 111, 27), 90F))
-                        g.FillPath(gold, path);
-                    using (Pen edge = new Pen(Color.FromArgb(218, 171, 68), 0.9F))
-                        g.DrawPath(edge, path);
+                    g.FillRectangle(lower, 4, 13, Width - 8, 7);
+                    g.DrawLine(lowerEdge, 4, 16, Width - 4, 16);
+                    g.DrawEllipse(lowerEdge, 4, 10, Width - 8, 7);
+                    g.DrawArc(lowerEdge, 4, 14, Width - 8, 7, 0, 180);
                 }
-                PointF[] top = {
-                    new PointF(4, 9), new PointF(Width - 4, 9),
-                    new PointF(Width - 8, 14), new PointF(8, 14)
-                };
-                using (LinearGradientBrush facet = new LinearGradientBrush(
-                    new Rectangle(4, 9, Width - 8, 6),
-                    Color.FromArgb(255, 245, 190), Color.FromArgb(231, 180, 79), 90F))
-                    g.FillPolygon(facet, top);
-                using (Pen shine = new Pen(Color.FromArgb(210, 255, 242, 190), 1F))
-                    g.DrawLine(shine, 6, 10, Width - 6, 10);
+                using (LinearGradientBrush upper = new LinearGradientBrush(
+                    new Rectangle(5, 5, Width - 10, 9),
+                    Color.FromArgb(255, 239, 162), Color.FromArgb(190, 122, 32), 90F))
+                using (Pen outer = new Pen(Color.FromArgb(162, 104, 28), 0.9F))
+                using (Pen inner = new Pen(Color.FromArgb(235, 255, 229, 147), 0.9F))
+                {
+                    g.FillEllipse(upper, 5, 5, Width - 10, 9);
+                    g.DrawEllipse(outer, 5, 5, Width - 10, 9);
+                    g.DrawEllipse(inner, 7, 7, Width - 14, 5);
+                }
             }
         }
     }
@@ -2841,8 +2702,8 @@ namespace ChronoDeskWidget
                 Font modeFont = ModeFont ?? SystemFonts.DefaultFont;
                 Font timeFont = TimeFont ?? SystemFonts.DefaultFont;
 
-                RectangleF modeBounds = new RectangleF(13, Height * 0.29F, Width - 26, 17);
-                RectangleF timeBounds = new RectangleF(10, Height * 0.44F, Width - 20, 34);
+                RectangleF timeBounds = new RectangleF(8, Height * 0.31F, Width - 16, 36);
+                RectangleF modeBounds = new RectangleF(12, Height * 0.68F, Width - 24, 15);
                 if (modeBounds.Width > 0F && modeBounds.Height > 0F)
                     g.DrawString(ModeText ?? string.Empty, modeFont, modeBrush, modeBounds, centered);
                 if (timeBounds.Width > 0F && timeBounds.Height > 0F)
@@ -2851,69 +2712,4 @@ namespace ChronoDeskWidget
         }
     }
 
-    internal sealed class SectionPanel : Panel
-    {
-        public Color BorderColor { get; set; }
-        private const int CornerRadius = 16;
-
-        public SectionPanel()
-        {
-            SetStyle(ControlStyles.AllPaintingInWmPaint | ControlStyles.OptimizedDoubleBuffer |
-                ControlStyles.UserPaint | ControlStyles.ResizeRedraw, true);
-            BackColor = SystemColors.Control;
-        }
-
-        protected override void OnSizeChanged(EventArgs e)
-        {
-            base.OnSizeChanged(e);
-            UpdateCornerRegion();
-        }
-
-        private void UpdateCornerRegion()
-        {
-            if (Width < 4 || Height < 4) return;
-            using (GraphicsPath path = RoundedPath(new Rectangle(0, 0, Width, Height), CornerRadius))
-            {
-                Region old = Region;
-                Region = new Region(path);
-                if (old != null) old.Dispose();
-            }
-        }
-
-        private GraphicsPath RoundedPath(Rectangle bounds, int radius)
-        {
-            GraphicsPath path = new GraphicsPath();
-            int diameter = Math.Max(2, radius * 2);
-            diameter = Math.Min(diameter, Math.Min(bounds.Width, bounds.Height));
-            Rectangle arc = new Rectangle(bounds.X, bounds.Y, diameter, diameter);
-            path.AddArc(arc, 180, 90);
-            arc.X = bounds.Right - diameter;
-            path.AddArc(arc, 270, 90);
-            arc.Y = bounds.Bottom - diameter;
-            path.AddArc(arc, 0, 90);
-            arc.X = bounds.Left;
-            path.AddArc(arc, 90, 90);
-            path.CloseFigure();
-            return path;
-        }
-
-        protected override void OnPaintBackground(PaintEventArgs e)
-        {
-            using (SolidBrush fill = new SolidBrush(BackColor))
-                e.Graphics.FillRectangle(fill, ClientRectangle);
-        }
-
-        protected override void OnPaint(PaintEventArgs e)
-        {
-            base.OnPaint(e);
-            e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
-            using (GraphicsPath path = RoundedPath(new Rectangle(0, 0, Width - 1, Height - 1), CornerRadius))
-            using (Pen border = new Pen(BorderColor.IsEmpty ? SystemColors.ControlDark : BorderColor, 0.9F))
-            using (Pen highlight = new Pen(Color.FromArgb(34, 255, 255, 255), 0.8F))
-            {
-                e.Graphics.DrawPath(border, path);
-                e.Graphics.DrawLine(highlight, 20, 1, Math.Max(20, Width - 20), 1);
-            }
-        }
-    }
 }
