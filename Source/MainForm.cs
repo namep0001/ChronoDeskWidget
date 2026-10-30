@@ -369,12 +369,6 @@ namespace ChronoDeskWidget
                 e.Graphics.DrawLine(edge, 18, 1, Math.Max(18, Width - 18), 1);
         }
 
-        protected override void OnSizeChanged(EventArgs e)
-        {
-            base.OnSizeChanged(e);
-            if (IsHandleCreated) UpdateWindowShape();
-        }
-
         private void ApplyGlassBackdrop()
         {
             if (!IsHandleCreated || IsDisposed) return;
