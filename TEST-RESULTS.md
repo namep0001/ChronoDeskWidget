@@ -1,48 +1,51 @@
 # ChronoDesk Widget — validation report
 
-## Project files published
+## Project files
 
-- Added the WinForms project file, all supporting C# source files, build and launch scripts, README, and test checklist.
-- The main form source is stored as Source/MainForm.cs.gz.b64 because the connected upload action does not accept a local file path or direct raw-file transfer. restore-mainform.ps1 reconstructs Source/MainForm.cs and verifies SHA-256 before any compile is attempted.
-- Both build.bat and build.ps1 restore the main form automatically on a clean download.
-- A GitHub Actions workflow is included to restore and commit the readable MainForm.cs source when the workflow can run with contents-write permissions.
+- WinForms project targeting .NET Framework 4.8.
+- Main source: Source\MainForm.cs.
+- A compressed copy of the main source is kept at Source\MainForm.cs.gz.b64 for clean-download recovery. The packaging workflow synchronizes the compressed backup and the SHA-256 expected by restore-mainform.ps1.
+- Build and launch scripts restore the readable source if it is missing.
 
-## Feature changes in this revision
+## Current redesign
 
-- Added tray-menu visibility switches for Clock and dates, Calendar, Tasks, Pomodoro, Quick note, and Live market rates.
-- Saved each visibility choice in %LOCALAPPDATA%\ChronoDeskWidget\settings.ini with all six widgets enabled by default for existing installations.
-- Removed the visible header/title strip and its language, always-on-top, and hide buttons. Those controls are in the tray menu.
-- Added Windows theme detection using the Windows system light/dark preference, the Start/taskbar accent toggle, and Windows accent color registry values.
-- Kept the widget draggable from clock/date labels, section headings, and blank card surfaces.
-- Converted market rates from IRR to toman by dividing displayed values by ten.
-- Avoided automatic market-rate refresh while the rates widget is hidden.
-- Reduced redundant UI allocations using cached fonts, a shared tooltip, and disposal of dynamically recreated calendar/task controls.
+- Replaced the vertical stack with a compact two-column layout. Clock and the single calendar span the widget width; Tasks/Pomodoro and Quick Note/Market Rates use paired columns.
+- Removed the small local-time hint under the two date lines. Gregorian and Solar Hijri dates remain visible; the calendar itself switches between the two systems in one panel.
+- Added light and dark palettes driven by Windows app-theme preference and Windows accent color.
+- Added persisted window coordinates so the widget reopens where it was last moved.
+- Added tray submenus for visible widgets, opacity and blur, market rates, language, and font. The individual widget visibility toggles are nested under Visible widgets; no layout mode is offered.
+- Added widget opacity choices (50–100%) and an Acrylic/blur-behind toggle.
+- Added Toman (T) / Rial (R) price-unit selection independent of English/Persian UI language.
+- Added font choices: Segoe UI, Arial, Calibri, Tahoma, Verdana, and Microsoft YaHei UI.
+- Pomodoro controls now provide Start/Pause, Reset, and a rest/cup switch between 25-minute focus and 5-minute rest. No option/ellipsis menu is present.
+- Task count remains completed/total. Tasks and notes use internal scroll areas with Windows light/dark scrollbar theme hints.
+- Quick Note saves locally automatically and has a Save As button for exporting a UTF-8 .txt file to a user-selected location.
+- Retained TGJU market-data parser fix: correct Persian/English current-price parsing, first formatted price only, and normalized Persian/Arabic numerals.
 
-## Live-rate parsing fix
+## Automated Windows build
 
-The market-rate parser previously used double-escaped whitespace tokens inside C# verbatim regex strings (`\\s`), so the current-price label never matched. The parser now uses proper whitespace matching and supports TGJU's Persian current-rate label, the alternate Persian price label, and English current-price labels. It extracts only the first grouped price (so the adjacent daily-change percentage is not appended) and normalizes Persian/Arabic digits and thousands separators. Download requests now allow up to 12 seconds before timing out.
+- Commit 1e6465d46960648e7d52962ce66b96ac874abacd compiled successfully on GitHub Actions Windows runner.
+- The first attempt at the same redesign caught a WinForms API issue (Timer.IsDisposed); this was corrected before the successful build.
+- Successful Windows build workflow: https://github.com/namep0001/ChronoDeskWidget/actions/runs/41031981582
+- The workflow creates the ChronoDeskWidget-Windows artifact containing bin\Release\ChronoDeskWidget.exe.
 
-## Checks performed in this authoring environment
+## Not yet verified interactively
 
-- The downloaded ZIP project archive was listed and its files identified.
-- Repository access, source file commits, project file commits, and README/script updates were confirmed through GitHub.
-- The restored MainForm source is guarded by a SHA-256 check against the current source hash: c26ecdf5118b078335eed58aa462d5c862a8bdfa92887a27a1f48c9d8dfb6e0e.
-- The build scripts call the restoration script before compiling on a clean repository download.
+The automated build confirms compilation, not all Windows visual behaviors. The following still require manual GUI testing on Windows 10/11:
+- Compare the widget in both Windows light and dark modes and confirm accent colors match the current Windows accent.
+- Try opacity and blur on/off. Acrylic blur depends on Windows composition/version; check appearance at the opacity levels.
+- Drag the window to another location, close the app with tray > Exit, and relaunch; confirm it restores the previous location.
+- Change the font and restart; confirm the selected font persists and Persian glyph fallback is acceptable.
+- Toggle every item in Visible widgets and confirm visibility persists.
+- Verify that the single calendar switches between Solar Hijri and Gregorian and that month navigation/today selection work.
+- Add/complete/remove multiple tasks; confirm the completed/total counter and internal scrollbar.
+- Enter a long quick note; confirm autosave after typing and verify Save As creates a readable UTF-8 .txt file at the chosen location.
+- Switch the market-rate unit between Toman and Rial while testing both UI languages; refresh quotes and verify the values and suffixes.
+- Test Pomodoro Start/Pause, Reset, the focus/rest switch, and automatic transition at the end of each interval.
+- Measure working set and idle CPU in Task Manager after several minutes idle.
 
-## Not verified here
+## Known platform considerations
 
-The authoring environment is Linux and has no Windows C# compiler, MSBuild, or .NET Framework toolchain installed. The modified Windows executable could not be compiled or GUI-tested in this environment. Build on Windows 10/11 and run the smoke tests below.
-
-## Windows smoke-test checklist
-
-1. From a clean GitHub Code → Download ZIP extraction, run Start-Widget.bat and confirm the source restoration checksum passes.
-2. Run build.bat, then launch bin\Release\ChronoDeskWidget.exe.
-3. Confirm there is no visible header, title, icon, or language/topmost/close button on the widget.
-4. Right-click the tray icon and toggle each of the six widget sections; confirm each choice persists after restarting.
-5. Turn all sections off, then turn one back on through the tray. Confirm the widget hides when no sections are enabled and reappears when a widget is enabled.
-6. Drag the widget using clock/date labels or blank card surfaces.
-7. Change Windows between light and dark taskbar styles, and enable/disable the taskbar accent color. Confirm the palette updates without restarting.
-8. Check that dollar, euro, and 18K gold values are divided by ten and labeled as T / تومان (T).
-9. Change language, toggle always-on-top, hide/show, exit, and toggle Windows startup from the tray.
-10. With Tasks, Notes, and Pomodoro enabled, verify add/complete/remove, persistence, and timer functions still work.
-11. Measure working set and idle CPU in Task Manager after several minutes idle.
+- The app is a frameless WinForms desktop window. Backdrop blur uses the Windows composition accent policy; availability and rendering vary by Windows build and desktop composition state.
+- Scrollbar appearance uses the native Windows Explorer/DarkMode_Explorer theme hints. Exact scrollbar coloring is controlled by Windows and may vary by system build.
+- No Windows GUI session was available in this authoring environment, so visual effects and interactive UX have not been claimed as manually verified.
