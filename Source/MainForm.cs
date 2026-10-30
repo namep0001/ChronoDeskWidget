@@ -1388,7 +1388,8 @@ namespace ChronoDeskWidget
                 AccentPolicy policy = new AccentPolicy();
                 policy.AccentState = _blurEnabled ? 4 : 0;
                 policy.AccentFlags = 2;
-                policy.GradientColor = unchecked((int)0xB8222C3B);
+                Color backdropTint = _themeUsesLightTaskbar ? Color.FromArgb(210, 241, 244, 249) : Color.FromArgb(184, 22, 28, 38);
+                policy.GradientColor = backdropTint.ToArgb();
                 IntPtr memory = Marshal.AllocHGlobal(Marshal.SizeOf(typeof(AccentPolicy)));
                 try
                 {
