@@ -858,7 +858,7 @@ namespace ChronoDeskWidget
             b.FlatAppearance.BorderSize = 1;
             b.FlatAppearance.BorderColor = _themeBorder;
             b.BackColor = _themeButton;
-            b.ForeColor = _themeText;
+            b.ForeColor = text.Length <= 2 ? _themeAccentText : _themeText;
             b.Font = GetUiFont(8F, FontStyle.Regular);
             b.Cursor = Cursors.Hand;
             b.Margin = new Padding(1);
