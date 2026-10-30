@@ -52,6 +52,7 @@ namespace ChronoDeskWidget
         private DateTime _lastThemePoll = DateTime.MinValue;
 
         private string _language;
+        private string _themeMode;
         private bool _keepOnTop;
         private bool _exitRequested;
         private bool _startHidden;
@@ -89,8 +90,6 @@ namespace ChronoDeskWidget
         private Label _taskCountLabel;
         private TextBox _notesBox;
         private Label _notesStatusLabel;
-        private Label _pomodoroModeLabel;
-        private Label _pomodoroTimeLabel;
         private Label _pomodoroStatusLabel;
         private Button _pomodoroStartButton;
         private Button _pomodoroResetButton;
@@ -119,6 +118,8 @@ namespace ChronoDeskWidget
             _startHidden = startHidden;
             _language = LocalStore.LoadSetting("language", "en");
             if (_language != "fa") _language = "en";
+            _themeMode = LocalStore.LoadSetting("theme", "system").ToLowerInvariant();
+            if (_themeMode != "light" && _themeMode != "dark") _themeMode = "system";
             _keepOnTop = LocalStore.LoadSetting("topmost", "1") == "1";
             _opacityPercent = 90;
             int savedOpacity;
@@ -239,9 +240,9 @@ namespace ChronoDeskWidget
             if (rawAccent == 0u) rawAccent = ReadRegistryUInt(explorerAccentPath, "AccentColorMenu", 0u);
             if (rawAccent == 0u) rawAccent = ReadRegistryUInt(explorerAccentPath, "StartColorMenu", 0xFFD77800u);
 
-            bool isLight = appLight == 1;
+            bool isLight = _themeMode == "light" || (_themeMode == "system" && appLight == 1);
             Color accent = DecodeDwmColor(rawAccent, Color.FromArgb(0, 120, 215));
-            string signature = appLight + "|" + rawAccent.ToString(CultureInfo.InvariantCulture);
+            string signature = _themeMode + "|" + appLight + "|" + rawAccent.ToString(CultureInfo.InvariantCulture);
             _lastThemePoll = DateTime.Now;
             if (!force && string.Equals(signature, _themeSignature, StringComparison.Ordinal)) return;
 
@@ -351,42 +352,38 @@ namespace ChronoDeskWidget
             }
         }
 
+        private int GetVisibleWidgetCount()
+        {
+            int count = 0;
+            foreach (string key in _widgetKeys)
+                if (IsWidgetVisible(key)) count++;
+            return count;
+        }
+
         private int DetermineLayoutColumns()
         {
-            int columns = 1;
-            for (int row = 0; row < 3; row++)
-            {
-                int count = 0;
-                for (int column = 0; column < 2; column++)
-                {
-                    int index = row * 2 + column;
-                    if (index < _widgetKeys.Length && IsWidgetVisible(_widgetKeys[index])) count++;
-                }
-                columns = Math.Max(columns, count);
-            }
-            return columns;
+            return GetVisibleWidgetCount() > 1 ? 2 : 1;
         }
 
         private void ConfigureContentGrid()
         {
             if (_content == null) return;
+            int rowCount = Math.Max(1, (_sections.Count + _layoutColumns - 1) / _layoutColumns);
             _content.SuspendLayout();
             _content.ColumnCount = _layoutColumns;
-            _content.RowCount = 3;
+            _content.RowCount = rowCount;
             _content.ColumnStyles.Clear();
             for (int column = 0; column < _layoutColumns; column++)
                 _content.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F / _layoutColumns));
 
             _content.RowStyles.Clear();
-            for (int row = 0; row < 3; row++)
+            for (int row = 0; row < rowCount; row++)
             {
                 int rowHeight = 0;
-                foreach (Panel section in _sections)
-                {
-                    int index = Array.IndexOf(_widgetKeys, section.Tag as string);
-                    if (index >= 0 && index / 2 == row)
-                        rowHeight = Math.Max(rowHeight, GetWidgetHeight(section.Tag as string));
-                }
+                int first = row * _layoutColumns;
+                int last = Math.Min(_sections.Count - 1, first + _layoutColumns - 1);
+                for (int index = first; index <= last; index++)
+                    rowHeight = Math.Max(rowHeight, GetWidgetHeight(_sections[index].Tag as string));
                 _content.RowStyles.Add(new RowStyle(SizeType.Absolute, rowHeight == 0 ? 0 : rowHeight + 10));
             }
             _content.ResumeLayout(true);
@@ -395,21 +392,21 @@ namespace ChronoDeskWidget
         private void ResizeWidgetToContent()
         {
             if (_content == null || _content.IsDisposed || _resizingToContent) return;
-            int[] rowHeights = new int[3];
-            foreach (Panel section in _sections)
-            {
-                int index = Array.IndexOf(_widgetKeys, section.Tag as string);
-                if (index >= 0) rowHeights[index / 2] = Math.Max(rowHeights[index / 2], GetWidgetHeight(section.Tag as string));
-            }
-
+            int rowCount = Math.Max(1, (_sections.Count + _layoutColumns - 1) / _layoutColumns);
             int desiredHeight = _content.Padding.Vertical;
-            for (int row = 0; row < 3; row++)
-                if (rowHeights[row] > 0) desiredHeight += rowHeights[row] + 10;
+            for (int row = 0; row < rowCount; row++)
+            {
+                int rowHeight = 0;
+                int first = row * _layoutColumns;
+                int last = Math.Min(_sections.Count - 1, first + _layoutColumns - 1);
+                for (int index = first; index <= last; index++)
+                    rowHeight = Math.Max(rowHeight, GetWidgetHeight(_sections[index].Tag as string));
+                if (rowHeight > 0) desiredHeight += rowHeight + 10;
+            }
 
             int desiredWidth = _content.Padding.Horizontal + (_layoutColumns * 260);
             desiredHeight = Math.Max(MinimumSize.Height, desiredHeight);
             desiredWidth = Math.Max(MinimumSize.Width, desiredWidth);
-
             if (ClientSize.Width == desiredWidth && ClientSize.Height == desiredHeight) return;
             _resizingToContent = true;
             try
@@ -458,8 +455,6 @@ namespace ChronoDeskWidget
             _taskCountLabel = null;
             _notesBox = null;
             _notesStatusLabel = null;
-            _pomodoroModeLabel = null;
-            _pomodoroTimeLabel = null;
             _pomodoroStatusLabel = null;
             _pomodoroStartButton = null;
             _pomodoroResetButton = null;
@@ -474,7 +469,7 @@ namespace ChronoDeskWidget
             _content = new TableLayoutPanel();
             _content.Dock = DockStyle.Fill;
             _content.ColumnCount = _layoutColumns;
-            _content.RowCount = 3;
+            _content.RowCount = Math.Max(1, (_widgetKeys.Length + _layoutColumns - 1) / _layoutColumns);
             _content.GrowStyle = TableLayoutPanelGrowStyle.FixedSize;
             _content.CellBorderStyle = TableLayoutPanelCellBorderStyle.None;
             _content.Padding = new Padding(8);
@@ -484,7 +479,7 @@ namespace ChronoDeskWidget
             _content.MouseDown += StartWindowDrag;
             for (int column = 0; column < _layoutColumns; column++)
                 _content.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F / _layoutColumns));
-            for (int row = 0; row < 3; row++)
+            for (int row = 0; row < _content.RowCount; row++)
                 _content.RowStyles.Add(new RowStyle(SizeType.Absolute, 0));
             Controls.Add(_content);
 
@@ -522,10 +517,12 @@ namespace ChronoDeskWidget
             panel.ForeColor = _themeText;
             _sections.Add(panel);
 
-            int index = Array.IndexOf(_widgetKeys, key);
-            int row = index >= 0 ? index / 2 : 0;
-            int column = index >= 0 && _layoutColumns == 2 ? index % 2 : 0;
+            int index = _sections.Count - 1;
+            int row = index / _layoutColumns;
+            int column = index % _layoutColumns;
             _content.Controls.Add(panel, column, row);
+            if (_layoutColumns == 2 && (_sections.Count % 2) == 1 && index == GetVisibleWidgetCount() - 1)
+                _content.SetColumnSpan(panel, 2);
             return panel;
         }
 
@@ -755,65 +752,65 @@ namespace ChronoDeskWidget
             AddSectionHeader(panel, "pomodoro", T("Pomodoro", "پومودورو"), 0);
 
             _pomodoroProgressIndicator = new CircularProgressIndicator();
-            _pomodoroProgressIndicator.Size = new Size(116, 116);
-            _pomodoroProgressIndicator.Location = new Point((panel.Width - 116) / 2, 37);
+            _pomodoroProgressIndicator.Size = new Size(118, 118);
+            _pomodoroProgressIndicator.Location = new Point((panel.Width - 118) / 2, 33);
+            _pomodoroProgressIndicator.Anchor = AnchorStyles.Top;
             _pomodoroProgressIndicator.TrackColor = _themeBorder;
             _pomodoroProgressIndicator.ProgressColor = _themeAccentText;
-            _pomodoroProgressIndicator.Anchor = AnchorStyles.Top;
+            _pomodoroProgressIndicator.TextColor = _themeText;
+            _pomodoroProgressIndicator.ModeColor = _themeMutedText;
+            _pomodoroProgressIndicator.ModeFont = GetUiFont(7.1F, FontStyle.Regular);
+            _pomodoroProgressIndicator.TimeFont = GetUiFont(19F, FontStyle.Regular);
+            _pomodoroProgressIndicator.FaceColor = _themeSurface;
             panel.Controls.Add(_pomodoroProgressIndicator);
 
-            _pomodoroModeLabel = new Label();
-            _pomodoroModeLabel.Location = new Point((panel.Width - 96) / 2, 62);
-            _pomodoroModeLabel.Size = new Size(96, 16);
-            _pomodoroModeLabel.Anchor = AnchorStyles.Top;
-            _pomodoroModeLabel.Font = GetUiFont(7F, FontStyle.Regular);
-            _pomodoroModeLabel.ForeColor = _themeMutedText;
-            _pomodoroModeLabel.TextAlign = ContentAlignment.MiddleCenter;
-            panel.Controls.Add(_pomodoroModeLabel);
-
-            _pomodoroTimeLabel = new Label();
-            _pomodoroTimeLabel.Location = new Point((panel.Width - 100) / 2, 79);
-            _pomodoroTimeLabel.Size = new Size(100, 34);
-            _pomodoroTimeLabel.Anchor = AnchorStyles.Top;
-            _pomodoroTimeLabel.Font = GetUiFont(22F, FontStyle.Regular);
-            _pomodoroTimeLabel.ForeColor = _themeText;
-            _pomodoroTimeLabel.TextAlign = ContentAlignment.MiddleCenter;
-            panel.Controls.Add(_pomodoroTimeLabel);
-
             _pomodoroStatusLabel = new Label();
-            _pomodoroStatusLabel.Location = new Point(12, 153);
-            _pomodoroStatusLabel.Size = new Size(panel.Width - 24, 17);
+            _pomodoroStatusLabel.Location = new Point(12, 151);
+            _pomodoroStatusLabel.Size = new Size(panel.Width - 24, 18);
             _pomodoroStatusLabel.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
             _pomodoroStatusLabel.Font = GetUiFont(7F, FontStyle.Regular);
             _pomodoroStatusLabel.ForeColor = _themeMutedText;
             _pomodoroStatusLabel.TextAlign = ContentAlignment.MiddleCenter;
             panel.Controls.Add(_pomodoroStatusLabel);
 
-            _pomodoroStartButton = MakeSmallButton(T("Start", "شروع"), T("Start or pause timer", "شروع یا توقف زمان‌سنج"), 70);
-            _pomodoroStartButton.Location = new Point((panel.Width - 146) / 2, 179);
+            _pomodoroStartButton = new VectorIconButton("play");
+            _pomodoroStartButton.Size = new Size(34, 34);
+            _pomodoroStartButton.Location = new Point((panel.Width - 118) / 2, 179);
+            _pomodoroStartButton.ForeColor = _themeAccentText;
+            _pomodoroStartButton.BackColor = _themeButton;
+            _pomodoroStartButton.Cursor = Cursors.Hand;
+            _toolTip.SetToolTip(_pomodoroStartButton, T("Start or pause timer", "شروع یا توقف زمان‌سنج"));
             _pomodoroStartButton.Click += delegate { TogglePomodoro(); };
             panel.Controls.Add(_pomodoroStartButton);
 
-            _pomodoroResetButton = MakeSmallButton("↻", T("Reset current session", "بازنشانی نشست جاری"), 30);
-            _pomodoroResetButton.Location = new Point(_pomodoroStartButton.Right + 6, 179);
+            _pomodoroResetButton = new VectorIconButton("reset");
+            _pomodoroResetButton.Size = new Size(34, 34);
+            _pomodoroResetButton.Location = new Point(_pomodoroStartButton.Right + 8, 179);
+            _pomodoroResetButton.ForeColor = _themeAccentText;
+            _pomodoroResetButton.BackColor = _themeButton;
+            _pomodoroResetButton.Cursor = Cursors.Hand;
+            _toolTip.SetToolTip(_pomodoroResetButton, T("Reset current session", "بازنشانی نشست جاری"));
             _pomodoroResetButton.Click += delegate { ResetPomodoro(); };
             panel.Controls.Add(_pomodoroResetButton);
 
-            _pomodoroSwitchButton = MakeSmallButton("☕", T("Switch between focus and rest", "تغییر بین تمرکز و استراحت"), 34);
-            _pomodoroSwitchButton.Location = new Point(_pomodoroResetButton.Right + 6, 179);
+            _pomodoroSwitchButton = new VectorIconButton("rest");
+            _pomodoroSwitchButton.Size = new Size(34, 34);
+            _pomodoroSwitchButton.Location = new Point(_pomodoroResetButton.Right + 8, 179);
+            _pomodoroSwitchButton.ForeColor = _themeAccentText;
+            _pomodoroSwitchButton.BackColor = _themeButton;
+            _pomodoroSwitchButton.Cursor = Cursors.Hand;
+            _toolTip.SetToolTip(_pomodoroSwitchButton, T("Switch between focus and rest", "تغییر بین تمرکز و استراحت"));
             _pomodoroSwitchButton.Click += delegate { SwitchPomodoroMode(); };
             panel.Controls.Add(_pomodoroSwitchButton);
 
             panel.Resize += delegate
             {
                 _pomodoroProgressIndicator.Left = (panel.ClientSize.Width - _pomodoroProgressIndicator.Width) / 2;
-                _pomodoroModeLabel.Left = (panel.ClientSize.Width - _pomodoroModeLabel.Width) / 2;
-                _pomodoroTimeLabel.Left = (panel.ClientSize.Width - _pomodoroTimeLabel.Width) / 2;
-                _pomodoroStatusLabel.Width = panel.ClientSize.Width - 24;
-                int totalButtons = _pomodoroStartButton.Width + _pomodoroResetButton.Width + _pomodoroSwitchButton.Width + 12;
+                int totalButtons = _pomodoroStartButton.Width + _pomodoroResetButton.Width + _pomodoroSwitchButton.Width + 16;
                 _pomodoroStartButton.Left = (panel.ClientSize.Width - totalButtons) / 2;
-                _pomodoroResetButton.Left = _pomodoroStartButton.Right + 6;
-                _pomodoroSwitchButton.Left = _pomodoroResetButton.Right + 6;
+                _pomodoroResetButton.Left = _pomodoroStartButton.Right + 8;
+                _pomodoroSwitchButton.Left = _pomodoroResetButton.Right + 8;
+                _pomodoroStatusLabel.Width = panel.ClientSize.Width - 24;
             };
         }
 
@@ -888,10 +885,9 @@ namespace ChronoDeskWidget
                 int rowY = firstY + i * 43;
                 string iconKind = rate.Key == "usd" ? "usd" : (rate.Key == "eur" ? "eur" : "gold");
 
-                VectorIconView rateIcon = new VectorIconView(iconKind);
-                rateIcon.Size = new Size(19, 19);
-                rateIcon.Location = new Point(12, rowY + 7);
-                rateIcon.ForeColor = _themeAccentText;
+                CurrencyBadgeIcon rateIcon = new CurrencyBadgeIcon(iconKind);
+                rateIcon.Size = new Size(22, 22);
+                rateIcon.Location = new Point(11, rowY + 5);
                 rateIcon.BackColor = Color.Transparent;
                 panel.Controls.Add(rateIcon);
 
@@ -1294,20 +1290,24 @@ namespace ChronoDeskWidget
 
         private void UpdatePomodoroDisplay()
         {
-            if (_pomodoroTimeLabel == null || _pomodoroTimeLabel.IsDisposed) return;
+            if (_pomodoroProgressIndicator == null || _pomodoroProgressIndicator.IsDisposed) return;
             int seconds = _remainingSeconds;
             if (_timerRunning) seconds = Math.Max(0, (int)Math.Ceiling((_timerEndsAt - DateTime.Now).TotalSeconds));
             string display = (seconds / 60).ToString("00") + ":" + (seconds % 60).ToString("00");
             if (_language == "fa") display = ToPersianDigits(display);
-            _pomodoroTimeLabel.Text = display;
-            _pomodoroModeLabel.Text = _isBreak ? T("Rest · 5 min", "استراحت · ۵ دقیقه") : T("Focus · 25 min", "تمرکز · ۲۵ دقیقه");
-            _pomodoroStartButton.Text = _timerRunning ? T("Pause", "توقف") : T("Start", "شروع");
 
-            if (_pomodoroProgressIndicator != null)
+            int total = _isBreak ? 5 * 60 : 25 * 60;
+            _pomodoroProgressIndicator.TimeText = display;
+            _pomodoroProgressIndicator.ModeText = _isBreak
+                ? T("Rest · 5 min", "استراحت · ۵ دقیقه")
+                : T("Focus · 25 min", "تمرکز · ۲۵ دقیقه");
+            _pomodoroProgressIndicator.Progress = Math.Max(0F, Math.Min(1F, seconds / (float)total));
+            _pomodoroProgressIndicator.Invalidate();
+
+            if (_pomodoroStartButton != null)
             {
-                int total = _isBreak ? 5 * 60 : 25 * 60;
-                _pomodoroProgressIndicator.Progress = Math.Max(0F, Math.Min(1F, (total - seconds) / (float)total));
-                _pomodoroProgressIndicator.Invalidate();
+                _pomodoroStartButton.Kind = _timerRunning ? "pause" : "play";
+                _pomodoroStartButton.Invalidate();
             }
             if (_pomodoroStatusLabel != null && !_timerRunning && string.IsNullOrEmpty(_pomodoroStatusLabel.Text))
                 _pomodoroStatusLabel.Text = T("Ready when you are", "آماده شروع");
@@ -1470,6 +1470,16 @@ namespace ChronoDeskWidget
             BuildTrayMenu();
         }
 
+        private void SetThemeMode(string mode)
+        {
+            mode = mode == "light" || mode == "dark" ? mode : "system";
+            if (_themeMode == mode) return;
+            _themeMode = mode;
+            LocalStore.SaveSetting("theme", _themeMode);
+            RefreshSystemTheme(true);
+            BuildTrayMenu();
+        }
+
         private void SetRateUnit(string unit)
         {
             _rateUnit = unit == "$" ? "$" : "T";
@@ -1561,6 +1571,21 @@ namespace ChronoDeskWidget
                 opacityItem.DropDownItems.Add(opacityOption);
             }
             menu.Items.Add(opacityItem);
+
+            ToolStripMenuItem themeItem = new ToolStripMenuItem(T("Theme", "پوسته"));
+            ToolStripMenuItem systemTheme = new ToolStripMenuItem(T("System", "هماهنگ با سیستم"));
+            systemTheme.Checked = _themeMode == "system";
+            systemTheme.Click += delegate { SetThemeMode("system"); };
+            ToolStripMenuItem lightTheme = new ToolStripMenuItem(T("Light", "روشن"));
+            lightTheme.Checked = _themeMode == "light";
+            lightTheme.Click += delegate { SetThemeMode("light"); };
+            ToolStripMenuItem darkTheme = new ToolStripMenuItem(T("Dark", "تاریک"));
+            darkTheme.Checked = _themeMode == "dark";
+            darkTheme.Click += delegate { SetThemeMode("dark"); };
+            themeItem.DropDownItems.Add(systemTheme);
+            themeItem.DropDownItems.Add(lightTheme);
+            themeItem.DropDownItems.Add(darkTheme);
+            menu.Items.Add(themeItem);
 
             ToolStripMenuItem ratesItem = new ToolStripMenuItem(T("Market rates", "نرخ بازار"));
             ToolStripMenuItem refreshItem = new ToolStripMenuItem(T("Refresh market rates", "به‌روزرسانی نرخ‌ها"));
@@ -1899,8 +1924,12 @@ namespace ChronoDeskWidget
                         g.DrawLine(thin, 7, 16, 9, 18); g.DrawLine(thin, 9, 18, 12, 14.5F); g.DrawLine(thin, 14, 16, 18, 16);
                         break;
                     case "pomodoro":
-                        g.DrawEllipse(pen, 4.5F, 7, 15, 14); g.DrawLine(pen, 12, 7, 12, 4);
-                        g.DrawLine(pen, 12, 5, 8, 3.5F); g.DrawLine(pen, 12, 5, 16, 3.5F); g.DrawLine(thin, 12, 7, 12, 10);
+                        g.DrawEllipse(pen, 5, 7, 14, 14);
+                        g.DrawLine(pen, 12, 7, 12, 4);
+                        g.DrawLine(pen, 9, 3, 15, 3);
+                        g.DrawLine(pen, 12, 4, 12, 7);
+                        g.DrawLine(pen, 12, 11, 12, 15);
+                        g.DrawLine(pen, 12, 15, 16, 17);
                         break;
                     case "notes":
                         PointF[] paper = { new PointF(6, 3), new PointF(15, 3), new PointF(19, 7), new PointF(19, 21), new PointF(6, 21) };
@@ -1911,21 +1940,6 @@ namespace ChronoDeskWidget
                         g.DrawLine(pen, 4, 4, 4, 20); g.DrawLine(pen, 4, 20, 21, 20);
                         PointF[] chart = { new PointF(6, 16), new PointF(10, 12), new PointF(13, 14), new PointF(19, 7) };
                         g.DrawLines(pen, chart); g.FillEllipse(brush, 17.5F, 5.5F, 3, 3);
-                        break;
-                    case "usd":
-                    case "eur":
-                        g.DrawEllipse(pen, 3.5F, 3.5F, 17, 17);
-                        string symbol = Kind == "usd" ? "$" : "€";
-                        using (Font f = new Font("Segoe UI", 12F, FontStyle.Regular, GraphicsUnit.Pixel))
-                        using (StringFormat sf = new StringFormat())
-                        {
-                            sf.Alignment = StringAlignment.Center; sf.LineAlignment = StringAlignment.Center;
-                            g.DrawString(symbol, f, brush, new RectangleF(3, 3, 18, 18), sf);
-                        }
-                        break;
-                    case "gold":
-                        PointF[] ingot = { new PointF(5, 9), new PointF(9, 5), new PointF(17, 5), new PointF(21, 9), new PointF(18, 18), new PointF(7, 18) };
-                        g.DrawPolygon(pen, ingot); g.DrawLine(thin, 5, 9, 21, 9); g.DrawLine(thin, 9, 5, 11, 9); g.DrawLine(thin, 17, 5, 15, 9);
                         break;
                     default: g.DrawEllipse(pen, 4, 4, 16, 16); break;
                 }
@@ -1939,6 +1953,115 @@ namespace ChronoDeskWidget
             path.AddArc(x + width - d, y + height - d, d, d, 0, 90); path.AddArc(x, y + height - d, d, d, 90, 90);
             path.CloseFigure();
             return path;
+        }
+    }
+
+    internal sealed class VectorIconButton : Button
+    {
+        private string _kind;
+        private bool _hovered;
+        public string Kind { get { return _kind; } set { _kind = value ?? "play"; Invalidate(); } }
+
+        public VectorIconButton(string kind)
+        {
+            _kind = kind ?? "play";
+            Text = string.Empty;
+            FlatStyle = FlatStyle.Flat;
+            FlatAppearance.BorderSize = 0;
+            UseVisualStyleBackColor = false;
+            SetStyle(ControlStyles.AllPaintingInWmPaint | ControlStyles.OptimizedDoubleBuffer |
+                ControlStyles.UserPaint | ControlStyles.ResizeRedraw, true);
+            BackColor = SystemColors.Control;
+            TabStop = false;
+        }
+
+        protected override void OnMouseEnter(EventArgs e) { _hovered = true; Invalidate(); base.OnMouseEnter(e); }
+        protected override void OnMouseLeave(EventArgs e) { _hovered = false; Invalidate(); base.OnMouseLeave(e); }
+
+        protected override void OnPaint(PaintEventArgs e)
+        {
+            Graphics g = e.Graphics;
+            g.SmoothingMode = SmoothingMode.AntiAlias;
+            using (SolidBrush background = new SolidBrush(_hovered ? ControlPaint.Light(BackColor, 0.12F) : BackColor))
+                g.FillEllipse(background, 1, 1, Width - 3, Height - 3);
+            using (Pen pen = new Pen(ForeColor, 1.8F))
+            using (SolidBrush brush = new SolidBrush(ForeColor))
+            {
+                pen.StartCap = LineCap.Round;
+                pen.EndCap = LineCap.Round;
+                pen.LineJoin = LineJoin.Round;
+                switch (_kind)
+                {
+                    case "play":
+                        PointF[] triangle = { new PointF(13, 8), new PointF(22, 17), new PointF(13, 26) };
+                        g.FillPolygon(brush, triangle);
+                        break;
+                    case "pause":
+                        using (GraphicsPath bars = new GraphicsPath())
+                        {
+                            bars.AddRectangle(new Rectangle(10, 8, 4, 18));
+                            bars.AddRectangle(new Rectangle(18, 8, 4, 18));
+                            g.FillPath(brush, bars);
+                        }
+                        break;
+                    case "reset":
+                        g.DrawArc(pen, 8, 9, 17, 16, 35, 295);
+                        PointF[] arrow = { new PointF(7, 8), new PointF(15, 8), new PointF(10, 15) };
+                        g.FillPolygon(brush, arrow);
+                        break;
+                    case "rest":
+                        g.DrawLine(pen, 10, 8, 10, 12);
+                        g.DrawLine(pen, 18, 7, 18, 12);
+                        using (GraphicsPath cup = new GraphicsPath())
+                        {
+                            cup.AddLine(7, 14, 19, 14);
+                            cup.AddLine(19, 14, 18, 23);
+                            cup.AddLine(18, 23, 9, 23);
+                            cup.CloseFigure();
+                            g.DrawPath(pen, cup);
+                        }
+                        g.DrawArc(pen, 16, 15, 7, 6, 270, 180);
+                        g.DrawLine(pen, 9, 26, 20, 26);
+                        break;
+                }
+            }
+        }
+    }
+
+    internal sealed class CurrencyBadgeIcon : Control
+    {
+        private readonly string _kind;
+        private readonly Color _badgeColor;
+
+        public CurrencyBadgeIcon(string kind)
+        {
+            _kind = kind ?? "usd";
+            _badgeColor = _kind == "usd" ? Color.FromArgb(39, 153, 105) :
+                (_kind == "eur" ? Color.FromArgb(55, 112, 194) : Color.FromArgb(190, 143, 39));
+            SetStyle(ControlStyles.AllPaintingInWmPaint | ControlStyles.OptimizedDoubleBuffer |
+                ControlStyles.UserPaint | ControlStyles.SupportsTransparentBackColor, true);
+            BackColor = Color.Transparent;
+            TabStop = false;
+        }
+
+        protected override void OnPaint(PaintEventArgs e)
+        {
+            base.OnPaint(e);
+            Graphics g = e.Graphics;
+            g.SmoothingMode = SmoothingMode.AntiAlias;
+            int diameter = Math.Min(Width, Height) - 2;
+            Rectangle circle = new Rectangle((Width - diameter) / 2, (Height - diameter) / 2, diameter, diameter);
+            using (SolidBrush badge = new SolidBrush(_badgeColor))
+            using (SolidBrush white = new SolidBrush(Color.White))
+            using (Font font = new Font("Segoe UI", _kind == "gold" ? 7.1F : 10.5F, FontStyle.Bold, GraphicsUnit.Point))
+            using (StringFormat centered = new StringFormat())
+            {
+                centered.Alignment = StringAlignment.Center;
+                centered.LineAlignment = StringAlignment.Center;
+                g.FillEllipse(badge, circle);
+                string symbol = _kind == "usd" ? "$" : (_kind == "eur" ? "€" : "Au");
+                g.DrawString(symbol, font, white, circle, centered);
+            }
         }
     }
 
@@ -1983,23 +2106,60 @@ namespace ChronoDeskWidget
         public float Progress { get { return _progress; } set { _progress = Math.Max(0F, Math.Min(1F, value)); Invalidate(); } }
         public Color TrackColor { get; set; }
         public Color ProgressColor { get; set; }
+        public Color TextColor { get; set; }
+        public Color ModeColor { get; set; }
+        public Color FaceColor { get; set; }
+        public string TimeText { get; set; }
+        public string ModeText { get; set; }
+        public Font TimeFont { get; set; }
+        public Font ModeFont { get; set; }
+
         public CircularProgressIndicator()
         {
-            SetStyle(ControlStyles.AllPaintingInWmPaint | ControlStyles.OptimizedDoubleBuffer | ControlStyles.UserPaint | ControlStyles.SupportsTransparentBackColor, true);
-            BackColor = Color.Transparent; TrackColor = Color.Gray; ProgressColor = Color.DodgerBlue; TabStop = false;
+            SetStyle(ControlStyles.AllPaintingInWmPaint | ControlStyles.OptimizedDoubleBuffer |
+                ControlStyles.UserPaint | ControlStyles.SupportsTransparentBackColor, true);
+            BackColor = Color.Transparent;
+            TrackColor = Color.Gray;
+            ProgressColor = Color.DodgerBlue;
+            TextColor = Color.Black;
+            ModeColor = Color.Gray;
+            FaceColor = Color.White;
+            TimeText = "25:00";
+            ModeText = "Focus · 25 min";
+            TabStop = false;
         }
+
         protected override void OnPaint(PaintEventArgs e)
         {
             base.OnPaint(e);
-            Graphics g = e.Graphics; g.SmoothingMode = SmoothingMode.AntiAlias;
+            Graphics g = e.Graphics;
+            g.SmoothingMode = SmoothingMode.AntiAlias;
             RectangleF bounds = new RectangleF(7, 7, Width - 14, Height - 14);
             using (Pen track = new Pen(TrackColor, 5.5F))
             using (Pen progress = new Pen(ProgressColor, 5.5F))
+            using (SolidBrush face = new SolidBrush(FaceColor))
+            using (SolidBrush textBrush = new SolidBrush(TextColor))
+            using (SolidBrush modeBrush = new SolidBrush(ModeColor))
+            using (StringFormat centered = new StringFormat())
             {
-                track.StartCap = LineCap.Round; track.EndCap = LineCap.Round;
-                progress.StartCap = LineCap.Round; progress.EndCap = LineCap.Round;
+                centered.Alignment = StringAlignment.Center;
+                centered.LineAlignment = StringAlignment.Center;
+                track.StartCap = LineCap.Round;
+                track.EndCap = LineCap.Round;
+                progress.StartCap = LineCap.Round;
+                progress.EndCap = LineCap.Round;
+                g.FillEllipse(face, bounds);
                 g.DrawArc(track, bounds, -90, 359.8F);
-                if (_progress > 0.001F) g.DrawArc(progress, bounds, -90, Math.Min(359.8F, 360F * _progress));
+                if (_progress > 0.001F)
+                    g.DrawArc(progress, bounds, -90, Math.Min(359.8F, 360F * _progress));
+                using (Font modeFont = ModeFont ?? SystemFonts.DefaultFont)
+                using (Font timeFont = TimeFont ?? SystemFonts.DefaultFont)
+                {
+                    g.DrawString(ModeText ?? string.Empty, modeFont, modeBrush,
+                        new RectangleF(13, Height * 0.34F, Width - 26, 18), centered);
+                    g.DrawString(TimeText ?? string.Empty, timeFont, textBrush,
+                        new RectangleF(10, Height * 0.46F, Width - 20, 32), centered);
+                }
             }
         }
     }
@@ -2008,46 +2168,48 @@ namespace ChronoDeskWidget
     {
         public Color BorderColor { get; set; }
         private const int CornerRadius = 18;
+
         public SectionPanel()
         {
-            SetStyle(ControlStyles.AllPaintingInWmPaint | ControlStyles.OptimizedDoubleBuffer | ControlStyles.UserPaint |
-                ControlStyles.ResizeRedraw | ControlStyles.SupportsTransparentBackColor, true);
+            SetStyle(ControlStyles.AllPaintingInWmPaint | ControlStyles.OptimizedDoubleBuffer |
+                ControlStyles.UserPaint | ControlStyles.ResizeRedraw, true);
             BackColor = SystemColors.Control;
         }
+
         private GraphicsPath RoundedPath(Rectangle bounds, int radius)
         {
             GraphicsPath path = new GraphicsPath();
             int diameter = Math.Max(2, radius * 2);
             diameter = Math.Min(diameter, Math.Min(bounds.Width, bounds.Height));
             Rectangle arc = new Rectangle(bounds.X, bounds.Y, diameter, diameter);
-            path.AddArc(arc, 180, 90); arc.X = bounds.Right - diameter; path.AddArc(arc, 270, 90);
-            arc.Y = bounds.Bottom - diameter; path.AddArc(arc, 0, 90); arc.X = bounds.Left; path.AddArc(arc, 90, 90);
-            path.CloseFigure(); return path;
+            path.AddArc(arc, 180, 90);
+            arc.X = bounds.Right - diameter;
+            path.AddArc(arc, 270, 90);
+            arc.Y = bounds.Bottom - diameter;
+            path.AddArc(arc, 0, 90);
+            arc.X = bounds.Left;
+            path.AddArc(arc, 90, 90);
+            path.CloseFigure();
+            return path;
         }
-        protected override void OnSizeChanged(EventArgs e)
-        {
-            base.OnSizeChanged(e);
-            if (Width < 2 || Height < 2) return;
-            using (GraphicsPath path = RoundedPath(new Rectangle(0, 0, Width, Height), CornerRadius))
-            {
-                Region replacement = new Region(path);
-                Region previous = Region;
-                Region = replacement;
-                if (previous != null) previous.Dispose();
-            }
-            Invalidate();
-        }
+
         protected override void OnPaintBackground(PaintEventArgs e)
         {
+            Color outside = Parent == null ? SystemColors.Control : Parent.BackColor;
             e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+            e.Graphics.Clear(outside);
             using (GraphicsPath path = RoundedPath(new Rectangle(0, 0, Width - 1, Height - 1), CornerRadius))
-            using (SolidBrush brush = new SolidBrush(BackColor)) e.Graphics.FillPath(brush, path);
+            using (SolidBrush brush = new SolidBrush(BackColor))
+                e.Graphics.FillPath(brush, path);
         }
+
         protected override void OnPaint(PaintEventArgs e)
         {
-            base.OnPaint(e); e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+            base.OnPaint(e);
+            e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
             using (GraphicsPath path = RoundedPath(new Rectangle(0, 0, Width - 1, Height - 1), CornerRadius))
-            using (Pen pen = new Pen(BorderColor.IsEmpty ? SystemColors.ControlDark : BorderColor, 1F)) e.Graphics.DrawPath(pen, path);
+            using (Pen pen = new Pen(BorderColor.IsEmpty ? SystemColors.ControlDark : BorderColor, 1F))
+                e.Graphics.DrawPath(pen, path);
         }
     }
 }
