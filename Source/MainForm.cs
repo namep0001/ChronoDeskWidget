@@ -337,6 +337,20 @@ namespace ChronoDeskWidget
                 (int)Math.Round(source.B * (1 - amount) + target.B * amount));
         }
 
+        private int GetWidgetHeight(string key)
+        {
+            switch (key)
+            {
+                case "clock": return 188;
+                case "calendar": return 234;
+                case "tasks": return 222;
+                case "pomodoro": return 222;
+                case "notes": return 222;
+                case "rates": return 222;
+                default: return 0;
+            }
+        }
+
         private int DetermineLayoutColumns()
         {
             int columns = 1;
@@ -371,7 +385,7 @@ namespace ChronoDeskWidget
                 {
                     int index = Array.IndexOf(_widgetKeys, section.Tag as string);
                     if (index >= 0 && index / 2 == row)
-                        rowHeight = Math.Max(rowHeight, section.Height);
+                        rowHeight = Math.Max(rowHeight, GetWidgetHeight(section.Tag as string));
                 }
                 _content.RowStyles.Add(new RowStyle(SizeType.Absolute, rowHeight == 0 ? 0 : rowHeight + 10));
             }
@@ -385,7 +399,7 @@ namespace ChronoDeskWidget
             foreach (Panel section in _sections)
             {
                 int index = Array.IndexOf(_widgetKeys, section.Tag as string);
-                if (index >= 0) rowHeights[index / 2] = Math.Max(rowHeights[index / 2], section.Height);
+                if (index >= 0) rowHeights[index / 2] = Math.Max(rowHeights[index / 2], GetWidgetHeight(section.Tag as string));
             }
 
             int desiredHeight = _content.Padding.Vertical;
@@ -1111,7 +1125,7 @@ namespace ChronoDeskWidget
                 int number = _showSolarCalendar ? _persianCalendar.GetDayOfMonth(date) : date.Day;
                 int displayYear = _showSolarCalendar ? _persianCalendar.GetYear(date) : date.Year;
                 int displayMonth = _showSolarCalendar ? _persianCalendar.GetMonth(date) : date.Month;
-                Button dayButton = new Button();
+                CalendarDayButton dayButton = new CalendarDayButton();
                 dayButton.Dock = DockStyle.Fill;
                 dayButton.Margin = new Padding(2);
                 dayButton.FlatStyle = FlatStyle.Flat;
@@ -1123,23 +1137,9 @@ namespace ChronoDeskWidget
                 dayButton.Font = GetUiFont(7.5F, selected ? FontStyle.Bold : FontStyle.Regular);
                 dayButton.Cursor = Cursors.Hand;
                 dayButton.Tag = date.Date;
-                if (selected)
-                {
-                    dayButton.BackColor = _themeSelection;
-                    dayButton.ForeColor = _themeSelectionText;
-                    dayButton.FlatAppearance.BorderSize = 1;
-                    dayButton.FlatAppearance.BorderColor = _themeAccentText;
-                }
-                else if (todayDate)
-                {
-                    dayButton.BackColor = _themeButton;
-                    dayButton.ForeColor = _themeAccentText;
-                }
-                else
-                {
-                    dayButton.BackColor = currentMonth ? _themeSurfaceAlt : _themeSurface;
-                    dayButton.ForeColor = _themeText;
-                }
+                dayButton.BackColor = _calendarGrid.BackColor;
+                dayButton.FillColor = selected ? _themeSelection : (todayDate ? _themeButton : Color.Empty);
+                dayButton.ForeColor = selected ? _themeSelectionText : (todayDate ? _themeAccentText : (currentMonth ? _themeText : _themeMutedText));
                 dayButton.Click += delegate(object sender, EventArgs e)
                 {
                     Button clicked = (Button)sender;
@@ -1300,7 +1300,7 @@ namespace ChronoDeskWidget
             string display = (seconds / 60).ToString("00") + ":" + (seconds % 60).ToString("00");
             if (_language == "fa") display = ToPersianDigits(display);
             _pomodoroTimeLabel.Text = display;
-            _pomodoroModeLabel.Text = _isBreak ? T("Rest", "استراحت") : T("Focus", "تمرکز");
+            _pomodoroModeLabel.Text = _isBreak ? T("Rest · 5 min", "استراحت · ۵ دقیقه") : T("Focus · 25 min", "تمرکز · ۲۵ دقیقه");
             _pomodoroStartButton.Text = _timerRunning ? T("Pause", "توقف") : T("Start", "شروع");
 
             if (_pomodoroProgressIndicator != null)
@@ -1939,6 +1939,41 @@ namespace ChronoDeskWidget
             path.AddArc(x + width - d, y + height - d, d, d, 0, 90); path.AddArc(x, y + height - d, d, d, 90, 90);
             path.CloseFigure();
             return path;
+        }
+    }
+
+    internal sealed class CalendarDayButton : Button
+    {
+        public Color FillColor { get; set; }
+
+        public CalendarDayButton()
+        {
+            FlatStyle = FlatStyle.Flat;
+            FlatAppearance.BorderSize = 0;
+            UseVisualStyleBackColor = false;
+            SetStyle(ControlStyles.AllPaintingInWmPaint | ControlStyles.OptimizedDoubleBuffer |
+                ControlStyles.UserPaint | ControlStyles.ResizeRedraw, true);
+            TabStop = false;
+        }
+
+        protected override void OnPaint(PaintEventArgs e)
+        {
+            Graphics g = e.Graphics;
+            g.SmoothingMode = SmoothingMode.AntiAlias;
+            using (SolidBrush background = new SolidBrush(Parent == null ? SystemColors.Control : Parent.BackColor))
+                g.FillRectangle(background, ClientRectangle);
+
+            int diameter = Math.Min(20, Math.Min(Width - 2, Height - 1));
+            if (!FillColor.IsEmpty && diameter > 0)
+            {
+                Rectangle circle = new Rectangle((Width - diameter) / 2, (Height - diameter) / 2, diameter, diameter);
+                using (SolidBrush fill = new SolidBrush(FillColor))
+                    g.FillEllipse(fill, circle);
+            }
+
+            TextRenderer.DrawText(g, Text, Font, ClientRectangle, ForeColor,
+                TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPadding |
+                TextFormatFlags.SingleLine);
         }
     }
 
