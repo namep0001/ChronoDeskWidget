@@ -750,6 +750,18 @@ namespace ChronoDeskWidget
             _calendarModeCombo = new ComboBox();
             _calendarModeCombo.DropDownStyle = ComboBoxStyle.DropDownList;
             _calendarModeCombo.FlatStyle = FlatStyle.Flat;
+            _calendarModeCombo.DrawMode = DrawMode.OwnerDrawFixed;
+            _calendarModeCombo.ItemHeight = 20;
+            _calendarModeCombo.DrawItem += delegate(object sender, DrawItemEventArgs e)
+            {
+                if (e.Index < 0) return;
+                bool selectedItem = (e.State & DrawItemState.Selected) == DrawItemState.Selected;
+                Color itemBack = selectedItem ? _themeButton : _themeInput;
+                using (SolidBrush fill = new SolidBrush(itemBack)) e.Graphics.FillRectangle(fill, e.Bounds);
+                TextRenderer.DrawText(e.Graphics, _calendarModeCombo.Items[e.Index].ToString(), _calendarModeCombo.Font,
+                    e.Bounds, _themeText, TextFormatFlags.Left | TextFormatFlags.VerticalCenter |
+                    TextFormatFlags.NoPadding | TextFormatFlags.EndEllipsis);
+            };
             _calendarModeCombo.Font = GetUiFont(8F, FontStyle.Regular);
             _calendarModeCombo.BackColor = _themeButton;
             _calendarModeCombo.ForeColor = _themeText;
@@ -817,11 +829,19 @@ namespace ChronoDeskWidget
             _taskCountLabel.ForeColor = _themeMutedText;
             panel.Controls.Add(_taskCountLabel);
 
+            RoundedSurfacePanel taskInputFrame = new RoundedSurfacePanel();
+            taskInputFrame.Location = new Point(12, 36);
+            taskInputFrame.Size = new Size(panel.Width - 106, 26);
+            taskInputFrame.FillColor = _themeInput;
+            taskInputFrame.BorderColor = _themeBorder;
+            panel.Controls.Add(taskInputFrame);
+
             _taskInput = new TextBox();
-            _taskInput.Location = new Point(12, 36);
-            _taskInput.Size = new Size(panel.Width - 106, 26);
+            _taskInput.Location = new Point(8, 5);
+            _taskInput.Size = new Size(taskInputFrame.Width - 16, 16);
             _taskInput.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
-            _taskInput.BorderStyle = BorderStyle.FixedSingle;
+            _taskInput.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
+            _taskInput.BorderStyle = BorderStyle.None;
             _taskInput.BackColor = _themeInput;
             _taskInput.ForeColor = _themeText;
             _taskInput.Font = GetUiFont(8.6F, FontStyle.Regular);
@@ -829,7 +849,7 @@ namespace ChronoDeskWidget
             {
                 if (e.KeyCode == Keys.Enter) { AddTask(); e.SuppressKeyPress = true; }
             };
-            panel.Controls.Add(_taskInput);
+            taskInputFrame.Controls.Add(_taskInput);
 
             _addTaskButton = MakeSmallButton(T("Add", "افزودن"), T("Add task", "افزودن وظیفه"), 72);
             _addTaskButton.Location = new Point(panel.Width - 84, 35);
@@ -849,7 +869,8 @@ namespace ChronoDeskWidget
             panel.Resize += delegate
             {
                 _taskCountLabel.Left = panel.ClientSize.Width - _taskCountLabel.Width - 12;
-                _taskInput.Width = Math.Max(90, panel.ClientSize.Width - 106);
+                taskInputFrame.Width = Math.Max(90, panel.ClientSize.Width - 106);
+                _taskInput.Width = Math.Max(72, taskInputFrame.ClientSize.Width - 16);
                 _addTaskButton.Left = panel.ClientSize.Width - _addTaskButton.Width - 12;
                 _taskRowsPanel.Width = panel.ClientSize.Width - 24;
                 _taskRowsPanel.Height = panel.ClientSize.Height - _taskRowsPanel.Top - 8;
@@ -1671,6 +1692,8 @@ namespace ChronoDeskWidget
                     SetWindowTheme(_taskRowsPanel.Handle, themeName, null);
                 if (_notesBox != null && !_notesBox.IsDisposed)
                     SetWindowTheme(_notesBox.Handle, themeName, null);
+                if (_calendarModeCombo != null && !_calendarModeCombo.IsDisposed)
+                    SetWindowTheme(_calendarModeCombo.Handle, _themeUsesLightTaskbar ? "Explorer" : "DarkMode_CFD", null);
             }
             catch { }
         }
@@ -1679,6 +1702,8 @@ namespace ChronoDeskWidget
         {
             ContextMenuStrip menu = new ContextMenuStrip();
             menu.Font = GetUiFont(9F, FontStyle.Regular);
+            menu.ForeColor = _themeText;
+            menu.BackColor = _themeSurface;
             menu.Padding = new Padding(4);
             menu.ImageScalingSize = new Size(18, 18);
             menu.ShowImageMargin = true;
@@ -2688,8 +2713,9 @@ namespace ChronoDeskWidget
             Graphics g = e.Graphics;
             g.SmoothingMode = SmoothingMode.AntiAlias;
             RectangleF bounds = new RectangleF(7, 7, Width - 14, Height - 14);
-            using (Pen track = new Pen(TrackColor, 5.5F))
-            using (Pen progress = new Pen(ProgressColor, 5.5F))
+            using (Pen track = new Pen(TrackColor, 5.8F))
+            using (Pen glow = new Pen(Color.FromArgb(42, ProgressColor), 9F))
+            using (Pen progress = new Pen(ProgressColor, 5.8F))
             using (SolidBrush face = new SolidBrush(FaceColor))
             using (SolidBrush textBrush = new SolidBrush(TextColor))
             using (SolidBrush modeBrush = new SolidBrush(ModeColor))
@@ -2704,14 +2730,18 @@ namespace ChronoDeskWidget
                 g.FillEllipse(face, bounds);
                 g.DrawArc(track, bounds, -90, 359.8F);
                 if (_progress > 0.001F)
-                    g.DrawArc(progress, bounds, -90, Math.Min(359.8F, 360F * _progress));
+                {
+                    float sweep = Math.Min(359.8F, 360F * _progress);
+                    g.DrawArc(glow, bounds, -90, sweep);
+                    g.DrawArc(progress, bounds, -90, sweep);
+                }
                 // ModeFont and TimeFont are borrowed from MainForm's shared font cache.
                 // Never dispose them here: OnPaint runs repeatedly and the cache owns their lifetime.
                 Font modeFont = ModeFont ?? SystemFonts.DefaultFont;
                 Font timeFont = TimeFont ?? SystemFonts.DefaultFont;
 
-                RectangleF modeBounds = new RectangleF(13, Height * 0.34F, Width - 26, 18);
-                RectangleF timeBounds = new RectangleF(10, Height * 0.46F, Width - 20, 32);
+                RectangleF modeBounds = new RectangleF(13, Height * 0.29F, Width - 26, 17);
+                RectangleF timeBounds = new RectangleF(10, Height * 0.44F, Width - 20, 34);
                 if (modeBounds.Width > 0F && modeBounds.Height > 0F)
                     g.DrawString(ModeText ?? string.Empty, modeFont, modeBrush, modeBounds, centered);
                 if (timeBounds.Width > 0F && timeBounds.Height > 0F)
@@ -2723,13 +2753,30 @@ namespace ChronoDeskWidget
     internal sealed class SectionPanel : Panel
     {
         public Color BorderColor { get; set; }
-        private const int CornerRadius = 18;
+        private const int CornerRadius = 16;
 
         public SectionPanel()
         {
             SetStyle(ControlStyles.AllPaintingInWmPaint | ControlStyles.OptimizedDoubleBuffer |
                 ControlStyles.UserPaint | ControlStyles.ResizeRedraw, true);
             BackColor = SystemColors.Control;
+        }
+
+        protected override void OnSizeChanged(EventArgs e)
+        {
+            base.OnSizeChanged(e);
+            UpdateCornerRegion();
+        }
+
+        private void UpdateCornerRegion()
+        {
+            if (Width < 4 || Height < 4) return;
+            using (GraphicsPath path = RoundedPath(new Rectangle(0, 0, Width, Height), CornerRadius))
+            {
+                Region old = Region;
+                Region = new Region(path);
+                if (old != null) old.Dispose();
+            }
         }
 
         private GraphicsPath RoundedPath(Rectangle bounds, int radius)
@@ -2751,12 +2798,11 @@ namespace ChronoDeskWidget
 
         protected override void OnPaintBackground(PaintEventArgs e)
         {
-            Color outside = Parent == null ? SystemColors.Control : Parent.BackColor;
             e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
-            e.Graphics.Clear(outside);
-            using (GraphicsPath path = RoundedPath(new Rectangle(0, 0, Width - 1, Height - 1), CornerRadius))
-            using (SolidBrush brush = new SolidBrush(BackColor))
-                e.Graphics.FillPath(brush, path);
+            Color top = ControlPaint.Light(BackColor, 0.07F);
+            Color bottom = ControlPaint.Dark(BackColor, 0.10F);
+            using (LinearGradientBrush fill = new LinearGradientBrush(ClientRectangle, top, bottom, 90F))
+                e.Graphics.FillRectangle(fill, ClientRectangle);
         }
 
         protected override void OnPaint(PaintEventArgs e)
@@ -2764,8 +2810,12 @@ namespace ChronoDeskWidget
             base.OnPaint(e);
             e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
             using (GraphicsPath path = RoundedPath(new Rectangle(0, 0, Width - 1, Height - 1), CornerRadius))
-            using (Pen pen = new Pen(BorderColor.IsEmpty ? SystemColors.ControlDark : BorderColor, 1F))
-                e.Graphics.DrawPath(pen, path);
+            using (Pen border = new Pen(BorderColor.IsEmpty ? SystemColors.ControlDark : BorderColor, 0.9F))
+            using (Pen highlight = new Pen(Color.FromArgb(34, 255, 255, 255), 0.8F))
+            {
+                e.Graphics.DrawPath(border, path);
+                e.Graphics.DrawLine(highlight, 20, 1, Math.Max(20, Width - 20), 1);
+            }
         }
     }
 }
