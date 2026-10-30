@@ -24,9 +24,9 @@ jobs:
           test -f Source/MainForm.cs
           gzip -n -c Source/MainForm.cs | base64 --wrap=0 > Source/MainForm.cs.gz.b64
           source_hash="$(sha256sum Source/MainForm.cs | cut -d' ' -f1)"
-          sed -i -E "s/\\$expectedSha256 = '[0-9a-f]+'/\\$expectedSha256 = '$source_hash'/" restore-mainform.ps1
+          sed -i -E "s/\$expectedSha256 = '[0-9a-f]+'/\\$expectedSha256 = '$source_hash'/" restore-mainform.ps1
           git config user.name "github-actions[bot]"
-          git config user.email "41898282+users.noreply.github.com"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add Source/MainForm.cs.gz.b64 restore-mainform.ps1
           if git diff --cached --quiet; then
             echo "Compressed source and checksum are already synchronized."
