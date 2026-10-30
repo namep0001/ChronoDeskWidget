@@ -91,9 +91,9 @@ namespace ChronoDeskWidget
         private TextBox _notesBox;
         private Label _notesStatusLabel;
         private Label _pomodoroStatusLabel;
-        private Button _pomodoroStartButton;
-        private Button _pomodoroResetButton;
-        private Button _pomodoroSwitchButton;
+        private VectorIconButton _pomodoroStartButton;
+        private VectorIconButton _pomodoroResetButton;
+        private VectorIconButton _pomodoroSwitchButton;
         private Label _ratesStatusLabel;
         private Button _ratesRefreshButton;
         private NotifyIcon _trayIcon;
