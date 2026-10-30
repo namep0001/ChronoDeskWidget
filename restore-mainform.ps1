@@ -3,7 +3,7 @@ Set-Location -LiteralPath $PSScriptRoot
 
 $encodedPath = Join-Path $PSScriptRoot 'Source\MainForm.cs.gz.b64'
 $destination = Join-Path $PSScriptRoot 'Source\MainForm.cs'
-$expectedSha256 = '0a20c221e75c64091e76660c09161de7e78d19a49c687e3d079730092b336908'
+$expectedSha256 = '1fd0cf2c5fce7cf4dbfe0f0b38207ef70c49e916d04e04eaa36352ec614b3f2e'
 
 if (-not (Test-Path -LiteralPath $encodedPath)) {
     throw "Missing compressed MainForm source: $encodedPath"
