@@ -977,7 +977,7 @@ namespace ChronoDeskWidget
             _pomodoroSwitchButton = new VectorIconButton("rest");
             _pomodoroSwitchButton.Size = new Size(28, 28);
             _pomodoroSwitchButton.Location = new Point(0, 119);
-            _pomodoroSwitchButton.ForeColor = _themeMutedText;
+            _pomodoroSwitchButton.ForeColor = _themeText;
             _pomodoroSwitchButton.BackColor = _themeButton;
             _pomodoroSwitchButton.Cursor = Cursors.Hand;
             _pomodoroSwitchButton.ShowBackground = true;
@@ -1763,14 +1763,15 @@ namespace ChronoDeskWidget
         {
             ContextMenuStrip menu = new ContextMenuStrip();
             menu.Font = GetUiFont(9F, FontStyle.Regular);
-            menu.ForeColor = _themeText;
-            menu.BackColor = _themeSurface;
+            menu.ForeColor = Color.FromArgb(34, 40, 49);
+            menu.BackColor = Color.White;
             menu.Padding = new Padding(4);
             menu.ImageScalingSize = new Size(18, 18);
             menu.ShowImageMargin = true;
             menu.ShowCheckMargin = true;
             menu.Renderer = new ToolStripProfessionalRenderer(new WidgetColorTable(
-                _themeSurface, _themeSurfaceAlt, _themeText, _themeMutedText, _themeAccent, _themeBorder));
+                Color.White, Color.FromArgb(239, 243, 248), Color.FromArgb(34, 40, 49),
+                Color.FromArgb(105, 113, 125), Color.FromArgb(76, 86, 100), Color.FromArgb(215, 221, 230)));
 
             List<Image> ownedImages = new List<Image>();
             menu.Disposed += delegate
@@ -1954,8 +1955,9 @@ namespace ChronoDeskWidget
                 }
                 else
                 {
-                    using (Pen pen = new Pen(_themeAccent, 1.8F))
-                    using (SolidBrush brush = new SolidBrush(_themeAccent))
+                    Color iconInk = Color.FromArgb(48, 56, 68);
+                    using (Pen pen = new Pen(iconInk, 1.8F))
+                    using (SolidBrush brush = new SolidBrush(iconInk))
                     {
                         pen.StartCap = LineCap.Round;
                         pen.EndCap = LineCap.Round;
@@ -2389,6 +2391,13 @@ namespace ChronoDeskWidget
         protected override void OnMouseEnter(EventArgs e) { _hovered = true; Invalidate(); base.OnMouseEnter(e); }
         protected override void OnMouseLeave(EventArgs e) { _hovered = false; Invalidate(); base.OnMouseLeave(e); }
 
+        protected override void OnPaintBackground(PaintEventArgs e)
+        {
+            Color parent = Parent == null ? SystemColors.Control : Parent.BackColor;
+            using (SolidBrush fill = new SolidBrush(parent))
+                e.Graphics.FillRectangle(fill, ClientRectangle);
+        }
+
         protected override void OnPaint(PaintEventArgs e)
         {
             Graphics g = e.Graphics;
@@ -2441,18 +2450,19 @@ namespace ChronoDeskWidget
                         g.FillPolygon(brush, refreshArrow);
                         break;
                     case "rest":
-                        g.DrawLine(pen, 11, 6, 11, 11);
-                        g.DrawLine(pen, 19, 6, 19, 11);
+                        g.DrawBezier(pen, new PointF(10, 5), new PointF(7, 7), new PointF(13, 8), new PointF(10, 11));
+                        g.DrawBezier(pen, new PointF(17, 5), new PointF(14, 7), new PointF(20, 8), new PointF(17, 11));
                         using (GraphicsPath cup = new GraphicsPath())
                         {
-                            cup.AddLine(8, 14, 21, 14);
-                            cup.AddLine(21, 14, 20, 24);
-                            cup.AddLine(20, 24, 10, 24);
+                            cup.AddLine(7, 14, 23, 14);
+                            cup.AddLine(23, 14, 21, 26);
+                            cup.AddBezier(21, 26, 20, 28, 10, 28, 9, 26);
+                            cup.AddLine(9, 26, 7, 14);
                             cup.CloseFigure();
                             g.DrawPath(pen, cup);
                         }
-                        g.DrawArc(pen, 18, 15, 8, 7, 270, 180);
-                        g.DrawLine(pen, 9, 27, 22, 27);
+                        g.DrawArc(pen, 20, 16, 9, 8, 270, 180);
+                        g.DrawLine(pen, 8, 30, 22, 30);
                         break;
                     case "export":
                         g.DrawLine(pen, 17, 5, 17, 20);
@@ -2497,17 +2507,13 @@ namespace ChronoDeskWidget
                     g.SetClip(clip);
                     using (SolidBrush white = new SolidBrush(Color.White)) g.FillRectangle(white, circle);
                     using (SolidBrush red = new SolidBrush(Color.FromArgb(190, 42, 54)))
-                    {
                         for (int i = 0; i < 7; i++) g.FillRectangle(red, circle.Left, circle.Top + 1 + i * 3, diameter, 1.6F);
-                    }
                     using (SolidBrush navy = new SolidBrush(Color.FromArgb(33, 54, 105)))
                         g.FillRectangle(navy, circle.Left, circle.Top, diameter * 0.55F, diameter * 0.56F);
                     using (SolidBrush stars = new SolidBrush(Color.White))
-                    {
                         for (int row = 0; row < 3; row++)
                             for (int col = 0; col < 3; col++)
                                 g.FillEllipse(stars, circle.Left + 2 + col * 3, circle.Top + 2 + row * 3, 1.2F, 1.2F);
-                    }
                 }
                 g.Restore(state);
                 using (Pen border = new Pen(Color.FromArgb(150, 255, 255, 255), 0.8F)) g.DrawEllipse(border, circle);
@@ -2534,34 +2540,34 @@ namespace ChronoDeskWidget
             }
             else
             {
-                RectangleF shadowRect = new RectangleF(3, 15, Width - 6, 5);
-                PointF[] ingot = {
-                    new PointF(5, 7), new PointF(Width - 5, 7),
-                    new PointF(Width - 2, 13), new PointF(Width - 7, Height - 4),
-                    new PointF(7, Height - 4), new PointF(2, 13)
+                // Compact bullion illustration with a broad top face and beveled lower sides.
+                PointF[] body = {
+                    new PointF(4, 9), new PointF(Width - 4, 9),
+                    new PointF(Width - 2, 14), new PointF(Width - 6, Height - 3),
+                    new PointF(6, Height - 3), new PointF(2, 14)
                 };
-                using (SolidBrush shadow = new SolidBrush(Color.FromArgb(55, 0, 0, 0))) g.FillEllipse(shadow, shadowRect);
+                using (SolidBrush shadow = new SolidBrush(Color.FromArgb(65, 0, 0, 0)))
+                    g.FillEllipse(shadow, new RectangleF(3, Height - 7, Width - 6, 5));
                 using (GraphicsPath path = new GraphicsPath())
                 {
-                    path.AddPolygon(ingot);
+                    path.AddPolygon(body);
                     using (LinearGradientBrush gold = new LinearGradientBrush(
-                        new Rectangle(2, 5, Width - 4, Height - 8),
-                        Color.FromArgb(255, 231, 143), Color.FromArgb(165, 105, 28), 90F))
+                        new Rectangle(2, 8, Width - 4, Height - 10),
+                        Color.FromArgb(255, 224, 126), Color.FromArgb(170, 111, 27), 90F))
                         g.FillPath(gold, path);
-                    using (Pen edge = new Pen(Color.FromArgb(226, 177, 77), 1F)) g.DrawPath(edge, path);
+                    using (Pen edge = new Pen(Color.FromArgb(218, 171, 68), 0.9F))
+                        g.DrawPath(edge, path);
                 }
-                PointF[] topFacet = { new PointF(5, 7), new PointF(Width - 5, 7), new PointF(Width - 9, 12), new PointF(9, 12) };
-                using (LinearGradientBrush top = new LinearGradientBrush(
-                    new Rectangle(5, 7, Width - 10, 6), Color.FromArgb(255, 244, 185), Color.FromArgb(219, 166, 67), 90F))
-                    g.FillPolygon(top, topFacet);
-                using (Font stamp = new Font("Segoe UI", 5.5F, FontStyle.Bold, GraphicsUnit.Point))
-                using (SolidBrush ink = new SolidBrush(Color.FromArgb(120, 79, 25)))
-                using (StringFormat center = new StringFormat())
-                {
-                    center.Alignment = StringAlignment.Center;
-                    center.LineAlignment = StringAlignment.Center;
-                    g.DrawString("Au", stamp, ink, new RectangleF(6, 12, Width - 12, 9), center);
-                }
+                PointF[] top = {
+                    new PointF(4, 9), new PointF(Width - 4, 9),
+                    new PointF(Width - 8, 14), new PointF(8, 14)
+                };
+                using (LinearGradientBrush facet = new LinearGradientBrush(
+                    new Rectangle(4, 9, Width - 8, 6),
+                    Color.FromArgb(255, 245, 190), Color.FromArgb(231, 180, 79), 90F))
+                    g.FillPolygon(facet, top);
+                using (Pen shine = new Pen(Color.FromArgb(210, 255, 242, 190), 1F))
+                    g.DrawLine(shine, 6, 10, Width - 6, 10);
             }
         }
     }
