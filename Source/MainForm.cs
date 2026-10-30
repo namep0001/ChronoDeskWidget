@@ -113,6 +113,41 @@ namespace ChronoDeskWidget
         [DllImport("uxtheme.dll", CharSet = CharSet.Unicode)]
         private static extern int SetWindowTheme(IntPtr hwnd, string appName, string idList);
 
+        private const int WCA_ACCENT_POLICY = 19;
+        private const int ACCENT_ENABLE_BLUR_BEHIND = 3;
+        private const int ACCENT_ENABLE_ACRYLIC_BLUR_BEHIND = 4;
+
+        [StructLayout(LayoutKind.Sequential)]
+        private struct AccentPolicy
+        {
+            public int AccentState;
+            public int AccentFlags;
+            public uint GradientColor;
+            public int AnimationId;
+        }
+
+        [StructLayout(LayoutKind.Sequential)]
+        private struct WindowCompositionAttributeData
+        {
+            public int Attribute;
+            public IntPtr Data;
+            public int SizeOfData;
+        }
+
+        [DllImport("user32.dll", SetLastError = true)]
+        private static extern bool SetWindowCompositionAttribute(IntPtr hwnd, ref WindowCompositionAttributeData data);
+
+        [DllImport("gdi32.dll", SetLastError = true)]
+        private static extern IntPtr CreateRoundRectRgn(int left, int top, int right, int bottom, int width, int height);
+
+        [DllImport("user32.dll", SetLastError = true)]
+        private static extern int SetWindowRgn(IntPtr hWnd, IntPtr hRgn, bool redraw);
+
+        [DllImport("gdi32.dll")]
+        private static extern bool DeleteObject(IntPtr hObject);
+
+        private bool _glassBackdropActive;
+
         public MainForm(bool startHidden)
         {
             _startHidden = startHidden;
@@ -145,10 +180,9 @@ namespace ChronoDeskWidget
             ShowInTaskbar = false;
             StartPosition = FormStartPosition.Manual;
             MinimumSize = new Size(260, 190);
-            Size = new Size(540, 720);
+            Size = new Size(456, 520);
             RefreshSystemTheme(true);
             Font = GetUiFont(9F, FontStyle.Regular);
-            Opacity = _opacityPercent / 100.0;
             TopMost = _keepOnTop;
             PlaceOnDesktop();
 
@@ -248,23 +282,26 @@ namespace ChronoDeskWidget
 
             _themeSignature = signature;
             _themeUsesLightTaskbar = isLight;
-            _themeBackground = isLight ? Color.FromArgb(241, 244, 249) : Color.FromArgb(22, 28, 38);
-            _themeText = isLight ? Color.FromArgb(31, 37, 47) : Color.FromArgb(241, 245, 251);
-            _themeMutedText = isLight ? Color.FromArgb(102, 111, 125) : Color.FromArgb(157, 168, 184);
+            // The outer glass layer is intentionally brighter than the individual widget cards.
+            _themeBackground = isLight ? Color.FromArgb(232, 238, 247) : Color.FromArgb(82, 96, 116);
+            _themeText = isLight ? Color.FromArgb(31, 38, 49) : Color.FromArgb(244, 247, 252);
+            _themeMutedText = isLight ? Color.FromArgb(105, 115, 130) : Color.FromArgb(170, 181, 197);
             _themeAccent = accent;
-            _themeAccentText = GetColorLuminance(accent) > 0.62
-                ? Blend(accent, Color.Black, 0.24)
-                : Blend(accent, Color.White, 0.13);
-            _themeSurface = isLight ? Color.FromArgb(250, 251, 253) : Color.FromArgb(34, 42, 55);
-            _themeSurfaceAlt = isLight ? Color.White : Color.FromArgb(41, 51, 66);
-            _themeButton = isLight ? Color.FromArgb(235, 239, 245) : Color.FromArgb(51, 62, 79);
-            _themeInput = isLight ? Color.FromArgb(255, 255, 255) : Color.FromArgb(27, 34, 46);
-            _themeBorder = isLight ? Color.FromArgb(218, 224, 233) : Color.FromArgb(59, 71, 89);
+            // Preserve the Windows accent hue. Only a small luminance adjustment is applied for legibility.
+            _themeAccentText = GetColorLuminance(accent) > 0.72
+                ? Blend(accent, Color.Black, 0.10)
+                : Blend(accent, Color.White, 0.08);
+            _themeSurface = isLight ? Color.FromArgb(249, 251, 254) : Color.FromArgb(31, 39, 52);
+            _themeSurfaceAlt = isLight ? Color.FromArgb(255, 255, 255) : Color.FromArgb(41, 51, 67);
+            _themeButton = isLight ? Color.FromArgb(235, 240, 247) : Color.FromArgb(53, 64, 82);
+            _themeInput = isLight ? Color.FromArgb(246, 249, 253) : Color.FromArgb(25, 32, 44);
+            _themeBorder = isLight ? Color.FromArgb(211, 220, 232) : Color.FromArgb(67, 81, 101);
             _themeSelection = accent;
             _themeSelectionText = ContrastText(accent);
 
             BackColor = _themeBackground;
             ForeColor = _themeText;
+            if (IsHandleCreated) ApplyGlassBackdrop();
             if (_trayIcon != null && _generatedIcon != null)
             {
                 Icon previousIcon = _generatedIcon;
@@ -273,6 +310,82 @@ namespace ChronoDeskWidget
                 previousIcon.Dispose();
             }
             if (_content != null && !_content.IsDisposed && !_buildingContent) BuildContent();
+        }
+
+        protected override void OnHandleCreated(EventArgs e)
+        {
+            base.OnHandleCreated(e);
+            ApplyGlassBackdrop();
+            UpdateWindowShape();
+        }
+
+        protected override void OnPaintBackground(PaintEventArgs e)
+        {
+            if (_glassBackdropActive) return;
+
+            // Fallback material for Windows builds where the acrylic composition API is unavailable.
+            Rectangle bounds = ClientRectangle;
+            using (LinearGradientBrush glass = new LinearGradientBrush(bounds,
+                _themeUsesLightTaskbar ? Color.FromArgb(244, 247, 251) : Color.FromArgb(101, 117, 139),
+                _themeUsesLightTaskbar ? Color.FromArgb(220, 228, 239) : Color.FromArgb(58, 72, 91), 90F))
+                e.Graphics.FillRectangle(glass, bounds);
+            using (Pen edge = new Pen(_themeUsesLightTaskbar ? Color.FromArgb(180, 255, 255, 255) : Color.FromArgb(55, 255, 255, 255), 1F))
+                e.Graphics.DrawLine(edge, 18, 1, Math.Max(18, Width - 18), 1);
+        }
+
+        protected override void OnSizeChanged(EventArgs e)
+        {
+            base.OnSizeChanged(e);
+            if (IsHandleCreated) UpdateWindowShape();
+        }
+
+        private void ApplyGlassBackdrop()
+        {
+            if (!IsHandleCreated || IsDisposed) return;
+
+            byte alpha = (byte)Math.Max(150, Math.Min(232, 112 + _opacityPercent));
+            Color material = _themeUsesLightTaskbar
+                ? Color.FromArgb(236, 242, 250)
+                : Color.FromArgb(76, 90, 110);
+
+            AccentPolicy policy = new AccentPolicy();
+            policy.AccentState = ACCENT_ENABLE_ACRYLIC_BLUR_BEHIND;
+            policy.AccentFlags = 2;
+            policy.GradientColor = unchecked((uint)Color.FromArgb(alpha, material.R, material.G, material.B).ToArgb());
+            IntPtr memory = Marshal.AllocHGlobal(Marshal.SizeOf(typeof(AccentPolicy)));
+            try
+            {
+                Marshal.StructureToPtr(policy, memory, false);
+                WindowCompositionAttributeData data = new WindowCompositionAttributeData();
+                data.Attribute = WCA_ACCENT_POLICY;
+                data.Data = memory;
+                data.SizeOfData = Marshal.SizeOf(typeof(AccentPolicy));
+                _glassBackdropActive = SetWindowCompositionAttribute(Handle, ref data);
+
+                if (!_glassBackdropActive)
+                {
+                    policy.AccentState = ACCENT_ENABLE_BLUR_BEHIND;
+                    Marshal.StructureToPtr(policy, memory, false);
+                    _glassBackdropActive = SetWindowCompositionAttribute(Handle, ref data);
+                }
+            }
+            catch
+            {
+                _glassBackdropActive = false;
+            }
+            finally
+            {
+                Marshal.FreeHGlobal(memory);
+            }
+            Invalidate(true);
+        }
+
+        private void UpdateWindowShape()
+        {
+            if (!IsHandleCreated || Width < 40 || Height < 40) return;
+            IntPtr region = CreateRoundRectRgn(0, 0, Width + 1, Height + 1, 24, 24);
+            if (region == IntPtr.Zero) return;
+            if (SetWindowRgn(Handle, region, true) == 0) DeleteObject(region);
         }
 
         private void OnSystemPreferenceChanged(object sender, UserPreferenceChangedEventArgs e)
@@ -342,12 +455,12 @@ namespace ChronoDeskWidget
         {
             switch (key)
             {
-                case "clock": return 188;
-                case "calendar": return 234;
-                case "tasks": return 222;
-                case "pomodoro": return 222;
-                case "notes": return 222;
-                case "rates": return 222;
+                case "clock": return 146;
+                case "calendar": return 184;
+                case "tasks": return 152;
+                case "pomodoro": return 152;
+                case "notes": return 152;
+                case "rates": return 152;
                 default: return 0;
             }
         }
@@ -384,7 +497,7 @@ namespace ChronoDeskWidget
                 int last = Math.Min(_sections.Count - 1, first + _layoutColumns - 1);
                 for (int index = first; index <= last; index++)
                     rowHeight = Math.Max(rowHeight, GetWidgetHeight(_sections[index].Tag as string));
-                _content.RowStyles.Add(new RowStyle(SizeType.Absolute, rowHeight == 0 ? 0 : rowHeight + 10));
+                _content.RowStyles.Add(new RowStyle(SizeType.Absolute, rowHeight == 0 ? 0 : rowHeight + 7));
             }
             _content.ResumeLayout(true);
         }
@@ -401,10 +514,10 @@ namespace ChronoDeskWidget
                 int last = Math.Min(_sections.Count - 1, first + _layoutColumns - 1);
                 for (int index = first; index <= last; index++)
                     rowHeight = Math.Max(rowHeight, GetWidgetHeight(_sections[index].Tag as string));
-                if (rowHeight > 0) desiredHeight += rowHeight + 10;
+                if (rowHeight > 0) desiredHeight += rowHeight + 7;
             }
 
-            int desiredWidth = _content.Padding.Horizontal + (_layoutColumns * 260);
+            int desiredWidth = _content.Padding.Horizontal + (_layoutColumns * 218);
             desiredHeight = Math.Max(MinimumSize.Height, desiredHeight);
             desiredWidth = Math.Max(MinimumSize.Width, desiredWidth);
             if (ClientSize.Width == desiredWidth && ClientSize.Height == desiredHeight) return;
@@ -474,7 +587,7 @@ namespace ChronoDeskWidget
             _content.CellBorderStyle = TableLayoutPanelCellBorderStyle.None;
             _content.Padding = new Padding(8);
             _content.Margin = new Padding(0);
-            _content.BackColor = BackColor;
+            _content.BackColor = Color.Transparent;
             _content.RightToLeft = RightToLeft.No;
             _content.MouseDown += StartWindowDrag;
             for (int column = 0; column < _layoutColumns; column++)
@@ -531,7 +644,7 @@ namespace ChronoDeskWidget
             Label label = new Label();
             label.Text = text;
             label.Height = 25;
-            label.Font = GetUiFont(9.2F, FontStyle.Regular);
+            label.Font = GetUiFont(9.7F, FontStyle.Bold);
             label.ForeColor = _themeText;
             label.TextAlign = _language == "fa" ? ContentAlignment.MiddleRight : ContentAlignment.MiddleLeft;
             label.MouseDown += StartWindowDrag;
@@ -541,19 +654,19 @@ namespace ChronoDeskWidget
         private void AddSectionHeader(Panel panel, string iconKind, string text, int reservedRight)
         {
             VectorIconView icon = new VectorIconView(iconKind);
-            icon.Size = new Size(21, 21);
-            icon.ForeColor = _themeAccentText;
+            icon.Size = new Size(23, 23);
+            icon.ForeColor = _themeAccent;
             icon.BackColor = Color.Transparent;
             icon.Location = _language == "fa"
-                ? new Point(panel.ClientSize.Width - 33, 7)
-                : new Point(12, 7);
+                ? new Point(panel.ClientSize.Width - 35, 6)
+                : new Point(11, 6);
             icon.Anchor = _language == "fa" ? AnchorStyles.Top | AnchorStyles.Right : AnchorStyles.Top | AnchorStyles.Left;
             icon.MouseDown += StartWindowDrag;
             panel.Controls.Add(icon);
 
             Label title = NewSectionTitle(text);
-            title.Location = _language == "fa" ? new Point(12, 5) : new Point(40, 5);
-            title.Width = Math.Max(72, panel.ClientSize.Width - 54 - reservedRight);
+            title.Location = _language == "fa" ? new Point(12, 4) : new Point(40, 4);
+            title.Width = Math.Max(72, panel.ClientSize.Width - 56 - reservedRight);
             title.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
             title.TextAlign = _language == "fa" ? ContentAlignment.MiddleRight : ContentAlignment.MiddleLeft;
             panel.Controls.Add(title);
@@ -567,35 +680,35 @@ namespace ChronoDeskWidget
 
         private void BuildClockSection()
         {
-            Panel panel = NewSection("clock", 188);
+            Panel panel = NewSection("clock", 146);
             panel.BackColor = _themeSurfaceAlt;
             AddSectionHeader(panel, "clock", T("Clock", "ساعت"), 0);
 
             _clockLabel = new Label();
-            _clockLabel.Location = new Point(8, 43);
-            _clockLabel.Size = new Size(panel.Width - 16, 58);
+            _clockLabel.Location = new Point(8, 30);
+            _clockLabel.Size = new Size(panel.Width - 16, 55);
             _clockLabel.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
-            _clockLabel.Font = GetUiFont(30F, FontStyle.Regular);
+            _clockLabel.Font = GetUiFont(31F, FontStyle.Regular);
             _clockLabel.ForeColor = _themeText;
             _clockLabel.TextAlign = ContentAlignment.MiddleCenter;
             _clockLabel.MouseDown += StartWindowDrag;
             panel.Controls.Add(_clockLabel);
 
             _dateEnglishLabel = new Label();
-            _dateEnglishLabel.Location = new Point(8, 115);
-            _dateEnglishLabel.Size = new Size(panel.Width - 16, 20);
+            _dateEnglishLabel.Location = new Point(8, 91);
+            _dateEnglishLabel.Size = new Size(panel.Width - 16, 19);
             _dateEnglishLabel.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
-            _dateEnglishLabel.Font = GetUiFont(7.7F, FontStyle.Regular);
+            _dateEnglishLabel.Font = GetUiFont(8.2F, FontStyle.Regular);
             _dateEnglishLabel.ForeColor = _themeText;
             _dateEnglishLabel.TextAlign = ContentAlignment.MiddleCenter;
             _dateEnglishLabel.MouseDown += StartWindowDrag;
             panel.Controls.Add(_dateEnglishLabel);
 
             _dateSolarLabel = new Label();
-            _dateSolarLabel.Location = new Point(8, 140);
-            _dateSolarLabel.Size = new Size(panel.Width - 16, 20);
+            _dateSolarLabel.Location = new Point(8, 112);
+            _dateSolarLabel.Size = new Size(panel.Width - 16, 18);
             _dateSolarLabel.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
-            _dateSolarLabel.Font = GetUiFont(7.7F, FontStyle.Regular);
+            _dateSolarLabel.Font = GetUiFont(8F, FontStyle.Regular);
             _dateSolarLabel.ForeColor = _themeAccentText;
             _dateSolarLabel.TextAlign = ContentAlignment.MiddleCenter;
             _dateSolarLabel.MouseDown += StartWindowDrag;
@@ -611,40 +724,40 @@ namespace ChronoDeskWidget
 
         private void BuildCalendarSection()
         {
-            Panel panel = NewSection("calendar", 234);
+            Panel panel = NewSection("calendar", 184);
             AddSectionHeader(panel, "calendar", T("Calendar", "تقویم"), 0);
 
             Button previous = MakeSmallButton("‹", T("Previous month", "ماه قبل"), 28);
-            previous.Location = new Point(12, 34);
+            previous.Location = new Point(12, 31);
             previous.Click += delegate { MoveCalendarMonth(-1); };
             panel.Controls.Add(previous);
 
             _calendarMonthLabel = new Label();
-            _calendarMonthLabel.Location = new Point(45, 34);
-            _calendarMonthLabel.Size = new Size(panel.Width - 90, 25);
+            _calendarMonthLabel.Location = new Point(45, 31);
+            _calendarMonthLabel.Size = new Size(panel.Width - 90, 24);
             _calendarMonthLabel.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
-            _calendarMonthLabel.Font = GetUiFont(8.1F, FontStyle.Regular);
+            _calendarMonthLabel.Font = GetUiFont(8.5F, FontStyle.Bold);
             _calendarMonthLabel.ForeColor = _themeText;
             _calendarMonthLabel.TextAlign = ContentAlignment.MiddleCenter;
             panel.Controls.Add(_calendarMonthLabel);
 
             Button next = MakeSmallButton("›", T("Next month", "ماه بعد"), 28);
             next.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-            next.Location = new Point(panel.Width - 40, 34);
+            next.Location = new Point(panel.Width - 40, 31);
             next.Click += delegate { MoveCalendarMonth(1); };
             panel.Controls.Add(next);
 
             _calendarModeCombo = new ComboBox();
             _calendarModeCombo.DropDownStyle = ComboBoxStyle.DropDownList;
             _calendarModeCombo.FlatStyle = FlatStyle.Flat;
-            _calendarModeCombo.Font = GetUiFont(7.7F, FontStyle.Regular);
+            _calendarModeCombo.Font = GetUiFont(8F, FontStyle.Regular);
             _calendarModeCombo.BackColor = _themeButton;
             _calendarModeCombo.ForeColor = _themeText;
             _calendarModeCombo.Items.Add(T("Solar Hijri", "هجری شمسی"));
             _calendarModeCombo.Items.Add(T("Gregorian", "میلادی"));
             _calendarModeCombo.SelectedIndex = _showSolarCalendar ? 0 : 1;
-            _calendarModeCombo.Size = new Size(120, 25);
-            _calendarModeCombo.Location = new Point(12, 64);
+            _calendarModeCombo.Size = new Size(116, 23);
+            _calendarModeCombo.Location = new Point(12, 58);
             _calendarModeCombo.SelectedIndexChanged += delegate
             {
                 _showSolarCalendar = _calendarModeCombo.SelectedIndex == 0;
@@ -655,7 +768,7 @@ namespace ChronoDeskWidget
 
             Button today = MakeSmallButton(T("Today", "امروز"), T("Jump to today", "رفتن به امروز"), 56);
             today.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-            today.Location = new Point(panel.Width - 68, 64);
+            today.Location = new Point(panel.Width - 68, 58);
             today.Click += delegate
             {
                 _selectedDate = DateTime.Today;
@@ -666,8 +779,8 @@ namespace ChronoDeskWidget
             panel.Controls.Add(today);
 
             _calendarGrid = new TableLayoutPanel();
-            _calendarGrid.Location = new Point(12, 95);
-            _calendarGrid.Size = new Size(panel.Width - 24, 132);
+            _calendarGrid.Location = new Point(12, 85);
+            _calendarGrid.Size = new Size(panel.Width - 24, 92);
             _calendarGrid.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
             _calendarGrid.ColumnCount = 7;
             _calendarGrid.RowCount = 7;
@@ -676,8 +789,8 @@ namespace ChronoDeskWidget
             _calendarGrid.BackColor = panel.BackColor;
             _calendarGrid.CellBorderStyle = TableLayoutPanelCellBorderStyle.None;
             for (int i = 0; i < 7; i++) _calendarGrid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F / 7F));
-            _calendarGrid.RowStyles.Add(new RowStyle(SizeType.Absolute, 17));
-            for (int i = 0; i < 6; i++) _calendarGrid.RowStyles.Add(new RowStyle(SizeType.Absolute, 19));
+            _calendarGrid.RowStyles.Add(new RowStyle(SizeType.Absolute, 14));
+            for (int i = 0; i < 6; i++) _calendarGrid.RowStyles.Add(new RowStyle(SizeType.Absolute, 13));
             panel.Controls.Add(_calendarGrid);
 
             panel.Resize += delegate
@@ -692,7 +805,7 @@ namespace ChronoDeskWidget
 
         private void BuildTasksSection()
         {
-            Panel panel = NewSection("tasks", 222);
+            Panel panel = NewSection("tasks", 152);
             AddSectionHeader(panel, "tasks", T("Tasks", "وظایف"), 96);
 
             _taskCountLabel = new Label();
@@ -700,18 +813,18 @@ namespace ChronoDeskWidget
             _taskCountLabel.Size = new Size(88, 21);
             _taskCountLabel.Anchor = AnchorStyles.Top | AnchorStyles.Right;
             _taskCountLabel.TextAlign = ContentAlignment.MiddleRight;
-            _taskCountLabel.Font = GetUiFont(7.5F, FontStyle.Regular);
+            _taskCountLabel.Font = GetUiFont(7.4F, FontStyle.Regular);
             _taskCountLabel.ForeColor = _themeMutedText;
             panel.Controls.Add(_taskCountLabel);
 
             _taskInput = new TextBox();
-            _taskInput.Location = new Point(12, 38);
-            _taskInput.Size = new Size(panel.Width - 106, 27);
+            _taskInput.Location = new Point(12, 36);
+            _taskInput.Size = new Size(panel.Width - 106, 26);
             _taskInput.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
             _taskInput.BorderStyle = BorderStyle.FixedSingle;
             _taskInput.BackColor = _themeInput;
             _taskInput.ForeColor = _themeText;
-            _taskInput.Font = GetUiFont(8.5F, FontStyle.Regular);
+            _taskInput.Font = GetUiFont(8.6F, FontStyle.Regular);
             _taskInput.KeyDown += delegate(object sender, KeyEventArgs e)
             {
                 if (e.KeyCode == Keys.Enter) { AddTask(); e.SuppressKeyPress = true; }
@@ -719,15 +832,15 @@ namespace ChronoDeskWidget
             panel.Controls.Add(_taskInput);
 
             _addTaskButton = MakeSmallButton(T("Add", "افزودن"), T("Add task", "افزودن وظیفه"), 72);
-            _addTaskButton.Location = new Point(panel.Width - 84, 37);
+            _addTaskButton.Location = new Point(panel.Width - 84, 35);
             _addTaskButton.Anchor = AnchorStyles.Top | AnchorStyles.Right;
             _addTaskButton.Height = 28;
             _addTaskButton.Click += delegate { AddTask(); };
             panel.Controls.Add(_addTaskButton);
 
             _taskRowsPanel = new Panel();
-            _taskRowsPanel.Location = new Point(12, 72);
-            _taskRowsPanel.Size = new Size(panel.Width - 24, 140);
+            _taskRowsPanel.Location = new Point(12, 68);
+            _taskRowsPanel.Size = new Size(panel.Width - 24, 76);
             _taskRowsPanel.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right | AnchorStyles.Bottom;
             _taskRowsPanel.AutoScroll = true;
             _taskRowsPanel.BackColor = panel.BackColor;
@@ -748,57 +861,54 @@ namespace ChronoDeskWidget
 
         private void BuildPomodoroSection()
         {
-            Panel panel = NewSection("pomodoro", 222);
+            Panel panel = NewSection("pomodoro", 152);
             AddSectionHeader(panel, "pomodoro", T("Pomodoro", "پومودورو"), 0);
 
             _pomodoroProgressIndicator = new CircularProgressIndicator();
-            _pomodoroProgressIndicator.Size = new Size(118, 118);
-            _pomodoroProgressIndicator.Location = new Point((panel.Width - 118) / 2, 33);
+            _pomodoroProgressIndicator.Size = new Size(96, 96);
+            _pomodoroProgressIndicator.Location = new Point((panel.Width - 96) / 2, 24);
             _pomodoroProgressIndicator.Anchor = AnchorStyles.Top;
             _pomodoroProgressIndicator.TrackColor = _themeBorder;
-            _pomodoroProgressIndicator.ProgressColor = _themeAccentText;
+            _pomodoroProgressIndicator.ProgressColor = _themeAccent;
             _pomodoroProgressIndicator.TextColor = _themeText;
             _pomodoroProgressIndicator.ModeColor = _themeMutedText;
-            _pomodoroProgressIndicator.ModeFont = GetUiFont(7.1F, FontStyle.Regular);
-            _pomodoroProgressIndicator.TimeFont = GetUiFont(19F, FontStyle.Regular);
+            _pomodoroProgressIndicator.ModeFont = GetUiFont(7.8F, FontStyle.Bold);
+            _pomodoroProgressIndicator.TimeFont = GetUiFont(18.5F, FontStyle.Regular);
             _pomodoroProgressIndicator.FaceColor = _themeSurface;
             panel.Controls.Add(_pomodoroProgressIndicator);
 
-            _pomodoroStatusLabel = new Label();
-            _pomodoroStatusLabel.Location = new Point(12, 151);
-            _pomodoroStatusLabel.Size = new Size(panel.Width - 24, 18);
-            _pomodoroStatusLabel.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
-            _pomodoroStatusLabel.Font = GetUiFont(7F, FontStyle.Regular);
-            _pomodoroStatusLabel.ForeColor = _themeMutedText;
-            _pomodoroStatusLabel.TextAlign = ContentAlignment.MiddleCenter;
-            panel.Controls.Add(_pomodoroStatusLabel);
+            // Session state remains in the timer logic and notifications, without a redundant caption under the dial.
+            _pomodoroStatusLabel = null;
 
             _pomodoroStartButton = new VectorIconButton("play");
-            _pomodoroStartButton.Size = new Size(34, 34);
-            _pomodoroStartButton.Location = new Point((panel.Width - 118) / 2, 179);
-            _pomodoroStartButton.ForeColor = _themeAccentText;
-            _pomodoroStartButton.BackColor = _themeButton;
+            _pomodoroStartButton.Size = new Size(30, 30);
+            _pomodoroStartButton.Location = new Point(0, 118);
+            _pomodoroStartButton.ForeColor = ContrastText(_themeAccent);
+            _pomodoroStartButton.BackColor = _themeAccent;
             _pomodoroStartButton.Cursor = Cursors.Hand;
+            _pomodoroStartButton.ShowBackground = true;
             _toolTip.SetToolTip(_pomodoroStartButton, T("Start or pause timer", "شروع یا توقف زمان‌سنج"));
             _pomodoroStartButton.Click += delegate { TogglePomodoro(); };
             panel.Controls.Add(_pomodoroStartButton);
 
             _pomodoroResetButton = new VectorIconButton("reset");
-            _pomodoroResetButton.Size = new Size(34, 34);
-            _pomodoroResetButton.Location = new Point(_pomodoroStartButton.Right + 8, 179);
-            _pomodoroResetButton.ForeColor = _themeAccentText;
+            _pomodoroResetButton.Size = new Size(28, 28);
+            _pomodoroResetButton.Location = new Point(0, 119);
+            _pomodoroResetButton.ForeColor = _themeMutedText;
             _pomodoroResetButton.BackColor = _themeButton;
             _pomodoroResetButton.Cursor = Cursors.Hand;
+            _pomodoroResetButton.ShowBackground = true;
             _toolTip.SetToolTip(_pomodoroResetButton, T("Reset current session", "بازنشانی نشست جاری"));
             _pomodoroResetButton.Click += delegate { ResetPomodoro(); };
             panel.Controls.Add(_pomodoroResetButton);
 
             _pomodoroSwitchButton = new VectorIconButton("rest");
-            _pomodoroSwitchButton.Size = new Size(34, 34);
-            _pomodoroSwitchButton.Location = new Point(_pomodoroResetButton.Right + 8, 179);
-            _pomodoroSwitchButton.ForeColor = _themeAccentText;
+            _pomodoroSwitchButton.Size = new Size(28, 28);
+            _pomodoroSwitchButton.Location = new Point(0, 119);
+            _pomodoroSwitchButton.ForeColor = _themeMutedText;
             _pomodoroSwitchButton.BackColor = _themeButton;
             _pomodoroSwitchButton.Cursor = Cursors.Hand;
+            _pomodoroSwitchButton.ShowBackground = true;
             _toolTip.SetToolTip(_pomodoroSwitchButton, T("Switch between focus and rest", "تغییر بین تمرکز و استراحت"));
             _pomodoroSwitchButton.Click += delegate { SwitchPomodoroMode(); };
             panel.Controls.Add(_pomodoroSwitchButton);
@@ -806,37 +916,50 @@ namespace ChronoDeskWidget
             panel.Resize += delegate
             {
                 _pomodoroProgressIndicator.Left = (panel.ClientSize.Width - _pomodoroProgressIndicator.Width) / 2;
-                int totalButtons = _pomodoroStartButton.Width + _pomodoroResetButton.Width + _pomodoroSwitchButton.Width + 16;
+                int totalButtons = _pomodoroStartButton.Width + _pomodoroResetButton.Width + _pomodoroSwitchButton.Width + 14;
                 _pomodoroStartButton.Left = (panel.ClientSize.Width - totalButtons) / 2;
-                _pomodoroResetButton.Left = _pomodoroStartButton.Right + 8;
-                _pomodoroSwitchButton.Left = _pomodoroResetButton.Right + 8;
-                _pomodoroStatusLabel.Width = panel.ClientSize.Width - 24;
+                _pomodoroResetButton.Left = _pomodoroStartButton.Right + 7;
+                _pomodoroSwitchButton.Left = _pomodoroResetButton.Right + 7;
             };
         }
 
         private void BuildNotesSection()
         {
-            Panel panel = NewSection("notes", 222);
-            AddSectionHeader(panel, "notes", T("Quick Notes", "یادداشت‌های سریع"), 42);
+            Panel panel = NewSection("notes", 152);
+            AddSectionHeader(panel, "notes", T("Quick Note", "یادداشت سریع"), 38);
 
-            Button saveAsButton = MakeSmallButton("↓", T("Save note as a .txt file", "ذخیره یادداشت به‌صورت فایل متنی"), 30);
-            saveAsButton.Location = new Point(panel.Width - 44, 4);
+            VectorIconButton saveAsButton = new VectorIconButton("export");
+            saveAsButton.Size = new Size(26, 26);
+            saveAsButton.Location = new Point(panel.Width - 38, 3);
             saveAsButton.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+            saveAsButton.ForeColor = _themeAccent;
+            saveAsButton.BackColor = Color.Transparent;
+            saveAsButton.ShowBackground = false;
+            saveAsButton.Cursor = Cursors.Hand;
+            _toolTip.SetToolTip(saveAsButton, T("Export note as a text file", "ذخیره یادداشت به‌صورت فایل متنی"));
             saveAsButton.Click += delegate { SaveNoteAs(); };
             panel.Controls.Add(saveAsButton);
 
+            RoundedSurfacePanel editorFrame = new RoundedSurfacePanel();
+            editorFrame.Location = new Point(12, 35);
+            editorFrame.Size = new Size(panel.Width - 24, 86);
+            editorFrame.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
+            editorFrame.FillColor = _themeInput;
+            editorFrame.BorderColor = _themeBorder;
+            panel.Controls.Add(editorFrame);
+
             _notesBox = new TextBox();
-            _notesBox.Location = new Point(12, 38);
-            _notesBox.Size = new Size(panel.Width - 24, 150);
+            _notesBox.Location = new Point(10, 7);
+            _notesBox.Size = new Size(editorFrame.Width - 20, editorFrame.Height - 14);
             _notesBox.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
             _notesBox.Multiline = true;
             _notesBox.AcceptsReturn = true;
             _notesBox.AcceptsTab = true;
             _notesBox.ScrollBars = ScrollBars.Vertical;
-            _notesBox.BorderStyle = BorderStyle.FixedSingle;
+            _notesBox.BorderStyle = BorderStyle.None;
             _notesBox.BackColor = _themeInput;
             _notesBox.ForeColor = _themeText;
-            _notesBox.Font = GetUiFont(8.5F, FontStyle.Regular);
+            _notesBox.Font = GetUiFont(8.8F, FontStyle.Regular);
             _notesBox.Text = LocalStore.LoadNotes();
             _notesBox.TextChanged += delegate
             {
@@ -844,59 +967,75 @@ namespace ChronoDeskWidget
                 if (_notesStatusLabel != null) _notesStatusLabel.Text = T("Saving…", "در حال ذخیره…");
             };
             _notesBox.Leave += delegate { SaveNotesIfNeeded(); };
-            panel.Controls.Add(_notesBox);
+            editorFrame.Controls.Add(_notesBox);
+
+            VectorIconView savedIcon = new VectorIconView("save");
+            savedIcon.Size = new Size(16, 16);
+            savedIcon.Location = new Point(12, panel.Height - 24);
+            savedIcon.ForeColor = _themeAccent;
+            savedIcon.BackColor = Color.Transparent;
+            panel.Controls.Add(savedIcon);
 
             _notesStatusLabel = new Label();
             _notesStatusLabel.Text = T("Saved locally", "ذخیره‌شده روی دستگاه");
-            _notesStatusLabel.Location = new Point(12, panel.Height - 25);
-            _notesStatusLabel.Size = new Size(panel.Width - 24, 17);
+            _notesStatusLabel.Location = new Point(32, panel.Height - 25);
+            _notesStatusLabel.Size = new Size(panel.Width - 44, 17);
             _notesStatusLabel.Anchor = AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
             _notesStatusLabel.TextAlign = _language == "fa" ? ContentAlignment.MiddleRight : ContentAlignment.MiddleLeft;
-            _notesStatusLabel.Font = GetUiFont(6.8F, FontStyle.Regular);
+            _notesStatusLabel.Font = GetUiFont(7.2F, FontStyle.Regular);
             _notesStatusLabel.ForeColor = _themeMutedText;
             panel.Controls.Add(_notesStatusLabel);
 
             panel.Resize += delegate
             {
-                saveAsButton.Left = panel.ClientSize.Width - saveAsButton.Width - 12;
-                _notesBox.Width = panel.ClientSize.Width - 24;
-                _notesBox.Height = panel.ClientSize.Height - _notesBox.Top - 34;
+                saveAsButton.Left = panel.ClientSize.Width - saveAsButton.Width - 10;
+                editorFrame.Width = panel.ClientSize.Width - 24;
+                editorFrame.Height = Math.Max(45, panel.ClientSize.Height - editorFrame.Top - 30);
+                _notesBox.Width = editorFrame.ClientSize.Width - 20;
+                _notesBox.Height = editorFrame.ClientSize.Height - 14;
+                savedIcon.Top = panel.ClientSize.Height - 24;
                 _notesStatusLabel.Top = panel.ClientSize.Height - 25;
-                _notesStatusLabel.Width = panel.ClientSize.Width - 24;
+                _notesStatusLabel.Width = panel.ClientSize.Width - 44;
                 ApplyScrollBarTheme();
             };
         }
 
         private void BuildRatesSection()
         {
-            Panel panel = NewSection("rates", 222);
+            Panel panel = NewSection("rates", 152);
             AddSectionHeader(panel, "rates", T("Market Rates", "نرخ بازار"), 42);
 
-            _ratesRefreshButton = MakeSmallButton("↻", T("Refresh market rates", "به‌روزرسانی نرخ‌ها"), 30);
-            _ratesRefreshButton.Location = new Point(panel.Width - 44, 4);
+            _ratesRefreshButton = new VectorIconButton("refresh");
+            _ratesRefreshButton.Size = new Size(26, 26);
+            _ratesRefreshButton.Location = new Point(panel.Width - 38, 3);
             _ratesRefreshButton.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+            _ratesRefreshButton.ForeColor = _themeAccent;
+            _ratesRefreshButton.BackColor = Color.Transparent;
+            _ratesRefreshButton.ShowBackground = false;
+            _ratesRefreshButton.Cursor = Cursors.Hand;
+            _toolTip.SetToolTip(_ratesRefreshButton, T("Refresh market rates", "به‌روزرسانی نرخ‌ها"));
             _ratesRefreshButton.Click += delegate { RefreshRates(); };
             panel.Controls.Add(_ratesRefreshButton);
 
-            int firstY = 38;
+            int firstY = 34;
             for (int i = 0; i < _rateDefinitions.Length; i++)
             {
                 MarketRate rate = _rateDefinitions[i];
-                int rowY = firstY + i * 43;
+                int rowY = firstY + i * 30;
                 string iconKind = rate.Key == "usd" ? "usd" : (rate.Key == "eur" ? "eur" : "gold");
 
                 CurrencyBadgeIcon rateIcon = new CurrencyBadgeIcon(iconKind);
-                rateIcon.Size = new Size(22, 22);
-                rateIcon.Location = new Point(11, rowY + 5);
+                rateIcon.Size = new Size(25, 25);
+                rateIcon.Location = new Point(10, rowY + 1);
                 rateIcon.BackColor = Color.Transparent;
                 panel.Controls.Add(rateIcon);
 
                 Label name = new Label();
                 name.Text = _language == "fa" ? rate.DisplayNamePersian : rate.DisplayNameEnglish;
-                name.Location = new Point(38, rowY + 3);
-                name.Size = new Size(86, 26);
+                name.Location = new Point(42, rowY);
+                name.Size = new Size(66, 27);
                 name.ForeColor = _themeText;
-                name.Font = GetUiFont(7.6F, FontStyle.Regular);
+                name.Font = GetUiFont(7.8F, FontStyle.Regular);
                 name.TextAlign = _language == "fa" ? ContentAlignment.MiddleRight : ContentAlignment.MiddleLeft;
                 name.Cursor = Cursors.Hand;
                 name.Tag = rate.Url;
@@ -905,10 +1044,10 @@ namespace ChronoDeskWidget
 
                 Label value = new Label();
                 value.Text = "—";
-                value.Location = new Point(124, rowY + 3);
-                value.Size = new Size(panel.Width - 136, 26);
+                value.Location = new Point(108, rowY);
+                value.Size = new Size(panel.Width - 120, 27);
                 value.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
-                value.ForeColor = _themeAccentText;
+                value.ForeColor = _themeAccent;
                 value.Font = GetUiFont(8.1F, FontStyle.Bold);
                 value.TextAlign = _language == "fa" ? ContentAlignment.MiddleLeft : ContentAlignment.MiddleRight;
                 value.Tag = rate.Url;
@@ -921,8 +1060,8 @@ namespace ChronoDeskWidget
                 {
                     Panel separator = new Panel();
                     separator.BackColor = _themeBorder;
-                    separator.Location = new Point(38, rowY + 39);
-                    separator.Size = new Size(panel.Width - 50, 1);
+                    separator.Location = new Point(42, rowY + 29);
+                    separator.Size = new Size(panel.Width - 54, 1);
                     separator.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
                     panel.Controls.Add(separator);
                 }
@@ -930,10 +1069,10 @@ namespace ChronoDeskWidget
 
             _ratesStatusLabel = new Label();
             _ratesStatusLabel.Text = T("Waiting for live market data…", "در انتظار داده زنده بازار…");
-            _ratesStatusLabel.Location = new Point(12, 174);
-            _ratesStatusLabel.Size = new Size(panel.Width - 24, 18);
+            _ratesStatusLabel.Location = new Point(12, 126);
+            _ratesStatusLabel.Size = new Size(panel.Width - 24, 16);
             _ratesStatusLabel.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
-            _ratesStatusLabel.Font = GetUiFont(6.5F, FontStyle.Regular);
+            _ratesStatusLabel.Font = GetUiFont(6.8F, FontStyle.Regular);
             _ratesStatusLabel.ForeColor = _themeMutedText;
             _ratesStatusLabel.TextAlign = _language == "fa" ? ContentAlignment.MiddleRight : ContentAlignment.MiddleLeft;
             panel.Controls.Add(_ratesStatusLabel);
@@ -943,7 +1082,7 @@ namespace ChronoDeskWidget
                 _ratesRefreshButton.Left = panel.ClientSize.Width - _ratesRefreshButton.Width - 12;
                 foreach (Control child in panel.Controls)
                 {
-                    if (child is Label && child.Tag is string && child.Location.Y >= firstY && child.Location.Y < firstY + 3 * 43 && child.Location.X >= 100)
+                    if (child is Label && child.Tag is string && child.Location.Y >= firstY && child.Location.Y < firstY + 3 * 30 && child.Location.X >= 100)
                         child.Width = panel.ClientSize.Width - child.Left - 12;
                     else if (child is Panel && child.Height == 1 && child.Location.Y >= firstY)
                         child.Width = panel.ClientSize.Width - child.Left - 12;
@@ -954,16 +1093,16 @@ namespace ChronoDeskWidget
 
         private Button MakeSmallButton(string text, string tooltip, int width)
         {
-            Button b = new Button();
+            Button b = new RoundedButton();
             b.Text = text;
             b.Width = width;
             b.Height = 25;
             b.FlatStyle = FlatStyle.Flat;
-            b.FlatAppearance.BorderSize = 1;
+            b.FlatAppearance.BorderSize = 0;
             b.FlatAppearance.BorderColor = _themeBorder;
             b.BackColor = _themeButton;
             b.ForeColor = text.Length <= 2 ? _themeAccentText : _themeText;
-            b.Font = GetUiFont(8F, FontStyle.Regular);
+            b.Font = GetUiFont(8.2F, FontStyle.Bold);
             b.Cursor = Cursors.Hand;
             b.Margin = new Padding(1);
             _toolTip.SetToolTip(b, tooltip);
@@ -982,7 +1121,7 @@ namespace ChronoDeskWidget
             if (_clockLabel == null || IsDisposed) return;
             DateTime now = DateTime.Now;
             CultureInfo english = CultureInfo.GetCultureInfo("en-US");
-            string time = now.ToString("HH:mm:ss", CultureInfo.InvariantCulture);
+            string time = now.ToString("HH:mm", CultureInfo.InvariantCulture);
             _clockLabel.Text = _language == "fa" ? ToPersianDigits(time) : time;
 
             string gregorian = now.ToString("dddd, dd MMMM yyyy", english);
@@ -1062,8 +1201,8 @@ namespace ChronoDeskWidget
             _calendarGrid.ColumnStyles.Clear();
             _calendarGrid.RowStyles.Clear();
             for (int i = 0; i < 7; i++) _calendarGrid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F / 7F));
-            _calendarGrid.RowStyles.Add(new RowStyle(SizeType.Absolute, 17));
-            for (int i = 0; i < 6; i++) _calendarGrid.RowStyles.Add(new RowStyle(SizeType.Absolute, 19));
+            _calendarGrid.RowStyles.Add(new RowStyle(SizeType.Absolute, 14));
+            for (int i = 0; i < 6; i++) _calendarGrid.RowStyles.Add(new RowStyle(SizeType.Absolute, 13));
             _calendarGrid.RowCount = 7;
             _calendarGrid.ColumnCount = 7;
 
@@ -1077,7 +1216,7 @@ namespace ChronoDeskWidget
                 weekday.Dock = DockStyle.Fill;
                 weekday.Margin = new Padding(1);
                 weekday.TextAlign = ContentAlignment.MiddleCenter;
-                weekday.Font = GetUiFont(_language == "fa" ? 6.7F : 7F, FontStyle.Regular);
+                weekday.Font = GetUiFont(_language == "fa" ? 6.8F : 7.2F, FontStyle.Bold);
                 weekday.ForeColor = _themeMutedText;
                 _calendarGrid.Controls.Add(weekday, col, 0);
             }
@@ -1130,7 +1269,7 @@ namespace ChronoDeskWidget
                 bool todayDate = date.Date == DateTime.Today;
                 bool selected = date.Date == _selectedDate.Date;
                 dayButton.Text = _language == "fa" ? ToPersianDigits(number.ToString()) : number.ToString();
-                dayButton.Font = GetUiFont(7.5F, selected ? FontStyle.Bold : FontStyle.Regular);
+                dayButton.Font = GetUiFont(7.6F, selected || todayDate ? FontStyle.Bold : FontStyle.Regular);
                 dayButton.Cursor = Cursors.Hand;
                 dayButton.Tag = date.Date;
                 dayButton.BackColor = _calendarGrid.BackColor;
@@ -1299,8 +1438,8 @@ namespace ChronoDeskWidget
             int total = _isBreak ? 5 * 60 : 25 * 60;
             _pomodoroProgressIndicator.TimeText = display;
             _pomodoroProgressIndicator.ModeText = _isBreak
-                ? T("Rest · 5 min", "استراحت · ۵ دقیقه")
-                : T("Focus · 25 min", "تمرکز · ۲۵ دقیقه");
+                ? T("Rest", "استراحت")
+                : T("Focus", "تمرکز");
             _pomodoroProgressIndicator.Progress = Math.Max(0F, Math.Min(1F, seconds / (float)total));
             _pomodoroProgressIndicator.Invalidate();
 
@@ -1465,7 +1604,7 @@ namespace ChronoDeskWidget
         private void SetWidgetOpacity(int percent)
         {
             _opacityPercent = Math.Max(50, Math.Min(100, percent));
-            Opacity = _opacityPercent / 100.0;
+            ApplyGlassBackdrop();
             LocalStore.SaveSetting("opacity", _opacityPercent.ToString(CultureInfo.InvariantCulture));
             BuildTrayMenu();
         }
