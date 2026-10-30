@@ -107,6 +107,9 @@ namespace ChronoDeskWidget
         private static extern bool ReleaseCapture();
         [DllImport("user32.dll")]
         private static extern IntPtr SendMessage(IntPtr hWnd, int msg, int wParam, int lParam);
+
+        [DllImport("user32.dll", CharSet = CharSet.Unicode, EntryPoint = "SendMessageW")]
+        private static extern IntPtr SendMessageText(IntPtr hWnd, int msg, IntPtr wParam, string lParam);
         private const int WM_NCLBUTTONDOWN = 0x00A1;
         private const int HTCAPTION = 0x0002;
 
@@ -283,7 +286,7 @@ namespace ChronoDeskWidget
             _themeSignature = signature;
             _themeUsesLightTaskbar = isLight;
             // The outer glass layer is intentionally brighter than the individual widget cards.
-            _themeBackground = isLight ? Color.FromArgb(232, 238, 247) : Color.FromArgb(82, 96, 116);
+            _themeBackground = isLight ? Color.FromArgb(246, 248, 252) : Color.FromArgb(82, 96, 116);
             _themeText = isLight ? Color.FromArgb(31, 38, 49) : Color.FromArgb(244, 247, 252);
             _themeMutedText = isLight ? Color.FromArgb(105, 115, 130) : Color.FromArgb(170, 181, 197);
             _themeAccent = accent;
@@ -291,11 +294,11 @@ namespace ChronoDeskWidget
             _themeAccentText = GetColorLuminance(accent) > 0.72
                 ? Blend(accent, Color.Black, 0.10)
                 : Blend(accent, Color.White, 0.08);
-            _themeSurface = isLight ? Color.FromArgb(249, 251, 254) : Color.FromArgb(31, 39, 52);
-            _themeSurfaceAlt = isLight ? Color.FromArgb(255, 255, 255) : Color.FromArgb(41, 51, 67);
-            _themeButton = isLight ? Color.FromArgb(235, 240, 247) : Color.FromArgb(53, 64, 82);
-            _themeInput = isLight ? Color.FromArgb(246, 249, 253) : Color.FromArgb(25, 32, 44);
-            _themeBorder = isLight ? Color.FromArgb(211, 220, 232) : Color.FromArgb(67, 81, 101);
+            _themeSurface = isLight ? Color.FromArgb(228, 234, 243) : Color.FromArgb(31, 39, 52);
+            _themeSurfaceAlt = isLight ? Color.FromArgb(237, 242, 249) : Color.FromArgb(41, 51, 67);
+            _themeButton = isLight ? Color.FromArgb(216, 224, 236) : Color.FromArgb(53, 64, 82);
+            _themeInput = isLight ? Color.FromArgb(249, 251, 254) : Color.FromArgb(25, 32, 44);
+            _themeBorder = isLight ? Color.FromArgb(207, 216, 229) : Color.FromArgb(67, 81, 101);
             _themeSelection = accent;
             _themeSelectionText = ContrastText(accent);
 
@@ -982,6 +985,11 @@ namespace ChronoDeskWidget
             _notesBox.ForeColor = _themeText;
             _notesBox.Font = GetUiFont(8.8F, FontStyle.Regular);
             _notesBox.Text = LocalStore.LoadNotes();
+            _notesBox.HandleCreated += delegate
+            {
+                SendMessageText(_notesBox.Handle, 0x1501, IntPtr.Zero,
+                    T("Ideas, reminders, or anything to remember…", "ایده‌ها، یادآوری‌ها یا هر چیزی برای به‌خاطر سپردن…"));
+            };
             _notesBox.TextChanged += delegate
             {
                 _notesDirty = true;
@@ -1148,7 +1156,7 @@ namespace ChronoDeskWidget
             string gregorian = now.ToString("dddd, dd MMMM yyyy", english);
             string solar = GetSolarLongDate(now, _language == "fa");
             _dateEnglishLabel.Text = _language == "fa" ? "میلادی  ·  " + ToPersianDigits(now.ToString("yyyy/MM/dd", CultureInfo.InvariantCulture)) : gregorian;
-            _dateSolarLabel.Text = _language == "fa" ? solar : "Solar Hijri  ·  " + GetSolarLongDate(now, false);
+            _dateSolarLabel.Text = _language == "fa" ? solar : GetSolarLongDate(now, false);
 
             if (now.Date != _calendarAnchor.Date && _calendarAnchor.Date == _selectedDate.Date && _calendarAnchor.Date == now.Date.AddDays(-1))
             {
