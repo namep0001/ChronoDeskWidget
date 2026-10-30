@@ -95,7 +95,7 @@ namespace ChronoDeskWidget
         private VectorIconButton _pomodoroResetButton;
         private VectorIconButton _pomodoroSwitchButton;
         private Label _ratesStatusLabel;
-        private Button _ratesRefreshButton;
+        private VectorIconButton _ratesRefreshButton;
         private NotifyIcon _trayIcon;
         private ContextMenuStrip _trayMenu;
         private System.Windows.Forms.Timer _tickTimer;
