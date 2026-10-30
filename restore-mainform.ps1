@@ -5,14 +5,6 @@ $encodedPath = Join-Path $PSScriptRoot 'Source\MainForm.cs.gz.b64'
 $destination = Join-Path $PSScriptRoot 'Source\MainForm.cs'
 $expectedSha256 = 'c26ecdf5118b078335eed58aa462d5c862a8bdfa92887a27a1f48c9d8dfb6e0e'
 
-if (Test-Path -LiteralPath $destination) {
-    $existingHash = (Get-FileHash -LiteralPath $destination -Algorithm SHA256).Hash.ToLowerInvariant()
-    if ($existingHash -eq $expectedSha256) {
-        Write-Host 'MainForm.cs is already restored and verified.' -ForegroundColor Green
-        exit 0
-    }
-    throw 'Source\MainForm.cs exists but its checksum does not match the packaged source. Move it aside before restoring.'
-}
 if (-not (Test-Path -LiteralPath $encodedPath)) {
     throw "Missing compressed MainForm source: $encodedPath"
 }
@@ -27,10 +19,6 @@ try {
     $gzipStream = New-Object IO.Compression.GZipStream($inputStream, [IO.Compression.CompressionMode]::Decompress)
     $gzipStream.CopyTo($outputStream)
     $sourceBytes = $outputStream.ToArray()
-    # Compatibility patch for the older compressed source snapshot.
-    $sourceText = [System.Text.Encoding]::UTF8.GetString($sourceBytes)
-    $sourceText = $sourceText.Replace('ApplySystemTheme(true);', 'RefreshSystemTheme(true);')
-    $sourceBytes = (New-Object System.Text.UTF8Encoding($false)).GetBytes($sourceText)
 }
 finally {
     if ($gzipStream) { $gzipStream.Dispose() }
@@ -47,6 +35,15 @@ finally {
 }
 if ($actualSha256 -ne $expectedSha256) {
     throw "Restored MainForm.cs failed SHA-256 validation. Expected $expectedSha256; received $actualSha256."
+}
+
+if (Test-Path -LiteralPath $destination) {
+    $existingHash = (Get-FileHash -LiteralPath $destination -Algorithm SHA256).Hash.ToLowerInvariant()
+    if ($existingHash -ne $expectedSha256) {
+        throw 'Source\MainForm.cs exists but its checksum does not match the packaged source. Move it aside before restoring.'
+    }
+    Write-Host 'MainForm.cs is already restored and verified.' -ForegroundColor Green
+    exit 0
 }
 
 [IO.File]::WriteAllBytes($destination, $sourceBytes)
