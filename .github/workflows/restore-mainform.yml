@@ -1,4 +1,4 @@
-name: Restore MainForm source
+name: Package MainForm source
 
 on:
   push:
@@ -9,7 +9,7 @@ permissions:
   contents: write
 
 jobs:
-  restore:
+  package:
     runs-on: ubuntu-latest
     steps:
       - name: Check out repository
@@ -17,20 +17,20 @@ jobs:
         with:
           persist-credentials: true
 
-      - name: Restore and verify C# source
+      - name: Regenerate compressed source and checksum
         shell: bash
         run: |
           set -euo pipefail
-          if [[ -f Source/MainForm.cs ]]; then
-            echo "Source/MainForm.cs already exists; nothing to do."
+          test -f Source/MainForm.cs
+          gzip -n -c Source/MainForm.cs | base64 --wrap=0 > Source/MainForm.cs.gz.b64
+          source_hash="$(sha256sum Source/MainForm.cs | cut -d' ' -f1)"
+          sed -i -E "s/\\$expectedSha256 = '[0-9a-f]+'/\\$expectedSha256 = '$source_hash'/" restore-mainform.ps1
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+users.noreply.github.com"
+          git add Source/MainForm.cs.gz.b64 restore-mainform.ps1
+          if git diff --cached --quiet; then
+            echo "Compressed source and checksum are already synchronized."
             exit 0
           fi
-          base64 --decode Source/MainForm.cs.gz.b64 | gzip --decompress > Source/MainForm.cs
-          # Patch the older compressed snapshot to call the current theme method.
-          sed -i 's/ApplySystemTheme(true);/RefreshSystemTheme(true);/' Source/MainForm.cs
-          echo "c26ecdf5118b078335eed58aa462d5c862a8bdfa92887a27a1f48c9d8dfb6e0e  Source/MainForm.cs" | sha256sum --check
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add Source/MainForm.cs
-          git commit -m "Restore MainForm C# source"
+          git commit -m "Sync packaged MainForm source"
           git push
