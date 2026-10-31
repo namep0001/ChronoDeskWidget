@@ -22,8 +22,11 @@ if not defined CSC (
   goto :fail
 )
 if not exist "bin\Release" mkdir "bin\Release"
+echo Generating the embedded ChronoDesk application icon...
+powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0Source\Generate-AppIcon.ps1"
+if errorlevel 1 goto :fail
 echo Compiling ChronoDesk Widget...
-"%CSC%" /nologo /target:winexe /optimize+ /platform:anycpu32bitpreferred /codepage:65001 /out:"bin\Release\ChronoDeskWidget.exe" /reference:System.dll /reference:System.Core.dll /reference:System.Drawing.dll /reference:System.Windows.Forms.dll /reference:System.Xml.dll Source\Program.cs Source\LocalStore.cs Source\TgjuClient.cs Source\MainForm.cs
+"%CSC%" /nologo /target:winexe /win32icon:"Source\ChronoDeskWidget.ico" /optimize+ /platform:anycpu32bitpreferred /codepage:65001 /out:"bin\Release\ChronoDeskWidget.exe" /reference:System.dll /reference:System.Core.dll /reference:System.Drawing.dll /reference:System.Windows.Forms.dll /reference:System.Xml.dll Source\Program.cs Source\LocalStore.cs Source\TgjuClient.cs Source\MainForm.cs
 if errorlevel 1 goto :fail
 :ok
 echo.
