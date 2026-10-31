@@ -2498,7 +2498,6 @@ namespace ChronoDeskWidget
         }
     }
 
-    internal sealed class WidgetSurfacePanel : Panel 
     internal sealed class RoundedCardPanel : Panel
     {
         public RoundedCardPanel() { SetStyle(ControlStyles.AllPaintingInWmPaint | ControlStyles.OptimizedDoubleBuffer | ControlStyles.UserPaint | ControlStyles.ResizeRedraw, true); }
@@ -2507,7 +2506,7 @@ namespace ChronoDeskWidget
         private static GraphicsPath Path(Rectangle r) { GraphicsPath p = new GraphicsPath(); int d = Math.Min(24, Math.Min(r.Width, r.Height)); p.AddArc(r.Left,r.Top,d,d,180,90); p.AddArc(r.Right-d,r.Top,d,d,270,90); p.AddArc(r.Right-d,r.Bottom-d,d,d,0,90); p.AddArc(r.Left,r.Bottom-d,d,d,90,90); p.CloseFigure(); return p; }
     }
 
-
+    internal sealed class WidgetSurfacePanel : Panel
     {
         public WidgetSurfacePanel()
         {
