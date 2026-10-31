@@ -387,7 +387,7 @@ namespace ChronoDeskWidget
                 int last = Math.Min(_sections.Count - 1, first + _layoutColumns - 1);
                 for (int index = first; index <= last; index++)
                     rowHeight = Math.Max(rowHeight, GetWidgetHeight(_sections[index].Tag as string));
-                _content.RowStyles.Add(new RowStyle(SizeType.Absolute, rowHeight == 0 ? 0 : rowHeight + 7));
+                _content.RowStyles.Add(new RowStyle(SizeType.Absolute, rowHeight == 0 ? 0 : rowHeight + 4));
             }
             _content.ResumeLayout(true);
         }
@@ -404,10 +404,10 @@ namespace ChronoDeskWidget
                 int last = Math.Min(_sections.Count - 1, first + _layoutColumns - 1);
                 for (int index = first; index <= last; index++)
                     rowHeight = Math.Max(rowHeight, GetWidgetHeight(_sections[index].Tag as string));
-                if (rowHeight > 0) desiredHeight += rowHeight + 7;
+                if (rowHeight > 0) desiredHeight += rowHeight + 4;
             }
 
-            int desiredWidth = _content.Padding.Horizontal + (_layoutColumns * 264);
+            int desiredWidth = _content.Padding.Horizontal + (_layoutColumns * 276);
             desiredHeight = Math.Max(MinimumSize.Height, desiredHeight);
             desiredWidth = Math.Max(MinimumSize.Width, desiredWidth);
             if (ClientSize.Width == desiredWidth && ClientSize.Height == desiredHeight) return;
@@ -518,7 +518,7 @@ namespace ChronoDeskWidget
             panel.Height = height;
             panel.Width = 250;
             panel.Dock = DockStyle.Fill;
-            panel.Margin = new Padding(6);
+            panel.Margin = new Padding(3);
             panel.Padding = new Padding(0);
             panel.BackColor = _themeSurface;
             panel.ForeColor = _themeText;
