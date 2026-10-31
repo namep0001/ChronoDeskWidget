@@ -8,7 +8,6 @@ using System.IO;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Text;
-using System.Data;
 using System.Windows.Forms;
 using Microsoft.Win32;
 
@@ -797,9 +796,9 @@ namespace ChronoDeskWidget
         {
             if (_systemMonitor == null || _systemUptimeLabel == null || _systemUptimeLabel.IsDisposed) return;
             SetSystemMetric("CPU", _systemMonitor.CpuPercent, _systemMonitor.CpuPercent.ToString("0") + "%");
-            SetSystemMetric("RAM", _systemMonitor.RamPercent, SystemMetricsMonitor.FormatBytes(_systemMonitor.UsedRamBytes) + " / " + SystemMetricsMonitor.FormatBytes(_systemMonitor.TotalRamBytes));
+            SetSystemMetric("RAM", _systemMonitor.RamPercent, _systemMonitor.RamPercent.ToString("0") + "%");
             SetSystemMetric("GPU", _systemMonitor.GpuPercent, _systemMonitor.GpuPercent < 0 ? "N/A" : _systemMonitor.GpuPercent.ToString("0") + "%");
-            SetSystemMetric("Disk", _systemMonitor.DiskPercent, _systemMonitor.DiskText ?? "N/A");
+            SetSystemMetric("Disk", _systemMonitor.DiskPercent, _systemMonitor.DiskPercent.ToString("0") + "%");
             _systemUptimeLabel.Text = T("Uptime  ", "مدت روشن بودن  ") + _systemMonitor.Uptime.Days + T("d ", "روز ") +
                 _systemMonitor.Uptime.Hours + T("h ", "ساعت ") + _systemMonitor.Uptime.Minutes + T("m", "دقیقه");
             if (_systemMonitor.HasBattery)
@@ -814,7 +813,7 @@ namespace ChronoDeskWidget
                     _systemBars["Battery"] = bar; _systemValues["Battery"] = value;
                 }
                 SetSystemMetric("Battery", _systemMonitor.BatteryPercent, _systemMonitor.BatteryPercent + "%" + (_systemMonitor.BatteryCharging ? " +" : ""));
-                _systemUptimeLabel.Top = 221;
+                _systemUptimeLabel.Top = 218;
             }
             else
             {
