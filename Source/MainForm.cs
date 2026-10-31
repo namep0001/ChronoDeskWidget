@@ -407,7 +407,7 @@ namespace ChronoDeskWidget
                 if (rowHeight > 0) desiredHeight += rowHeight + 4;
             }
 
-            int desiredWidth = _content.Padding.Horizontal + (_layoutColumns * 276);
+            int desiredWidth = _content.Padding.Horizontal + (_layoutColumns * 296);
             desiredHeight = Math.Max(MinimumSize.Height, desiredHeight);
             desiredWidth = Math.Max(MinimumSize.Width, desiredWidth);
             if (ClientSize.Width == desiredWidth && ClientSize.Height == desiredHeight) return;
