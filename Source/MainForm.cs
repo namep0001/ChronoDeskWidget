@@ -1707,7 +1707,6 @@ namespace ChronoDeskWidget
             ratesItem.DropDownItems.Add(unitToman);
             menu.Items.Add(ratesItem);
 
-            ToolStripMenuItem languageItem 
             ToolStripMenuItem orderItem = new ToolStripMenuItem(T("Widget order", "ترتیب ابزارک‌ها"));
             AddTrayImage(orderItem, "widgets", ownedImages);
             foreach (string widgetKey in _widgetKeys) {
