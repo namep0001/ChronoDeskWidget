@@ -196,7 +196,7 @@ namespace ChronoDeskWidget
         [DllImport("kernel32.dll")] private static extern ulong GetTickCount64();
 
         private ulong _idle, _kernel, _user;
-        private PerformanceCounter _gpuCounter;
+        private readonly List<PerformanceCounter> _gpuCounters = new List<PerformanceCounter>();
         public float CpuPercent { get; private set; }
         public float RamPercent { get; private set; }
         public float GpuPercent { get; private set; }
@@ -218,7 +218,7 @@ namespace ChronoDeskWidget
                     foreach (string name in names)
                     {
                         if (name.IndexOf("engtype_3D", StringComparison.OrdinalIgnoreCase) < 0) continue;
-                        try { _gpuCounter = new PerformanceCounter("GPU Engine", "Utilization Percentage", name, true); break; } catch { }
+                        try { _gpuCounters.Add(new PerformanceCounter("GPU Engine", "Utilization Percentage", name, true)); } catch { }
                     }
                 }
             }
@@ -249,7 +249,16 @@ namespace ChronoDeskWidget
                 RamPercent = (float)(UsedRamBytes * 100.0 / TotalRamBytes);
             }
 
-            try { GpuPercent = _gpuCounter == null ? -1 : Math.Max(0, Math.Min(100, _gpuCounter.NextValue())); }
+            try
+            {
+                if (_gpuCounters.Count == 0) GpuPercent = -1;
+                else
+                {
+                    double usage = 0;
+                    foreach (PerformanceCounter counter in _gpuCounters) usage += counter.NextValue();
+                    GpuPercent = (float)Math.Max(0, Math.Min(100, usage));
+                }
+            }
             catch { GpuPercent = -1; }
 
             try
@@ -282,6 +291,6 @@ namespace ChronoDeskWidget
             int i = 0; while (bytes >= 1024 && i < units.Length - 1) { bytes /= 1024; i++; }
             return bytes.ToString(i == 0 ? "0" : "0.0", CultureInfo.InvariantCulture) + " " + units[i];
         }
-        public void Dispose() { if (_gpuCounter != null) _gpuCounter.Dispose(); }
+        public void Dispose() { foreach (PerformanceCounter counter in _gpuCounters) counter.Dispose(); _gpuCounters.Clear(); }
     }
 }
