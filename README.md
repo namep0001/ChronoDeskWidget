@@ -13,6 +13,9 @@ A lightweight Windows desktop companion built with C#, Windows Forms, and .NET F
 - **Pomodoro** — focus and rest timer with circular progress and dedicated controls.
 - **Quick notes** — locally saved notes with UTF-8 text export.
 - **Market rates** — USD, EUR, and 18-karat gold per gram, with Toman or Dollar display and daily percentage movement.
+- **Network monitor** — live download/upload speed, monthly traffic totals, and daily download/upload history retained from the first through the last day of each month.
+- **Calculator** — compact desktop calculator with arithmetic, sign toggle, and decimal input.
+- **System monitor** — CPU, RAM, GPU, disk, optional laptop battery usage, and system uptime with progress bars.
 - **Appearance** — System, Light, and Dark themes, Windows accent color, adjustable opacity, and font selection.
 - **Widget controls** — independently show or hide widgets, keep the widget on top, and launch with Windows.
 - **Bilingual interface** — English and Persian, switchable from the system-tray menu.
@@ -65,7 +68,7 @@ ChronoDeskWidget/
 
 ## Data and privacy
 
-Tasks, notes, settings, window position, and the startup error log are stored locally in:
+Tasks, notes, settings, window position, network traffic history, and the startup error log are stored locally in:
 
 ```text
 %LOCALAPPDATA%\ChronoDeskWidget\
