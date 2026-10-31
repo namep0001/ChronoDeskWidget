@@ -110,8 +110,10 @@ namespace ChronoDeskWidget
         private Label _networkSummaryLabel;
         private Label _networkSpeedLabel;
         private Label _networkHistoryLabel;
+        private Label _networkDownloadTotalLabel;
+        private Label _networkUploadTotalLabel;
         private Label _systemUptimeLabel;
-        private readonly Dictionary<string, ProgressBar> _systemBars = new Dictionary<string, ProgressBar>();
+        private readonly Dictionary<string, ThemedProgressBar> _systemBars = new Dictionary<string, ThemedProgressBar>();
         private readonly Dictionary<string, Label> _systemValues = new Dictionary<string, Label>();
         private TextBox _calculatorDisplay;
         private double _calculatorAccumulator;
@@ -370,7 +372,7 @@ namespace ChronoDeskWidget
                 case "rates": return 203;
                 case "network": return 203;
                 case "calculator": return 203;
-                case "system": return 250;
+                case "system": return 270;
                 default: return 0;
             }
         }
@@ -491,6 +493,8 @@ namespace ChronoDeskWidget
             _networkSummaryLabel = null;
             _networkSpeedLabel = null;
             _networkHistoryLabel = null;
+            _networkDownloadTotalLabel = null;
+            _networkUploadTotalLabel = null;
             _systemUptimeLabel = null;
             _systemBars.Clear();
             _systemValues.Clear();
@@ -1250,7 +1254,7 @@ namespace ChronoDeskWidget
                 name.Text = _language == "fa" ? rate.DisplayNamePersian : rate.DisplayNameEnglish;
                 name.BackColor = panel.BackColor;
                 name.Location = new Point(36, rowY);
-                name.Size = new Size(91, 27);
+                name.Size = new Size(72, 27);
                 name.ForeColor = _themeText;
                 name.Font = GetUiFont(7.1F, FontStyle.Regular);
                 name.TextAlign = _language == "fa" ? ContentAlignment.MiddleRight : ContentAlignment.MiddleLeft;
@@ -1264,8 +1268,8 @@ namespace ChronoDeskWidget
                 Label value = new Label();
                 value.Text = "—";
                 value.BackColor = panel.BackColor;
-                value.Location = new Point(145, rowY);
-                value.Size = new Size(80, 27);
+                value.Location = new Point(112, rowY);
+                value.Size = new Size(70, 27);
                 value.AutoSize = false;
                 value.Anchor = AnchorStyles.Top | AnchorStyles.Left;
                 value.ForeColor = _themeAccentText;
@@ -1281,11 +1285,11 @@ namespace ChronoDeskWidget
                 Label change = new Label();
                 change.Text = "";
                 change.BackColor = panel.BackColor;
-                change.Location = new Point(229, rowY);
-                change.Size = new Size(panel.Width - 238, 27);
+                change.Location = new Point(185, rowY);
+                change.Size = new Size(panel.Width - 193, 27);
                 change.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
                 change.ForeColor = _themeMutedText;
-                change.Font = GetUiFont(7.2F, FontStyle.Bold);
+                change.Font = GetUiFont(6.4F, FontStyle.Bold);
                 change.TextAlign = ContentAlignment.MiddleRight;
                 change.AutoEllipsis = true;
                 change.Tag = rate.Url;
@@ -1320,12 +1324,12 @@ namespace ChronoDeskWidget
             {
                 _ratesRefreshButton.Left = panel.ClientSize.Width - _ratesRefreshButton.Width - 8;
                 foreach (KeyValuePair<string, Label> pair in _rateValueLabels)
-                    pair.Value.Left = 145;
+                    pair.Value.Left = 112;
                 foreach (KeyValuePair<string, Label> pair in _rateValueLabels)
-                    pair.Value.Width = 80;
+                    pair.Value.Width = 70;
                 foreach (KeyValuePair<string, Label> pair in _rateChangeLabels)
                 {
-                    pair.Value.Left = 229;
+                    pair.Value.Left = 185;
                     pair.Value.Width = Math.Max(25, panel.ClientSize.Width - pair.Value.Left - 8);
                 }
                 _ratesStatusLabel.Width = panel.ClientSize.Width - 20;
@@ -1821,11 +1825,12 @@ namespace ChronoDeskWidget
                     {
                         long previousValue = parsed - change;
                         decimal percentage = previousValue > 0
-                            ? Math.Abs((decimal)change / previousValue) * 100M
+                            ? ((decimal)change / previousValue) * 100M
                             : 0M;
-                        string magnitude = percentage.ToString("0.00", CultureInfo.InvariantCulture) + "%";
+                        string signedPercentage = (percentage > 0 ? "+" : "") + percentage.ToString("0.00", CultureInfo.InvariantCulture) + "%";
+                        string direction = change > 0 ? T("Increase", "افزایش") : T("Decrease", "کاهش");
                         string arrow = change > 0 ? "▲ " : "▼ ";
-                        changeLabel.Text = arrow + magnitude;
+                        changeLabel.Text = arrow + signedPercentage + " " + direction;
                         if (_language == "fa") changeLabel.Text = ToPersianDigits(changeLabel.Text);
                         changeLabel.ForeColor = change > 0 ? Color.FromArgb(42, 176, 105) : Color.FromArgb(224, 78, 78);
                     }
