@@ -837,7 +837,7 @@ namespace ChronoDeskWidget
             _pomodoroStartButton.Click += delegate { TogglePomodoro(); };
             panel.Controls.Add(_pomodoroStartButton);
 
-            _pomodoroResetButton = new CircularIconButton("reset");
+            _pomodoroResetButton = new CircularIconButton("refresh");
             _pomodoroResetButton.Size = new Size(28, 28);
             _pomodoroResetButton.Location = new Point(0, 159);
             _pomodoroResetButton.ForeColor = Color.White;
