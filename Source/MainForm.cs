@@ -645,11 +645,13 @@ namespace ChronoDeskWidget
 
             Button next = MakeSmallButton("›", T("Next month", "ماه بعد"), 24);
             next.Height = 24;
+            next.Location = new Point(215, 31);
             next.Click += delegate { MoveCalendarMonth(1); };
             panel.Controls.Add(next);
 
             Button today = MakeSmallButton(T("Today", "امروز"), T("Jump to today", "رفتن به امروز"), 45);
             today.Height = 24;
+            today.Location = new Point(243, 31);
             today.Click += delegate
             {
                 _selectedDate = DateTime.Today;
@@ -662,6 +664,7 @@ namespace ChronoDeskWidget
             _calendarSolarButton = new RoundedButton();
             _calendarSolarButton.Text = T("Solar Hijri", "هجری شمسی");
             _calendarSolarButton.Size = new Size(94, 24);
+            _calendarSolarButton.Location = new Point(51, 56);
             _calendarSolarButton.Font = GetUiFont(7.8F, FontStyle.Bold);
             _calendarSolarButton.Cursor = Cursors.Hand;
             _calendarSolarButton.Click += delegate
@@ -677,6 +680,7 @@ namespace ChronoDeskWidget
             _calendarGregorianButton = new RoundedButton();
             _calendarGregorianButton.Text = T("Gregorian", "میلادی");
             _calendarGregorianButton.Size = new Size(94, 24);
+            _calendarGregorianButton.Location = new Point(145, 56);
             _calendarGregorianButton.Font = GetUiFont(7.8F, FontStyle.Bold);
             _calendarGregorianButton.Cursor = Cursors.Hand;
             _calendarGregorianButton.Click += delegate
@@ -1158,7 +1162,7 @@ namespace ChronoDeskWidget
             _calendarGrid.RowStyles.Clear();
             for (int i = 0; i < 7; i++) _calendarGrid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F / 7F));
             _calendarGrid.RowStyles.Add(new RowStyle(SizeType.Absolute, 18));
-            for (int i = 0; i < 6; i++) _calendarGrid.RowStyles.Add(new RowStyle(SizeType.Absolute, 20));
+            for (int i = 0; i < 6; i++) _calendarGrid.RowStyles.Add(new RowStyle(SizeType.Absolute, 24));
             _calendarGrid.RowCount = 7;
             _calendarGrid.ColumnCount = 7;
 
