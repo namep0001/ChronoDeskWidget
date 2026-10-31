@@ -153,24 +153,23 @@ namespace ChronoDeskWidget
         {
             Graphics g = e.Graphics;
             g.SmoothingMode = SmoothingMode.AntiAlias;
-            if (ShowBackground)
-            {
-                Color backgroundColor = _hovered ? ControlPaint.Light(BackColor, 0.10F) : BackColor;
-                using (SolidBrush background = new SolidBrush(backgroundColor))
-                    g.FillEllipse(background, 1, 1, Width - 3, Height - 3);
-            }
-            else if (_hovered && ShowBackground)
+            g.PixelOffsetMode = PixelOffsetMode.HighQuality;
+            g.CompositingQuality = CompositingQuality.HighQuality;
+            if (ShowBackground || _hovered)
             {
                 Color parentColor = Parent == null ? BackColor : Parent.BackColor;
-                using (SolidBrush background = new SolidBrush(ControlPaint.Light(parentColor, 0.07F)))
-                    g.FillEllipse(background, 1, 1, Width - 3, Height - 3);
+                Color backgroundColor = ShowBackground
+                    ? (_hovered ? ControlPaint.Light(BackColor, 0.12F) : BackColor)
+                    : ControlPaint.Light(parentColor, 0.08F);
+                using (SolidBrush background = new SolidBrush(backgroundColor))
+                    g.FillEllipse(background, 1.25F, 1.25F, Width - 2.5F, Height - 2.5F);
             }
 
             float scale = Math.Min(Width, Height) / 34F;
             if (scale <= 0F) return;
             g.TranslateTransform((Width - 34F * scale) / 2F, (Height - 34F * scale) / 2F);
             g.ScaleTransform(scale, scale);
-            using (Pen pen = new Pen(ForeColor, 2.25F))
+            using (Pen pen = new Pen(ForeColor, 2.0F))
             using (SolidBrush brush = new SolidBrush(ForeColor))
             {
                 pen.StartCap = LineCap.Round;
@@ -179,63 +178,85 @@ namespace ChronoDeskWidget
                 switch (_kind)
                 {
                     case "play":
-                        PointF[] triangle = { new PointF(13, 8), new PointF(23, 17), new PointF(13, 26) };
-                        g.FillPolygon(brush, triangle);
+                        using (GraphicsPath play = new GraphicsPath())
+                        {
+                            play.AddBezier(12, 8, 12, 7, 14, 9, 15, 10);
+                            play.AddLine(15, 10, 23, 16);
+                            play.AddBezier(23, 16, 24.5F, 17, 24.5F, 18, 23, 19);
+                            play.AddLine(23, 19, 15, 25);
+                            play.AddBezier(15, 25, 13, 27, 12, 26, 12, 24);
+                            play.CloseFigure();
+                            g.FillPath(brush, play);
+                        }
                         break;
                     case "pause":
                         using (GraphicsPath bars = new GraphicsPath())
                         {
-                            bars.AddRectangle(new Rectangle(10, 8, 5, 18));
+                            bars.AddArc(10, 8, 5, 5, 180, 90); bars.AddArc(10, 8, 5, 5, 270, 90);
+                            bars.AddArc(10, 21, 5, 5, 0, 90); bars.AddArc(10, 21, 5, 5, 90, 90);
+                            bars.CloseFigure();
                             bars.AddRectangle(new Rectangle(19, 8, 5, 18));
                             g.FillPath(brush, bars);
                         }
                         break;
                     case "reset":
-                        g.DrawArc(pen, 8, 8, 19, 19, 35, 295);
-                        PointF[] resetArrow = { new PointF(6, 8), new PointF(16, 8), new PointF(10, 16) };
-                        g.FillPolygon(brush, resetArrow);
+                        g.DrawArc(pen, 8, 8, 18, 18, 42, 278);
+                        using (GraphicsPath arrow = new GraphicsPath())
+                        {
+                            arrow.AddLine(7, 8, 16, 8);
+                            arrow.AddLine(7, 8, 10, 16);
+                            arrow.CloseFigure();
+                            g.FillPath(brush, arrow);
+                        }
                         break;
                     case "refresh":
-                        g.DrawArc(pen, 7, 7, 20, 20, 42, 285);
-                        PointF[] refreshArrow = { new PointF(23, 5), new PointF(28, 11), new PointF(20, 12) };
-                        g.FillPolygon(brush, refreshArrow);
+                        g.DrawArc(pen, 8, 8, 18, 18, 48, 278);
+                        using (GraphicsPath arrow = new GraphicsPath())
+                        {
+                            arrow.AddLine(23, 6, 28, 11);
+                            arrow.AddLine(28, 11, 21, 13);
+                            arrow.CloseFigure();
+                            g.FillPath(brush, arrow);
+                        }
                         break;
                     case "rest":
-                        g.DrawBezier(pen, new PointF(10, 5), new PointF(7, 7), new PointF(13, 8), new PointF(10, 11));
-                        g.DrawBezier(pen, new PointF(17, 5), new PointF(14, 7), new PointF(20, 8), new PointF(17, 11));
-                        using (GraphicsPath cup = new GraphicsPath())
-                        {
-                            cup.AddLine(7, 14, 23, 14);
-                            cup.AddLine(23, 14, 21, 26);
-                            cup.AddBezier(21, 26, 20, 28, 10, 28, 9, 26);
-                            cup.AddLine(9, 26, 7, 14);
-                            cup.CloseFigure();
-                            g.DrawPath(pen, cup);
-                        }
-                        g.DrawArc(pen, 20, 16, 9, 8, 270, 180);
-                        g.DrawLine(pen, 8, 30, 22, 30);
-                        break;
-                    case "export":
-                        g.DrawLine(pen, 17, 5, 17, 20);
-                        g.DrawLine(pen, 11, 14, 17, 20);
-                        g.DrawLine(pen, 23, 14, 17, 20);
-                        g.DrawLine(pen, 7, 25, 7, 29);
-                        g.DrawLine(pen, 7, 29, 27, 29);
-                        g.DrawLine(pen, 27, 29, 27, 25);
-                        break; 
-                    case "save":
-                        g.DrawLine(pen, 7, 5, 23, 5); g.DrawLine(pen, 23, 5, 28, 10); g.DrawLine(pen, 28, 10, 28, 27); g.DrawLine(pen, 28, 27, 6, 27); g.DrawLine(pen, 6, 27, 6, 5); g.DrawLine(pen, 7, 5, 7, 13); g.DrawLine(pen, 7, 13, 23, 13); g.DrawLine(pen, 23, 13, 23, 5); g.DrawRectangle(pen, 10, 18, 13, 7);
-                        break;
                     case "coffee":
                         using (GraphicsPath cup = new GraphicsPath())
                         {
-                            cup.AddLine(7, 14, 23, 14); cup.AddLine(23, 14, 21, 25);
-                            cup.AddBezier(21, 25, 20, 28, 10, 28, 9, 25); cup.AddLine(9, 25, 7, 14); cup.CloseFigure();
+                            cup.AddLine(8, 13, 22, 13);
+                            cup.AddLine(22, 13, 20, 24);
+                            cup.AddBezier(20, 24, 19, 27, 11, 27, 10, 24);
+                            cup.AddLine(10, 24, 8, 13);
+                            cup.CloseFigure();
                             g.DrawPath(pen, cup);
                         }
-                        g.DrawArc(pen, 20, 16, 9, 8, 270, 180);
-                        g.DrawArc(pen, 10, 4, 5, 8, 190, 220);
-                        g.DrawArc(pen, 17, 4, 5, 8, 190, 220);
+                        g.DrawArc(pen, 20, 15, 8, 8, 270, 180);
+                        g.DrawLine(pen, 10, 30, 22, 30);
+                        break;
+                    case "export":
+                        g.DrawLine(pen, 17, 6, 17, 21);
+                        g.DrawLine(pen, 11, 15, 17, 21);
+                        g.DrawLine(pen, 23, 15, 17, 21);
+                        g.DrawArc(pen, 7, 22, 20, 8, 0, 180);
+                        break;
+                    case "save":
+                        using (GraphicsPath disk = new GraphicsPath())
+                        {
+                            disk.AddArc(7, 5, 20, 20, 180, 90);
+                            disk.AddLine(17, 5, 23, 5);
+                            disk.AddLine(27, 9, 27, 27);
+                            disk.AddArc(7, 23, 20, 4, 0, 180);
+                            disk.CloseFigure();
+                            g.DrawPath(pen, disk);
+                        }
+                        g.DrawLine(pen, 11, 6, 11, 13);
+                        g.DrawLine(pen, 21, 6, 21, 13);
+                        using (GraphicsPath slot = new GraphicsPath())
+                        {
+                            slot.AddArc(11, 17, 12, 10, 180, 180);
+                            slot.AddLine(11, 22, 23, 22);
+                            g.DrawPath(pen, slot);
+                        }
                         break;
                 }
             }
