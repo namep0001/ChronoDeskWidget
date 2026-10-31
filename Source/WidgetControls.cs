@@ -37,6 +37,50 @@ namespace ChronoDeskWidget
                 thin.StartCap = LineCap.Round; thin.EndCap = LineCap.Round; thin.LineJoin = LineJoin.Round;
                 switch (Kind)
                 {
+                    case "play":
+                        PointF[] play = { new PointF(9, 5), new PointF(20, 12), new PointF(9, 19) };
+                        g.FillPolygon(brush, play);
+                        break;
+                    case "pause":
+                        using (GraphicsPath pause = new GraphicsPath())
+                        {
+                            pause.AddRectangle(new RectangleF(7, 5, 4, 14));
+                            pause.AddRectangle(new RectangleF(14, 5, 4, 14));
+                            g.FillPath(brush, pause);
+                        }
+                        break;
+                    case "reset":
+                        g.DrawArc(pen, 5, 5, 14, 14, 42, 278);
+                        PointF[] resetArrow = { new PointF(4, 5), new PointF(12, 5), new PointF(6, 12) };
+                        g.FillPolygon(brush, resetArrow);
+                        break;
+                    case "refresh":
+                        g.DrawArc(pen, 5, 5, 14, 14, 48, 278);
+                        PointF[] refreshArrow = { new PointF(17, 3), new PointF(21, 8), new PointF(14, 9) };
+                        g.FillPolygon(brush, refreshArrow);
+                        break;
+                    case "coffee":
+                    case "rest":
+                        using (GraphicsPath cup = new GraphicsPath())
+                        {
+                            cup.AddLine(5, 8, 17, 8);
+                            cup.AddLine(17, 8, 15, 18);
+                            cup.AddBezier(15, 18, 14, 21, 8, 21, 7, 18);
+                            cup.AddLine(7, 18, 5, 8);
+                            cup.CloseFigure();
+                            g.DrawPath(pen, cup);
+                        }
+                        g.DrawArc(pen, 16, 10, 6, 6, 270, 180);
+                        g.DrawLine(pen, 7, 21, 17, 21);
+                        break;
+                    case "export":
+                        g.DrawLine(pen, 12, 3, 12, 15);
+                        g.DrawLine(pen, 7, 10, 12, 15);
+                        g.DrawLine(pen, 17, 10, 12, 15);
+                        g.DrawLine(pen, 5, 17, 5, 21);
+                        g.DrawLine(pen, 5, 21, 19, 21);
+                        g.DrawLine(pen, 19, 21, 19, 17);
+                        break;
                     case "clock":
                         g.DrawEllipse(pen, 3.2F, 3.2F, 17.6F, 17.6F);
                         g.DrawLine(pen, 12, 6.5F, 12, 12);
@@ -118,35 +162,79 @@ namespace ChronoDeskWidget
         }
     }
 
-    internal sealed class VectorIconButton : Button
+    internal sealed class CircularIconButton : Control
     {
-        private string _kind;
+        private readonly VectorIconView _icon;
         private bool _hovered;
-        public string Kind { get { return _kind; } set { _kind = value ?? "play"; Invalidate(); } }
+        private bool _pressed;
+
+        public string IconKind { get; private set; }
         public bool ShowBackground { get; set; }
 
-        public VectorIconButton(string kind)
+        public CircularIconButton(string iconKind)
         {
-            _kind = kind ?? "play";
+            IconKind = iconKind ?? "play";
             ShowBackground = true;
-            Text = string.Empty;
-            FlatStyle = FlatStyle.Flat;
-            FlatAppearance.BorderSize = 0;
-            UseVisualStyleBackColor = false;
             SetStyle(ControlStyles.AllPaintingInWmPaint | ControlStyles.OptimizedDoubleBuffer |
                 ControlStyles.UserPaint | ControlStyles.ResizeRedraw | ControlStyles.SupportsTransparentBackColor, true);
-            BackColor = Color.Transparent;
+            BackColor = SystemColors.Control;
+            Cursor = Cursors.Hand;
             TabStop = false;
+
+            _icon = new VectorIconView(IconKind);
+            _icon.Enabled = false;
+            _icon.BackColor = Color.Transparent;
+            _icon.TabStop = false;
+            Controls.Add(_icon);
+            UpdateIconLayout();
         }
 
-        protected override void OnMouseEnter(EventArgs e) { _hovered = true; Invalidate(); base.OnMouseEnter(e); }
-        protected override void OnMouseLeave(EventArgs e) { _hovered = false; Invalidate(); base.OnMouseLeave(e); }
+        protected override void OnSizeChanged(EventArgs e)
+        {
+            base.OnSizeChanged(e);
+            UpdateIconLayout();
+        }
+
+        protected override void OnForeColorChanged(EventArgs e)
+        {
+            base.OnForeColorChanged(e);
+            if (_icon != null) _icon.ForeColor = ForeColor;
+        }
+
+        protected override void OnMouseEnter(EventArgs e)
+        {
+            _hovered = true;
+            Invalidate();
+            base.OnMouseEnter(e);
+        }
+
+        protected override void OnMouseLeave(EventArgs e)
+        {
+            _hovered = false;
+            _pressed = false;
+            Invalidate();
+            base.OnMouseLeave(e);
+        }
+
+        protected override void OnMouseDown(MouseEventArgs e)
+        {
+            if (e.Button == MouseButtons.Left) _pressed = true;
+            Invalidate();
+            base.OnMouseDown(e);
+        }
+
+        protected override void OnMouseUp(MouseEventArgs e)
+        {
+            _pressed = false;
+            Invalidate();
+            base.OnMouseUp(e);
+        }
 
         protected override void OnPaintBackground(PaintEventArgs e)
         {
-            Color parent = Parent == null ? SystemColors.Control : Parent.BackColor;
-            using (SolidBrush fill = new SolidBrush(parent))
-                e.Graphics.FillRectangle(fill, ClientRectangle);
+            Color parentColor = Parent == null ? SystemColors.Control : Parent.BackColor;
+            using (SolidBrush background = new SolidBrush(parentColor))
+                e.Graphics.FillRectangle(background, ClientRectangle);
         }
 
         protected override void OnPaint(PaintEventArgs e)
@@ -155,111 +243,23 @@ namespace ChronoDeskWidget
             g.SmoothingMode = SmoothingMode.AntiAlias;
             g.PixelOffsetMode = PixelOffsetMode.HighQuality;
             g.CompositingQuality = CompositingQuality.HighQuality;
+
             if (ShowBackground || _hovered)
             {
-                Color parentColor = Parent == null ? BackColor : Parent.BackColor;
-                Color backgroundColor = ShowBackground
-                    ? (_hovered ? ControlPaint.Light(BackColor, 0.12F) : BackColor)
-                    : ControlPaint.Light(parentColor, 0.08F);
-                using (SolidBrush background = new SolidBrush(backgroundColor))
-                    g.FillEllipse(background, 1.25F, 1.25F, Width - 2.5F, Height - 2.5F);
+                Color fill = _pressed ? ControlPaint.Dark(BackColor, 0.10F) :
+                    (_hovered ? ControlPaint.Light(BackColor, 0.12F) : BackColor);
+                using (SolidBrush brush = new SolidBrush(fill))
+                    g.FillEllipse(brush, 0.8F, 0.8F, Math.Max(0, Width - 1.6F), Math.Max(0, Height - 1.6F));
             }
+        }
 
-            float scale = Math.Min(Width, Height) / 34F;
-            if (scale <= 0F) return;
-            g.TranslateTransform((Width - 34F * scale) / 2F, (Height - 34F * scale) / 2F);
-            g.ScaleTransform(scale, scale);
-            using (Pen pen = new Pen(ForeColor, 2.0F))
-            using (SolidBrush brush = new SolidBrush(ForeColor))
-            {
-                pen.StartCap = LineCap.Round;
-                pen.EndCap = LineCap.Round;
-                pen.LineJoin = LineJoin.Round;
-                switch (_kind)
-                {
-                    case "play":
-                        using (GraphicsPath play = new GraphicsPath())
-                        {
-                            play.AddBezier(12, 8, 12, 7, 14, 9, 15, 10);
-                            play.AddLine(15, 10, 23, 16);
-                            play.AddBezier(23, 16, 24.5F, 17, 24.5F, 18, 23, 19);
-                            play.AddLine(23, 19, 15, 25);
-                            play.AddBezier(15, 25, 13, 27, 12, 26, 12, 24);
-                            play.CloseFigure();
-                            g.FillPath(brush, play);
-                        }
-                        break;
-                    case "pause":
-                        using (GraphicsPath bars = new GraphicsPath())
-                        {
-                            bars.AddArc(10, 8, 5, 5, 180, 90); bars.AddArc(10, 8, 5, 5, 270, 90);
-                            bars.AddArc(10, 21, 5, 5, 0, 90); bars.AddArc(10, 21, 5, 5, 90, 90);
-                            bars.CloseFigure();
-                            bars.AddRectangle(new Rectangle(19, 8, 5, 18));
-                            g.FillPath(brush, bars);
-                        }
-                        break;
-                    case "reset":
-                        g.DrawArc(pen, 8, 8, 18, 18, 42, 278);
-                        using (GraphicsPath arrow = new GraphicsPath())
-                        {
-                            arrow.AddLine(7, 8, 16, 8);
-                            arrow.AddLine(7, 8, 10, 16);
-                            arrow.CloseFigure();
-                            g.FillPath(brush, arrow);
-                        }
-                        break;
-                    case "refresh":
-                        g.DrawArc(pen, 8, 8, 18, 18, 48, 278);
-                        using (GraphicsPath arrow = new GraphicsPath())
-                        {
-                            arrow.AddLine(23, 6, 28, 11);
-                            arrow.AddLine(28, 11, 21, 13);
-                            arrow.CloseFigure();
-                            g.FillPath(brush, arrow);
-                        }
-                        break;
-                    case "rest":
-                    case "coffee":
-                        using (GraphicsPath cup = new GraphicsPath())
-                        {
-                            cup.AddLine(8, 13, 22, 13);
-                            cup.AddLine(22, 13, 20, 24);
-                            cup.AddBezier(20, 24, 19, 27, 11, 27, 10, 24);
-                            cup.AddLine(10, 24, 8, 13);
-                            cup.CloseFigure();
-                            g.DrawPath(pen, cup);
-                        }
-                        g.DrawArc(pen, 20, 15, 8, 8, 270, 180);
-                        g.DrawLine(pen, 10, 30, 22, 30);
-                        break;
-                    case "export":
-                        g.DrawLine(pen, 17, 6, 17, 21);
-                        g.DrawLine(pen, 11, 15, 17, 21);
-                        g.DrawLine(pen, 23, 15, 17, 21);
-                        g.DrawArc(pen, 7, 22, 20, 8, 0, 180);
-                        break;
-                    case "save":
-                        using (GraphicsPath disk = new GraphicsPath())
-                        {
-                            disk.AddArc(7, 5, 20, 20, 180, 90);
-                            disk.AddLine(17, 5, 23, 5);
-                            disk.AddLine(27, 9, 27, 27);
-                            disk.AddArc(7, 23, 20, 4, 0, 180);
-                            disk.CloseFigure();
-                            g.DrawPath(pen, disk);
-                        }
-                        g.DrawLine(pen, 11, 6, 11, 13);
-                        g.DrawLine(pen, 21, 6, 21, 13);
-                        using (GraphicsPath slot = new GraphicsPath())
-                        {
-                            slot.AddArc(11, 17, 12, 10, 180, 180);
-                            slot.AddLine(11, 22, 23, 22);
-                            g.DrawPath(pen, slot);
-                        }
-                        break;
-                }
-            }
+        private void UpdateIconLayout()
+        {
+            if (_icon == null) return;
+            int iconSize = Math.Max(12, Math.Min(Width, Height) - 8);
+            _icon.Size = new Size(iconSize, iconSize);
+            _icon.Location = new Point((Width - iconSize) / 2, (Height - iconSize) / 2);
+            _icon.ForeColor = ForeColor;
         }
     }
 
