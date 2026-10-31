@@ -472,6 +472,7 @@ namespace ChronoDeskWidget
             _ratesRefreshButton = null;
             _sections.Clear();
             _rateValueLabels.Clear();
+            _rateChangeLabels.Clear();
 
             _layoutColumns = DetermineLayoutColumns();
             _content = new TableLayoutPanel();
