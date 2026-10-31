@@ -62,6 +62,8 @@ namespace ChronoDeskWidget
                         break;
                     case "coffee":
                     case "rest":
+                        GraphicsState cupState = g.Save();
+                        g.TranslateTransform(-1.5F, -3F);
                         using (GraphicsPath cup = new GraphicsPath())
                         {
                             cup.AddLine(5, 8, 17, 8);
@@ -73,6 +75,7 @@ namespace ChronoDeskWidget
                         }
                         g.DrawArc(pen, 16, 10, 6, 6, 270, 180);
                         g.DrawLine(pen, 7, 21, 17, 21);
+                        g.Restore(cupState);
                         break;
                     case "export":
                         g.DrawLine(pen, 12, 3, 12, 15);
@@ -328,8 +331,41 @@ namespace ChronoDeskWidget
             }
             else
             {
-                using (GraphicsPath body = new GraphicsPath()) { body.AddPolygon(new PointF[] { new PointF(5,11), new PointF(10,5), new PointF(22,5), new PointF(28,11), new PointF(24,24), new PointF(8,24) }); using (LinearGradientBrush gold = new LinearGradientBrush(new Rectangle(5,5,23,20), Color.FromArgb(255,241,160), Color.FromArgb(165,98,22), 90F)) using (Pen edge = new Pen(Color.FromArgb(151,92,22),1F)) { g.FillPath(gold,body); g.DrawPath(edge,body); } }
-                using (Pen shine = new Pen(Color.FromArgb(255,248,194),1.2F)) using (Pen shade = new Pen(Color.FromArgb(190,122,33),1F)) { g.DrawLine(shine,10,7,21,7); g.DrawLine(shade,10,12,23,12); g.DrawLine(shade,12,16,21,16); g.DrawLine(shine,9,21,23,21); }
+                int diameter = Math.Min(Width, Height) - 2;
+                Rectangle circle = new Rectangle((Width - diameter) / 2, (Height - diameter) / 2, diameter, diameter);
+                using (LinearGradientBrush badge = new LinearGradientBrush(circle,
+                    Color.FromArgb(255, 226, 128), Color.FromArgb(153, 91, 25), 135F))
+                    g.FillEllipse(badge, circle);
+
+                float cx = circle.Left + circle.Width / 2F;
+                float cy = circle.Top + circle.Height / 2F;
+                float unit = diameter / 24F;
+                PointF[] barPoints = {
+                    new PointF(cx - 7.5F * unit, cy - 2.0F * unit),
+                    new PointF(cx - 4.5F * unit, cy - 5.0F * unit),
+                    new PointF(cx + 4.5F * unit, cy - 5.0F * unit),
+                    new PointF(cx + 7.5F * unit, cy - 2.0F * unit),
+                    new PointF(cx + 5.5F * unit, cy + 4.5F * unit),
+                    new PointF(cx - 5.5F * unit, cy + 4.5F * unit)
+                };
+                using (GraphicsPath body = new GraphicsPath())
+                using (LinearGradientBrush gold = new LinearGradientBrush(circle,
+                    Color.FromArgb(255, 249, 190), Color.FromArgb(190, 116, 25), 90F))
+                using (Pen edge = new Pen(Color.FromArgb(145, 83, 18), Math.Max(0.7F, unit)))
+                {
+                    body.AddPolygon(barPoints);
+                    g.FillPath(gold, body);
+                    g.DrawPath(edge, body);
+                }
+                using (Pen shine = new Pen(Color.FromArgb(255, 255, 224), Math.Max(0.7F, unit * 0.9F)))
+                using (Pen shade = new Pen(Color.FromArgb(177, 105, 24), Math.Max(0.6F, unit * 0.75F)))
+                {
+                    g.DrawLine(shine, cx - 4.2F * unit, cy - 4.0F * unit, cx + 4.2F * unit, cy - 4.0F * unit);
+                    g.DrawLine(shade, cx - 5.0F * unit, cy - 1.0F * unit, cx + 5.0F * unit, cy - 1.0F * unit);
+                    g.DrawLine(shade, cx - 4.0F * unit, cy + 1.8F * unit, cx + 4.0F * unit, cy + 1.8F * unit);
+                }
+                using (Pen border = new Pen(Color.FromArgb(150, 255, 255, 255), 0.8F))
+                    g.DrawEllipse(border, circle);
             }
         }
     }
