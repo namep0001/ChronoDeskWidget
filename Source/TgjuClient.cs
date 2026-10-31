@@ -92,7 +92,7 @@ namespace ChronoDeskWidget
         {
             if (string.IsNullOrWhiteSpace(text)) return null;
             const string price = @"(?<price>[0-9۰-۹٠-٩]+(?:[,٬][0-9۰-۹٠-٩]{3})+|[0-9۰-۹٠-٩]{4,})";
-            Match match = Regex.Match(text, Regex.Escape(label) + @"\\s*[:：|]*\\s*" + price,
+            Match match = Regex.Match(text, Regex.Escape(label) + @"\s*[:：|]*\s*" + price,
                 RegexOptions.IgnoreCase);
             return match.Success ? NormalizeNumber(match.Groups["price"].Value) : null;
         }
