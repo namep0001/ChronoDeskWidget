@@ -9,11 +9,12 @@ namespace ChronoDeskWidget
 {
     internal sealed class VectorIconView : Control
     {
-        public string Kind { get; private set; }
+        private string _kind;
+        public string Kind { get { return _kind; } set { _kind = value ?? "clock"; Invalidate(); } }
 
         public VectorIconView(string kind)
         {
-            Kind = kind ?? "clock";
+            _kind = kind ?? "clock";
             SetStyle(ControlStyles.AllPaintingInWmPaint | ControlStyles.OptimizedDoubleBuffer |
                 ControlStyles.UserPaint | ControlStyles.SupportsTransparentBackColor, true);
             BackColor = Color.Transparent;
@@ -169,6 +170,7 @@ namespace ChronoDeskWidget
         private bool _pressed;
 
         public string IconKind { get; private set; }
+        public string Kind { get { return IconKind; } set { IconKind = value ?? "play"; if (_icon != null) _icon.Kind = IconKind; } }
         public bool ShowBackground { get; set; }
 
         public CircularIconButton(string iconKind)
