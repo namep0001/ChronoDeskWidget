@@ -82,7 +82,8 @@ namespace ChronoDeskWidget
         private Label _dateSolarLabel;
         private Label _clockHintLabel;
         private Label _calendarMonthLabel;
-        private ComboBox _calendarModeCombo;
+        private RoundedButton _calendarSolarButton;
+        private RoundedButton _calendarGregorianButton;
         private TableLayoutPanel _calendarGrid;
         private Panel _taskRowsPanel;
         private TextBox _taskInput;
@@ -346,7 +347,7 @@ namespace ChronoDeskWidget
             switch (key)
             {
                 case "clock": return 203;
-                case "calendar": return 203;
+                case "calendar": return 228;
                 case "tasks": return 203;
                 case "pomodoro": return 203;
                 case "notes": return 203;
@@ -451,7 +452,8 @@ namespace ChronoDeskWidget
             _dateSolarLabel = null;
             _clockHintLabel = null;
             _calendarMonthLabel = null;
-            _calendarModeCombo = null;
+            _calendarSolarButton = null;
+            _calendarGregorianButton = null;
             _calendarGrid = null;
             _taskRowsPanel = null;
             _taskInput = null;
@@ -622,66 +624,32 @@ namespace ChronoDeskWidget
 
         private void BuildCalendarSection()
         {
-            Panel panel = NewSection("calendar", 184);
+            Panel panel = NewSection("calendar", 228);
             AddSectionHeader(panel, "calendar", T("Calendar", "تقویم"), 0);
 
-            Button previous = MakeSmallButton("‹", T("Previous month", "ماه قبل"), 22);
-            previous.Height = 23;
+            Button previous = MakeSmallButton("‹", T("Previous month", "ماه قبل"), 24);
+            previous.Height = 24;
             previous.Location = new Point(8, 31);
             previous.Click += delegate { MoveCalendarMonth(-1); };
             panel.Controls.Add(previous);
 
             _calendarMonthLabel = new Label();
             _calendarMonthLabel.BackColor = panel.BackColor;
-            _calendarMonthLabel.Location = new Point(34, 31);
-            _calendarMonthLabel.Size = new Size(108, 23);
+            _calendarMonthLabel.Location = new Point(36, 31);
+            _calendarMonthLabel.Size = new Size(180, 24);
             _calendarMonthLabel.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
             _calendarMonthLabel.Font = GetUiFont(8.5F, FontStyle.Bold);
             _calendarMonthLabel.ForeColor = _themeText;
             _calendarMonthLabel.TextAlign = ContentAlignment.MiddleCenter;
             panel.Controls.Add(_calendarMonthLabel);
 
-            Button next = MakeSmallButton("›", T("Next month", "ماه بعد"), 22);
-            next.Height = 23;
-            next.Location = new Point(144, 31);
+            Button next = MakeSmallButton("›", T("Next month", "ماه بعد"), 24);
+            next.Height = 24;
             next.Click += delegate { MoveCalendarMonth(1); };
             panel.Controls.Add(next);
 
-            _calendarModeCombo = new ComboBox();
-            _calendarModeCombo.DropDownStyle = ComboBoxStyle.DropDownList;
-            _calendarModeCombo.FlatStyle = FlatStyle.Flat;
-            _calendarModeCombo.DrawMode = DrawMode.OwnerDrawFixed;
-            _calendarModeCombo.ItemHeight = 20;
-            _calendarModeCombo.DrawItem += delegate(object sender, DrawItemEventArgs e)
-            {
-                if (e.Index < 0) return;
-                bool selectedItem = (e.State & DrawItemState.Selected) == DrawItemState.Selected;
-                Color itemBack = _themeUsesLightTaskbar ? (selectedItem ? _themeButton : _themeInput) : Color.FromArgb(8, 11, 16);
-                Color itemText = _themeUsesLightTaskbar ? _themeText : Color.White;
-                using (SolidBrush fill = new SolidBrush(itemBack)) e.Graphics.FillRectangle(fill, e.Bounds);
-                TextRenderer.DrawText(e.Graphics, _calendarModeCombo.Items[e.Index].ToString(), _calendarModeCombo.Font,
-                    e.Bounds, itemText, TextFormatFlags.Left | TextFormatFlags.VerticalCenter |
-                    TextFormatFlags.NoPadding | TextFormatFlags.EndEllipsis);
-            };
-            _calendarModeCombo.Font = GetUiFont(8F, FontStyle.Regular);
-            _calendarModeCombo.BackColor = _themeUsesLightTaskbar ? _themeButton : Color.FromArgb(8, 11, 16);
-            _calendarModeCombo.ForeColor = _themeUsesLightTaskbar ? _themeText : Color.White;
-            _calendarModeCombo.Items.Add(T("Solar Hijri", "هجری شمسی"));
-            _calendarModeCombo.Items.Add(T("Gregorian", "میلادی"));
-            _calendarModeCombo.SelectedIndex = _showSolarCalendar ? 0 : 1;
-            _calendarModeCombo.Size = new Size(82, 23);
-            _calendarModeCombo.Location = new Point(169, 31);
-            _calendarModeCombo.SelectedIndexChanged += delegate
-            {
-                _showSolarCalendar = _calendarModeCombo.SelectedIndex == 0;
-                _calendarAnchor = _selectedDate;
-                DrawCalendar();
-            };
-            panel.Controls.Add(_calendarModeCombo);
-
             Button today = MakeSmallButton(T("Today", "امروز"), T("Jump to today", "رفتن به امروز"), 45);
-            today.Height = 23;
-            today.Location = new Point(254, 31);
+            today.Height = 24;
             today.Click += delegate
             {
                 _selectedDate = DateTime.Today;
@@ -691,9 +659,40 @@ namespace ChronoDeskWidget
             };
             panel.Controls.Add(today);
 
+            _calendarSolarButton = new RoundedButton();
+            _calendarSolarButton.Text = T("Solar Hijri", "هجری شمسی");
+            _calendarSolarButton.Size = new Size(94, 24);
+            _calendarSolarButton.Font = GetUiFont(7.8F, FontStyle.Bold);
+            _calendarSolarButton.Cursor = Cursors.Hand;
+            _calendarSolarButton.Click += delegate
+            {
+                if (_showSolarCalendar) return;
+                _showSolarCalendar = true;
+                _calendarAnchor = _selectedDate;
+                UpdateCalendarModeButtons();
+                DrawCalendar();
+            };
+            panel.Controls.Add(_calendarSolarButton);
+
+            _calendarGregorianButton = new RoundedButton();
+            _calendarGregorianButton.Text = T("Gregorian", "میلادی");
+            _calendarGregorianButton.Size = new Size(94, 24);
+            _calendarGregorianButton.Font = GetUiFont(7.8F, FontStyle.Bold);
+            _calendarGregorianButton.Cursor = Cursors.Hand;
+            _calendarGregorianButton.Click += delegate
+            {
+                if (!_showSolarCalendar) return;
+                _showSolarCalendar = false;
+                _calendarAnchor = _selectedDate;
+                UpdateCalendarModeButtons();
+                DrawCalendar();
+            };
+            panel.Controls.Add(_calendarGregorianButton);
+            UpdateCalendarModeButtons();
+
             _calendarGrid = new WidgetCalendarGrid();
-            _calendarGrid.Location = new Point(12, 60);
-            _calendarGrid.Size = new Size(panel.Width - 24, 132);
+            _calendarGrid.Location = new Point(12, 82);
+            _calendarGrid.Size = new Size(panel.Width - 24, 140);
             _calendarGrid.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
             _calendarGrid.ColumnCount = 7;
             _calendarGrid.RowCount = 7;
@@ -702,22 +701,39 @@ namespace ChronoDeskWidget
             _calendarGrid.BackColor = panel.BackColor;
             _calendarGrid.CellBorderStyle = TableLayoutPanelCellBorderStyle.None;
             for (int i = 0; i < 7; i++) _calendarGrid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F / 7F));
-            _calendarGrid.RowStyles.Add(new RowStyle(SizeType.Absolute, 16));
-            for (int i = 0; i < 6; i++) _calendarGrid.RowStyles.Add(new RowStyle(SizeType.Absolute, 19));
+            _calendarGrid.RowStyles.Add(new RowStyle(SizeType.Absolute, 18));
+            for (int i = 0; i < 6; i++) _calendarGrid.RowStyles.Add(new RowStyle(SizeType.Absolute, 20));
             panel.Controls.Add(_calendarGrid);
 
             panel.Resize += delegate
             {
                 previous.Left = 8;
+                today.Left = panel.ClientSize.Width - today.Width - 8;
+                next.Left = today.Left - next.Width - 4;
                 _calendarMonthLabel.Left = previous.Right + 4;
-                _calendarMonthLabel.Width = 108;
-                next.Left = _calendarMonthLabel.Right + 3;
-                _calendarModeCombo.Left = next.Right + 3;
-                _calendarModeCombo.Width = 82;
-                today.Left = _calendarModeCombo.Right + 3;
-                today.Width = Math.Max(38, panel.ClientSize.Width - today.Left - 8);
+                _calendarMonthLabel.Width = Math.Max(70, next.Left - _calendarMonthLabel.Left - 4);
+                _calendarSolarButton.Left = (panel.ClientSize.Width - _calendarSolarButton.Width - _calendarGregorianButton.Width) / 2;
+                _calendarGregorianButton.Left = _calendarSolarButton.Right;
                 _calendarGrid.Width = panel.ClientSize.Width - 24;
             };
+        }
+
+        private void UpdateCalendarModeButtons()
+        {
+            if (_calendarSolarButton == null || _calendarSolarButton.IsDisposed ||
+                _calendarGregorianButton == null || _calendarGregorianButton.IsDisposed) return;
+
+            _calendarSolarButton.BackColor = _showSolarCalendar ? _themeAccent : _themeButton;
+            _calendarSolarButton.ForeColor = _showSolarCalendar ? ContrastText(_themeAccent) : _themeText;
+            _calendarSolarButton.FlatAppearance.BorderColor = _showSolarCalendar ? _themeAccent : _themeBorder;
+            _calendarSolarButton.FlatAppearance.BorderSize = _showSolarCalendar ? 0 : 1;
+
+            _calendarGregorianButton.BackColor = !_showSolarCalendar ? _themeAccent : _themeButton;
+            _calendarGregorianButton.ForeColor = !_showSolarCalendar ? ContrastText(_themeAccent) : _themeText;
+            _calendarGregorianButton.FlatAppearance.BorderColor = !_showSolarCalendar ? _themeAccent : _themeBorder;
+            _calendarGregorianButton.FlatAppearance.BorderSize = !_showSolarCalendar ? 0 : 1;
+            _calendarSolarButton.Invalidate();
+            _calendarGregorianButton.Invalidate();
         }
 
         private void BuildTasksSection()
@@ -821,7 +837,7 @@ namespace ChronoDeskWidget
             _pomodoroResetButton = new VectorIconButton("reset");
             _pomodoroResetButton.Size = new Size(28, 28);
             _pomodoroResetButton.Location = new Point(0, 159);
-            _pomodoroResetButton.ForeColor = _themeMutedText;
+            _pomodoroResetButton.ForeColor = Color.White;
             _pomodoroResetButton.BackColor = _themeButton;
             _pomodoroResetButton.Cursor = Cursors.Hand;
             _pomodoroResetButton.ShowBackground = true;
@@ -832,7 +848,7 @@ namespace ChronoDeskWidget
             _pomodoroSwitchButton = new VectorIconButton("coffee");
             _pomodoroSwitchButton.Size = new Size(28, 28);
             _pomodoroSwitchButton.Location = new Point(0, 159);
-            _pomodoroSwitchButton.ForeColor = _themeAccentText;
+            _pomodoroSwitchButton.ForeColor = Color.White;
             _pomodoroSwitchButton.BackColor = _themeButton;
             _pomodoroSwitchButton.Cursor = Cursors.Hand;
             _pomodoroSwitchButton.ShowBackground = true;
@@ -859,7 +875,7 @@ namespace ChronoDeskWidget
             Panel panel = NewSection("notes", 152);
             AddSectionHeader(panel, "notes", T("Quick Note", "یادداشت سریع"), 38);
 
-            VectorIconButton saveAsButton = new VectorIconButton("save");
+            VectorIconButton saveAsButton = new VectorIconButton("export");
             saveAsButton.Size = new Size(28, 28);
             saveAsButton.Location = new Point(panel.Width - 38, 3);
             saveAsButton.Anchor = AnchorStyles.Top | AnchorStyles.Right;
@@ -1141,8 +1157,8 @@ namespace ChronoDeskWidget
             _calendarGrid.ColumnStyles.Clear();
             _calendarGrid.RowStyles.Clear();
             for (int i = 0; i < 7; i++) _calendarGrid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F / 7F));
-            _calendarGrid.RowStyles.Add(new RowStyle(SizeType.Absolute, 14));
-            for (int i = 0; i < 6; i++) _calendarGrid.RowStyles.Add(new RowStyle(SizeType.Absolute, 13));
+            _calendarGrid.RowStyles.Add(new RowStyle(SizeType.Absolute, 18));
+            for (int i = 0; i < 6; i++) _calendarGrid.RowStyles.Add(new RowStyle(SizeType.Absolute, 20));
             _calendarGrid.RowCount = 7;
             _calendarGrid.ColumnCount = 7;
 
@@ -1203,7 +1219,7 @@ namespace ChronoDeskWidget
                 int displayMonth = _showSolarCalendar ? _persianCalendar.GetMonth(date) : date.Month;
                 CalendarDayButton dayButton = new CalendarDayButton();
                 dayButton.Dock = DockStyle.Fill;
-                dayButton.Margin = new Padding(2);
+                dayButton.Margin = new Padding(1);
                 dayButton.FlatStyle = FlatStyle.Flat;
                 dayButton.FlatAppearance.BorderSize = 0;
                 bool currentMonth = displayYear == year && displayMonth == month;
@@ -1215,6 +1231,7 @@ namespace ChronoDeskWidget
                 dayButton.Tag = date.Date;
                 dayButton.BackColor = _calendarGrid.BackColor;
                 dayButton.FillColor = selected ? _themeSelection : (todayDate ? _themeButton : Color.Empty);
+                dayButton.IsToday = todayDate;
                 dayButton.ForeColor = selected ? _themeSelectionText : (todayDate ? _themeAccentText : (currentMonth ? _themeText : _themeMutedText));
                 dayButton.Click += delegate(object sender, EventArgs e)
                 {
