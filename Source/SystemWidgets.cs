@@ -214,7 +214,8 @@ namespace ChronoDeskWidget
             {
                 if (PerformanceCounterCategory.Exists("GPU Engine"))
                 {
-                    string[] names = PerformanceCounterCategory.GetInstanceNames("GPU Engine");
+                    PerformanceCounterCategory category = new PerformanceCounterCategory("GPU Engine");
+                    string[] names = category.GetInstanceNames();
                     foreach (string name in names)
                     {
                         if (name.IndexOf("engtype_3D", StringComparison.OrdinalIgnoreCase) < 0) continue;
