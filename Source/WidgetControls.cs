@@ -134,6 +134,27 @@ namespace ChronoDeskWidget
                         g.DrawLines(pen, chart);
                         g.FillEllipse(brush, 17.5F, 4.5F, 3.5F, 3.5F);
                         break;
+                    case "network":
+                        g.DrawArc(pen, 3.5F, 4, 17, 15, 205, 130);
+                        g.DrawArc(pen, 7, 8, 10, 9, 205, 130);
+                        g.DrawArc(pen, 10.5F, 12, 3, 3, 205, 130);
+                        g.FillEllipse(brush, 10.2F, 18, 3.6F, 3.6F);
+                        break;
+                    case "calculator":
+                        using (GraphicsPath calc = RoundedRectangle(3.5F, 2.5F, 17, 19, 2F)) g.DrawPath(pen, calc);
+                        g.DrawLine(pen, 6.5F, 7, 17.5F, 7);
+                        for (int row = 0; row < 3; row++)
+                            for (int col = 0; col < 3; col++)
+                                g.FillEllipse(brush, 6.5F + col * 5.3F, 10 + row * 4F, 2.2F, 2.2F);
+                        break;
+                    case "system":
+                        g.DrawLine(pen, 3, 20, 21, 20);
+                        g.DrawLine(pen, 5, 17, 5, 11);
+                        g.DrawLine(pen, 10, 17, 10, 6);
+                        g.DrawLine(pen, 15, 17, 15, 9);
+                        g.DrawLine(pen, 20, 17, 20, 3);
+                        g.DrawLine(pen, 3, 17, 21, 17);
+                        break;
                     case "save":
                         using (Pen disk = new Pen(ForeColor, 2F))
                         using (GraphicsPath shape = new GraphicsPath())
@@ -161,6 +182,58 @@ namespace ChronoDeskWidget
             path.AddArc(x + width - d, y, d, d, 270, 90);
             path.AddArc(x + width - d, y + height - d, d, d, 0, 90);
             path.AddArc(x, y + height - d, d, d, 90, 90);
+            path.CloseFigure();
+            return path;
+        }
+    }
+
+    internal sealed class ThemedProgressBar : Control
+    {
+        private int _value;
+        public int Value
+        {
+            get { return _value; }
+            set { _value = Math.Max(0, Math.Min(100, value)); Invalidate(); }
+        }
+        public Color TrackColor { get; set; }
+        public Color FillColor { get; set; }
+
+        public ThemedProgressBar()
+        {
+            SetStyle(ControlStyles.AllPaintingInWmPaint | ControlStyles.OptimizedDoubleBuffer |
+                ControlStyles.UserPaint | ControlStyles.ResizeRedraw, true);
+            Height = 13;
+            TrackColor = Color.FromArgb(225, 232, 241);
+            FillColor = Color.DodgerBlue;
+        }
+
+        protected override void OnPaint(PaintEventArgs e)
+        {
+            base.OnPaint(e);
+            e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+            Rectangle bounds = new Rectangle(0, 1, Math.Max(0, Width - 1), Math.Max(1, Height - 2));
+            if (bounds.Width <= 0) return;
+            using (GraphicsPath track = RoundedRectangle(bounds, Math.Max(2, bounds.Height / 2)))
+            using (SolidBrush trackBrush = new SolidBrush(TrackColor))
+                e.Graphics.FillPath(trackBrush, track);
+            int fillWidth = (int)Math.Round(bounds.Width * _value / 100.0);
+            if (fillWidth > 0)
+            {
+                Rectangle fillBounds = new Rectangle(bounds.X, bounds.Y, Math.Min(bounds.Width, fillWidth), bounds.Height);
+                using (GraphicsPath fill = RoundedRectangle(fillBounds, Math.Max(2, bounds.Height / 2)))
+                using (SolidBrush fillBrush = new SolidBrush(FillColor))
+                    e.Graphics.FillPath(fillBrush, fill);
+            }
+        }
+
+        private static GraphicsPath RoundedRectangle(Rectangle rect, int radius)
+        {
+            GraphicsPath path = new GraphicsPath();
+            float d = Math.Min(radius * 2F, Math.Min(rect.Width, rect.Height));
+            path.AddArc(rect.X, rect.Y, d, d, 180, 90);
+            path.AddArc(rect.Right - d, rect.Y, d, d, 270, 90);
+            path.AddArc(rect.Right - d, rect.Bottom - d, d, d, 0, 90);
+            path.AddArc(rect.X, rect.Bottom - d, d, d, 90, 90);
             path.CloseFigure();
             return path;
         }
