@@ -805,7 +805,7 @@ namespace ChronoDeskWidget
             _pomodoroStartButton = new VectorIconButton("play");
             _pomodoroStartButton.Size = new Size(30, 30);
             _pomodoroStartButton.Location = new Point(0, 118);
-            _pomodoroStartButton.ForeColor = _themeAccentText;
+            _pomodoroStartButton.ForeColor = ContrastText(_themeAccent);
             _pomodoroStartButton.BackColor = _themeAccent;
             _pomodoroStartButton.Cursor = Cursors.Hand;
             _pomodoroStartButton.ShowBackground = true;
@@ -2205,21 +2205,15 @@ namespace ChronoDeskWidget
                         g.FillEllipse(brush, 17.5F, 4.5F, 3.5F, 3.5F);
                         break;
                     case "save":
-                        using (GraphicsPath disk = RoundedRectangle(4, 3, 16, 18, 2))
-                            g.FillPath(brush, disk);
-                        Color surface = Parent == null ? Color.White : Parent.BackColor;
-                        using (SolidBrush cutout = new SolidBrush(surface))
+                        using (Pen disk = new Pen(ForeColor, 2F))
+                        using (GraphicsPath shape = new GraphicsPath())
                         {
-                            g.FillRectangle(cutout, 7, 4, 10, 5);
-                            g.FillRectangle(cutout, 7, 13, 10, 7);
-                        }
-                        using (Pen detail = new Pen(Color.FromArgb(175, 255, 255, 255), 1.5F))
-                        {
-                            detail.StartCap = LineCap.Round;
-                            detail.EndCap = LineCap.Round;
-                            g.DrawLine(detail, 9, 5, 15, 5);
-                            g.DrawLine(detail, 9, 15, 15, 15);
-                            g.DrawLine(detail, 9, 18, 15, 18);
+                            disk.StartCap = LineCap.Round; disk.EndCap = LineCap.Round; disk.LineJoin = LineJoin.Round;
+                            shape.AddLine(5, 3, 17, 3); shape.AddLine(17, 3, 21, 7); shape.AddLine(21, 7, 21, 21);
+                            shape.AddLine(21, 21, 3, 21); shape.AddLine(3, 21, 3, 3); shape.CloseFigure();
+                            g.DrawPath(disk, shape);
+                            g.DrawRectangle(disk, 7, 4, 9, 6);
+                            g.DrawRectangle(disk, 7, 13, 10, 6);
                         }
                         break;
                     default:
