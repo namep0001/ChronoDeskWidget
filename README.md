@@ -57,6 +57,7 @@ ChronoDeskWidget/
 │   ├── WidgetControls.cs       # Reusable custom controls and drawing
 │   ├── LocalStore.cs           # Local settings and data persistence
 │   ├── TgjuClient.cs           # Market-rate retrieval and parsing
+│   ├── SystemWidgets.cs        # Network usage and system metrics
 │   └── Generate-AppIcon.ps1    # Generates the executable icon
 ├── ChronoDeskWidget.csproj
 ├── Start-Widget.bat
@@ -74,7 +75,7 @@ Tasks, notes, settings, window position, network traffic history, and the startu
 %LOCALAPPDATA%\ChronoDeskWidget\
 ```
 
-Task and note data stay on the computer. Market-rate requests use public TGJU pages:
+Task, note, and network history data stay on the computer. Network history is sampled while the app is running, at most once per day and when Windows reports a network change; traffic while the app is closed cannot be reconstructed. Market-rate requests use public TGJU pages:
 
 - [Dollar](https://www.tgju.org/profile/price_dollar_rl)
 - [Euro](https://www.tgju.org/profile/price_eur)
