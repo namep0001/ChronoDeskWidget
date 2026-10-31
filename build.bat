@@ -19,7 +19,7 @@ if not defined CSC if exist "%WINDIR%\Microsoft.NET\Framework\v4.0.30319\csc.exe
 
 if defined CSC (
   echo Compiling ChronoDesk Widget...
-  "%CSC%" /nologo /target:winexe /win32icon:"Source\ChronoDeskWidget.ico" /optimize+ /platform:anycpu32bitpreferred /codepage:65001 /out:"bin\Release\ChronoDeskWidget.exe" /reference:System.dll /reference:System.Core.dll /reference:System.Drawing.dll /reference:System.Windows.Forms.dll /reference:System.Xml.dll Source\AssemblyInfo.cs Source\Program.cs Source\LocalStore.cs Source\TgjuClient.cs Source\MainForm.cs Source\WidgetControls.cs
+  "%CSC%" /nologo /target:winexe /win32icon:"Source\ChronoDeskWidget.ico" /optimize+ /platform:anycpu32bitpreferred /codepage:65001 /out:"bin\Release\ChronoDeskWidget.exe" /reference:System.dll /reference:System.Core.dll /reference:System.Drawing.dll /reference:System.Windows.Forms.dll /reference:System.Xml.dll Source\AssemblyInfo.cs Source\Program.cs Source\LocalStore.cs Source\TgjuClient.cs Source\MainForm.cs Source\WidgetControls.cs Source\SystemWidgets.cs
   if errorlevel 1 goto :fail
 ) else (
   where msbuild.exe >nul 2>nul
