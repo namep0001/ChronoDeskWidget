@@ -2003,11 +2003,10 @@ namespace ChronoDeskWidget
             _trayMenu = menu;
         }
 
-        private void SetLanguage(string language) 
         private string GetWidgetDisplayName(string key) { switch (key) { case "clock": return T("Clock", "ساعت"); case "calendar": return T("Calendar", "تقویم"); case "tasks": return T("Tasks", "وظایف"); case "pomodoro": return "Pomodoro"; case "notes": return T("Quick Note", "یادداشت سریع"); default: return T("Market Rates", "نرخ بازار"); } }
         private void MoveWidget(string key, int delta) { int i = Array.IndexOf(_widgetKeys, key), j = i + delta; if (i < 0 || j < 0 || j >= _widgetKeys.Length) return; string tmp = _widgetKeys[i]; _widgetKeys[i] = _widgetKeys[j]; _widgetKeys[j] = tmp; LocalStore.SaveSetting("widget.order", string.Join(",", _widgetKeys)); BuildContent(); BuildTrayMenu(); }
 
-
+        private void SetLanguage(string language)
         {
             if (language != "fa") language = "en";
             if (_language == language) return;
