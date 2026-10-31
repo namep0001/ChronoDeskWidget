@@ -50,6 +50,7 @@
     <Compile Include="Source\TgjuClient.cs" />
     <Compile Include="Source\MainForm.cs" />
     <Compile Include="Source\WidgetControls.cs" />
+    <Compile Include="Source\SystemWidgets.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>
