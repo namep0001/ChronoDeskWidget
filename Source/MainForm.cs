@@ -345,12 +345,12 @@ namespace ChronoDeskWidget
         {
             switch (key)
             {
-                case "clock": return 178;
-                case "calendar": return 178;
-                case "tasks": return 178;
-                case "pomodoro": return 178;
-                case "notes": return 178;
-                case "rates": return 178;
+                case "clock": return 203;
+                case "calendar": return 203;
+                case "tasks": return 203;
+                case "pomodoro": return 203;
+                case "notes": return 203;
+                case "rates": return 203;
                 default: return 0;
             }
         }
