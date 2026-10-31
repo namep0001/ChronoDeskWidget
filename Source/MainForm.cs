@@ -643,7 +643,7 @@ namespace ChronoDeskWidget
             panel.Controls.Add(uploadCard);
 
             Label downCaption = new Label();
-            downCaption.Text = "↓  " + T("Downloaded this month", "دریافت این ماه");
+            downCaption.Text = "↓  " + T("DOWNLOAD", "دریافت");
             downCaption.Location = new Point(9, 5);
             downCaption.Size = new Size(cardWidth - 18, 15);
             downCaption.BackColor = downloadCard.FillColor;
@@ -659,7 +659,7 @@ namespace ChronoDeskWidget
             downloadCard.Controls.Add(_networkDownloadTotalLabel);
 
             Label upCaption = new Label();
-            upCaption.Text = "↑  " + T("Uploaded this month", "ارسال این ماه");
+            upCaption.Text = "↑  " + T("UPLOAD", "ارسال");
             upCaption.Location = new Point(9, 5);
             upCaption.Size = new Size(cardWidth - 18, 15);
             upCaption.BackColor = uploadCard.FillColor;
@@ -683,14 +683,14 @@ namespace ChronoDeskWidget
 
             RoundedSurfacePanel speedCard = new RoundedSurfacePanel();
             speedCard.Location = new Point(12, 117);
-            speedCard.Size = new Size(panel.Width - 24, 42);
+            speedCard.Size = new Size(panel.Width - 24, 48);
             speedCard.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
             speedCard.FillColor = _themeSurfaceAlt;
             speedCard.BorderColor = _themeBorder;
             panel.Controls.Add(speedCard);
             _networkSpeedLabel = new Label();
             _networkSpeedLabel.Location = new Point(10, 3);
-            _networkSpeedLabel.Size = new Size(speedCard.Width - 20, 36);
+            _networkSpeedLabel.Size = new Size(speedCard.Width - 20, 42);
             _networkSpeedLabel.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
             _networkSpeedLabel.BackColor = speedCard.FillColor;
             _networkSpeedLabel.ForeColor = _themeText;
@@ -700,7 +700,7 @@ namespace ChronoDeskWidget
 
             Label historyTitle = new Label();
             historyTitle.Text = T("RECENT DAILY USAGE", "مصرف روزانه اخیر");
-            historyTitle.Location = new Point(12, 165);
+            historyTitle.Location = new Point(12, 171);
             historyTitle.Size = new Size(panel.Width - 24, 14);
             historyTitle.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
             historyTitle.BackColor = panel.BackColor;
@@ -708,8 +708,8 @@ namespace ChronoDeskWidget
             historyTitle.Font = GetUiFont(6.8F, FontStyle.Bold);
             panel.Controls.Add(historyTitle);
             _networkHistoryLabel = new Label();
-            _networkHistoryLabel.Location = new Point(12, 181);
-            _networkHistoryLabel.Size = new Size(panel.Width - 24, 43);
+            _networkHistoryLabel.Location = new Point(12, 187);
+            _networkHistoryLabel.Size = new Size(panel.Width - 24, 37);
             _networkHistoryLabel.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
             _networkHistoryLabel.BackColor = panel.BackColor;
             _networkHistoryLabel.ForeColor = _themeText;
@@ -746,9 +746,9 @@ namespace ChronoDeskWidget
             _networkSummaryLabel.Text = T("MONTH TO DATE  ·  ", "مجموع ماه  ·  ") + month;
             if (_networkDownloadTotalLabel != null) _networkDownloadTotalLabel.Text = SystemMetricsMonitor.FormatBytes(down);
             if (_networkUploadTotalLabel != null) _networkUploadTotalLabel.Text = SystemMetricsMonitor.FormatBytes(up);
-            _networkSpeedLabel.Text = (_networkMonitor.Connected ? "● " + T("Online", "متصل") : "● " + T("Offline", "قطع")) +
-                "     ↓ " + SystemMetricsMonitor.FormatBytes(_networkMonitor.DownloadBytesPerSecond) + "/s" +
-                "     ↑ " + SystemMetricsMonitor.FormatBytes(_networkMonitor.UploadBytesPerSecond) + "/s";
+            _networkSpeedLabel.Text = (_networkMonitor.Connected ? "● " + T("Online", "متصل") : "● " + T("Offline", "قطع")) + Environment.NewLine +
+                "↓ " + SystemMetricsMonitor.FormatBytes(_networkMonitor.DownloadBytesPerSecond) + "/s    ↑ " +
+                SystemMetricsMonitor.FormatBytes(_networkMonitor.UploadBytesPerSecond) + "/s";
             StringBuilder history = new StringBuilder();
             int first = Math.Max(0, days.Count - 2);
             for (int i = first; i < days.Count; i++)
