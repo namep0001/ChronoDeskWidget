@@ -92,11 +92,11 @@ namespace ChronoDeskWidget
         private TextBox _notesBox;
         private Label _notesStatusLabel;
         private Label _pomodoroStatusLabel;
-        private VectorIconButton _pomodoroStartButton;
-        private VectorIconButton _pomodoroResetButton;
-        private VectorIconButton _pomodoroSwitchButton;
+        private CircularIconButton _pomodoroStartButton;
+        private CircularIconButton _pomodoroResetButton;
+        private CircularIconButton _pomodoroSwitchButton;
         private Label _ratesStatusLabel;
-        private VectorIconButton _ratesRefreshButton;
+        private CircularIconButton _ratesRefreshButton;
         private NotifyIcon _trayIcon;
         private ContextMenuStrip _trayMenu;
         private System.Windows.Forms.Timer _tickTimer;
@@ -827,35 +827,32 @@ namespace ChronoDeskWidget
             // Session state remains in the timer logic and notifications, without a redundant caption under the dial.
             _pomodoroStatusLabel = null;
 
-            _pomodoroStartButton = new VectorIconButton("play");
+            _pomodoroStartButton = new CircularIconButton("play");
             _pomodoroStartButton.Size = new Size(30, 30);
             _pomodoroStartButton.Location = new Point(0, 158);
             _pomodoroStartButton.ForeColor = ContrastText(_themeAccent);
             _pomodoroStartButton.BackColor = _themeAccent;
             _pomodoroStartButton.Cursor = Cursors.Hand;
-            _pomodoroStartButton.ShowBackground = true;
             _toolTip.SetToolTip(_pomodoroStartButton, T("Start or pause timer", "شروع یا توقف زمان‌سنج"));
             _pomodoroStartButton.Click += delegate { TogglePomodoro(); };
             panel.Controls.Add(_pomodoroStartButton);
 
-            _pomodoroResetButton = new VectorIconButton("reset");
+            _pomodoroResetButton = new CircularIconButton("reset");
             _pomodoroResetButton.Size = new Size(28, 28);
             _pomodoroResetButton.Location = new Point(0, 159);
             _pomodoroResetButton.ForeColor = Color.White;
             _pomodoroResetButton.BackColor = _themeButton;
             _pomodoroResetButton.Cursor = Cursors.Hand;
-            _pomodoroResetButton.ShowBackground = true;
             _toolTip.SetToolTip(_pomodoroResetButton, T("Reset current session", "بازنشانی نشست جاری"));
             _pomodoroResetButton.Click += delegate { ResetPomodoro(); };
             panel.Controls.Add(_pomodoroResetButton);
 
-            _pomodoroSwitchButton = new VectorIconButton("coffee");
+            _pomodoroSwitchButton = new CircularIconButton("coffee");
             _pomodoroSwitchButton.Size = new Size(28, 28);
             _pomodoroSwitchButton.Location = new Point(0, 159);
             _pomodoroSwitchButton.ForeColor = Color.White;
             _pomodoroSwitchButton.BackColor = _themeButton;
             _pomodoroSwitchButton.Cursor = Cursors.Hand;
-            _pomodoroSwitchButton.ShowBackground = true;
             _toolTip.SetToolTip(_pomodoroSwitchButton, T("Switch between focus and rest", "تغییر بین تمرکز و استراحت"));
             _pomodoroSwitchButton.Click += delegate { SwitchPomodoroMode(); };
             panel.Controls.Add(_pomodoroSwitchButton);
@@ -879,13 +876,12 @@ namespace ChronoDeskWidget
             Panel panel = NewSection("notes", 152);
             AddSectionHeader(panel, "notes", T("Quick Note", "یادداشت سریع"), 38);
 
-            VectorIconButton saveAsButton = new VectorIconButton("export");
+            CircularIconButton saveAsButton = new CircularIconButton("export");
             saveAsButton.Size = new Size(28, 28);
             saveAsButton.Location = new Point(panel.Width - 38, 3);
             saveAsButton.Anchor = AnchorStyles.Top | AnchorStyles.Right;
             saveAsButton.ForeColor = _themeText;
             saveAsButton.BackColor = _themeButton;
-            saveAsButton.ShowBackground = true;
             saveAsButton.Cursor = Cursors.Hand;
             _toolTip.SetToolTip(saveAsButton, T("Export note as a text file", "ذخیره یادداشت به‌صورت فایل متنی"));
             saveAsButton.Click += delegate { SaveNoteAs(); };
@@ -962,13 +958,12 @@ namespace ChronoDeskWidget
             Panel panel = NewSection("rates", 152);
             AddSectionHeader(panel, "rates", T("Market Rates", "نرخ بازار"), 42);
 
-            _ratesRefreshButton = new VectorIconButton("refresh");
+            _ratesRefreshButton = new CircularIconButton("refresh");
             _ratesRefreshButton.Size = new Size(28, 28);
             _ratesRefreshButton.Location = new Point(panel.Width - 38, 3);
             _ratesRefreshButton.Anchor = AnchorStyles.Top | AnchorStyles.Right;
             _ratesRefreshButton.ForeColor = _themeText;
             _ratesRefreshButton.BackColor = _themeButton;
-            _ratesRefreshButton.ShowBackground = true;
             _ratesRefreshButton.Cursor = Cursors.Hand;
             _toolTip.SetToolTip(_ratesRefreshButton, T("Refresh market rates", "به‌روزرسانی نرخ‌ها"));
             _ratesRefreshButton.Click += delegate { RefreshRates(); };
