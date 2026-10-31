@@ -53,7 +53,8 @@ ChronoDeskWidget/
 ├── index.html                  # Project landing page
 ├── Source/
 │   ├── Program.cs              # Application entry point
-│   ├── MainForm.cs             # Main window and widget UI
+│   ├── MainForm.cs             # Main window and widget composition
+│   ├── WidgetControls.cs       # Reusable custom controls and drawing
 │   ├── LocalStore.cs            # Local settings and data persistence
 │   ├── TgjuClient.cs            # Market-rate retrieval and parsing
 │   └── Generate-AppIcon.ps1    # Creates the executable icon during builds
