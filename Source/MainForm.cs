@@ -778,7 +778,7 @@ namespace ChronoDeskWidget
 
             _systemUptimeLabel = new Label();
             _systemUptimeLabel.Location = new Point(12, 197);
-            _systemUptimeLabel.Size = new Size(panel.Width - 24, 35);
+            _systemUptimeLabel.Size = new Size(panel.Width - 24, 25);
             _systemUptimeLabel.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
             _systemUptimeLabel.BackColor = panel.BackColor;
             _systemUptimeLabel.ForeColor = _themeMutedText;
