@@ -511,6 +511,7 @@ namespace ChronoDeskWidget
     internal sealed class CalendarDayButton : Button
     {
         public Color FillColor { get; set; }
+        public bool IsToday { get; set; }
 
         public CalendarDayButton()
         {
@@ -529,12 +530,17 @@ namespace ChronoDeskWidget
             using (SolidBrush background = new SolidBrush(Parent == null ? SystemColors.Control : Parent.BackColor))
                 g.FillRectangle(background, ClientRectangle);
 
-            int diameter = Math.Min(24, Math.Min(Width - 2, Height - 1));
+            int diameter = Math.Min(28, Math.Min(Width - 2, Height - 2));
             if (!FillColor.IsEmpty && diameter > 0)
             {
                 Rectangle circle = new Rectangle((Width - diameter) / 2, (Height - diameter) / 2, diameter, diameter);
                 using (SolidBrush fill = new SolidBrush(FillColor))
                     g.FillEllipse(fill, circle);
+                if (IsToday)
+                {
+                    using (Pen todayRing = new Pen(ForeColor, 1.6F))
+                        g.DrawEllipse(todayRing, circle);
+                }
             }
 
             TextRenderer.DrawText(g, Text, Font, ClientRectangle, ForeColor,
