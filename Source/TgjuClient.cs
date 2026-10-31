@@ -13,6 +13,7 @@ namespace ChronoDeskWidget
         public string DisplayNamePersian;
         public string Url;
         public string Value;
+        public string Change;
         public string Error;
     }
 
@@ -49,6 +50,15 @@ namespace ChronoDeskWidget
                     throw new InvalidDataException("TGJU page format changed or did not contain a recognizable current price.");
                 result.Value = NormalizeNumber(number);
                 if (result.Value.Length < 4) throw new InvalidDataException("The extracted price was too short to be valid.");
+
+                string previous = FindLabeledValue(text, "نرخ روز گذشته");
+                if (!string.IsNullOrEmpty(previous))
+                {
+                    long currentValue, previousValue;
+                    if (long.TryParse(result.Value, out currentValue) &&
+                        long.TryParse(previous, out previousValue))
+                        result.Change = (currentValue - previousValue).ToString(System.Globalization.CultureInfo.InvariantCulture);
+                }
             }
             catch (Exception ex)
             {
@@ -76,6 +86,15 @@ namespace ChronoDeskWidget
                 using (StreamReader reader = new StreamReader(stream, Encoding.UTF8, true))
                     return reader.ReadToEnd();
             }
+        }
+
+        private static string FindLabeledValue(string text, string label)
+        {
+            if (string.IsNullOrWhiteSpace(text)) return null;
+            const string price = @"(?<price>[0-9۰-۹٠-٩]+(?:[,٬][0-9۰-۹٠-٩]{3})+|[0-9۰-۹٠-٩]{4,})";
+            Match match = Regex.Match(text, Regex.Escape(label) + @"\\s*[:：|]*\\s*" + price,
+                RegexOptions.IgnoreCase);
+            return match.Success ? NormalizeNumber(match.Groups["price"].Value) : null;
         }
 
         private static string FindCurrentValue(string text)
