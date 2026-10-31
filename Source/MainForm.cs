@@ -618,36 +618,82 @@ namespace ChronoDeskWidget
             Panel panel = NewSection("network", 203);
             AddSectionHeader(panel, "network", T("Network Monitor", "پایش شبکه"), 0);
             _networkSummaryLabel = new Label();
-            _networkSummaryLabel.Location = new Point(12, 37);
-            _networkSummaryLabel.Size = new Size(panel.Width - 24, 42);
+            _networkSummaryLabel.Location = new Point(12, 31);
+            _networkSummaryLabel.Size = new Size(panel.Width - 24, 18);
             _networkSummaryLabel.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
             _networkSummaryLabel.BackColor = panel.BackColor;
-            _networkSummaryLabel.ForeColor = _themeText;
-            _networkSummaryLabel.Font = GetUiFont(8.2F, FontStyle.Bold);
-            _networkSummaryLabel.TextAlign = ContentAlignment.MiddleLeft;
+            _networkSummaryLabel.ForeColor = _themeMutedText;
+            _networkSummaryLabel.Font = GetUiFont(7.1F, FontStyle.Regular);
             panel.Controls.Add(_networkSummaryLabel);
-
+            Panel downloadCard = new Panel();
+            downloadCard.Location = new Point(12, 52);
+            downloadCard.Size = new Size((panel.Width - 30) / 2, 49);
+            downloadCard.BackColor = _themeSurfaceAlt;
+            panel.Controls.Add(downloadCard);
+            Panel uploadCard = new Panel();
+            uploadCard.Location = new Point(18 + (panel.Width - 30) / 2, 52);
+            uploadCard.Size = new Size((panel.Width - 30) / 2, 49);
+            uploadCard.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+            uploadCard.BackColor = _themeSurfaceAlt;
+            panel.Controls.Add(uploadCard);
+            Label downCaption = new Label();
+            downCaption.Text = "↓  " + T("Downloaded", "دریافت");
+            downCaption.Location = new Point(8, 4);
+            downCaption.Size = new Size(downloadCard.Width - 16, 15);
+            downCaption.BackColor = downloadCard.BackColor;
+            downCaption.ForeColor = _themeMutedText;
+            downCaption.Font = GetUiFont(7F, FontStyle.Regular);
+            downloadCard.Controls.Add(downCaption);
+            _networkDownloadTotalLabel = new Label();
+            _networkDownloadTotalLabel.Location = new Point(8, 20);
+            _networkDownloadTotalLabel.Size = new Size(downloadCard.Width - 16, 23);
+            _networkDownloadTotalLabel.BackColor = downloadCard.BackColor;
+            _networkDownloadTotalLabel.ForeColor = _themeAccent;
+            _networkDownloadTotalLabel.Font = GetUiFont(9.2F, FontStyle.Bold);
+            downloadCard.Controls.Add(_networkDownloadTotalLabel);
+            Label upCaption = new Label();
+            upCaption.Text = "↑  " + T("Uploaded", "ارسال");
+            upCaption.Location = new Point(8, 4);
+            upCaption.Size = new Size(uploadCard.Width - 16, 15);
+            upCaption.BackColor = uploadCard.BackColor;
+            upCaption.ForeColor = _themeMutedText;
+            upCaption.Font = GetUiFont(7F, FontStyle.Regular);
+            uploadCard.Controls.Add(upCaption);
+            _networkUploadTotalLabel = new Label();
+            _networkUploadTotalLabel.Location = new Point(8, 20);
+            _networkUploadTotalLabel.Size = new Size(uploadCard.Width - 16, 23);
+            _networkUploadTotalLabel.BackColor = uploadCard.BackColor;
+            _networkUploadTotalLabel.ForeColor = _themeAccent;
+            _networkUploadTotalLabel.Font = GetUiFont(9.2F, FontStyle.Bold);
+            uploadCard.Controls.Add(_networkUploadTotalLabel);
             _networkSpeedLabel = new Label();
-            _networkSpeedLabel.Location = new Point(12, 82);
-            _networkSpeedLabel.Size = new Size(panel.Width - 24, 34);
+            _networkSpeedLabel.Location = new Point(12, 105);
+            _networkSpeedLabel.Size = new Size(panel.Width - 24, 27);
             _networkSpeedLabel.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
             _networkSpeedLabel.BackColor = panel.BackColor;
-            _networkSpeedLabel.ForeColor = _themeAccentText;
-            _networkSpeedLabel.Font = GetUiFont(8F, FontStyle.Bold);
+            _networkSpeedLabel.ForeColor = _themeText;
+            _networkSpeedLabel.Font = GetUiFont(7.5F, FontStyle.Bold);
             _networkSpeedLabel.TextAlign = ContentAlignment.MiddleLeft;
             panel.Controls.Add(_networkSpeedLabel);
-
             _networkHistoryLabel = new Label();
-            _networkHistoryLabel.Location = new Point(12, 121);
-            _networkHistoryLabel.Size = new Size(panel.Width - 24, 70);
+            _networkHistoryLabel.Location = new Point(12, 135);
+            _networkHistoryLabel.Size = new Size(panel.Width - 24, 62);
             _networkHistoryLabel.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
             _networkHistoryLabel.BackColor = panel.BackColor;
             _networkHistoryLabel.ForeColor = _themeMutedText;
-            _networkHistoryLabel.Font = GetUiFont(7.2F, FontStyle.Regular);
+            _networkHistoryLabel.Font = GetUiFont(6.9F, FontStyle.Regular);
             _networkHistoryLabel.TextAlign = ContentAlignment.TopLeft;
             panel.Controls.Add(_networkHistoryLabel);
             panel.Resize += delegate
             {
+                int cardWidth = (panel.ClientSize.Width - 30) / 2;
+                downloadCard.Width = cardWidth;
+                uploadCard.Left = 18 + cardWidth;
+                uploadCard.Width = cardWidth;
+                downCaption.Width = downloadCard.ClientSize.Width - 16;
+                _networkDownloadTotalLabel.Width = downloadCard.ClientSize.Width - 16;
+                upCaption.Width = uploadCard.ClientSize.Width - 16;
+                _networkUploadTotalLabel.Width = uploadCard.ClientSize.Width - 16;
                 _networkSummaryLabel.Width = panel.ClientSize.Width - 24;
                 _networkSpeedLabel.Width = panel.ClientSize.Width - 24;
                 _networkHistoryLabel.Width = panel.ClientSize.Width - 24;
@@ -661,23 +707,24 @@ namespace ChronoDeskWidget
             long down = 0, up = 0;
             foreach (NetworkUsageDay day in days) { down += day.DownloadBytes; up += day.UploadBytes; }
             string month = DateTime.Today.ToString("MMMM yyyy", CultureInfo.InvariantCulture);
-            _networkSummaryLabel.Text = T("This month · ", "این ماه · ") + month + Environment.NewLine +
-                "↓ " + SystemMetricsMonitor.FormatBytes(down) + "     ↑ " + SystemMetricsMonitor.FormatBytes(up);
-            _networkSpeedLabel.Text = (_networkMonitor.Connected ? T("Online", "متصل") : T("Offline", "قطع")) +
-                "   ↓ " + SystemMetricsMonitor.FormatBytes(_networkMonitor.DownloadBytesPerSecond) + "/s   ↑ " +
-                SystemMetricsMonitor.FormatBytes(_networkMonitor.UploadBytesPerSecond) + "/s";
-            StringBuilder history = new StringBuilder(T("Daily usage (download / upload)", "مصرف روزانه (دریافت / ارسال)"));
+            _networkSummaryLabel.Text = T("MONTH TO DATE  ·  ", "مجموع ماه  ·  ") + month;
+            if (_networkDownloadTotalLabel != null) _networkDownloadTotalLabel.Text = SystemMetricsMonitor.FormatBytes(down);
+            if (_networkUploadTotalLabel != null) _networkUploadTotalLabel.Text = SystemMetricsMonitor.FormatBytes(up);
+            _networkSpeedLabel.Text = (_networkMonitor.Connected ? "● " + T("Online", "متصل") : "● " + T("Offline", "قطع")) +
+                "     ↓ " + SystemMetricsMonitor.FormatBytes(_networkMonitor.DownloadBytesPerSecond) + "/s" +
+                "     ↑ " + SystemMetricsMonitor.FormatBytes(_networkMonitor.UploadBytesPerSecond) + "/s";
+            StringBuilder history = new StringBuilder(T("RECENT DAILY USAGE  ·  DOWN / UP", "مصرف روزانه اخیر  ·  دریافت / ارسال"));
             history.AppendLine();
-            int first = Math.Max(0, days.Count - 4);
+            int first = Math.Max(0, days.Count - 3);
             for (int i = first; i < days.Count; i++)
-                history.AppendLine(days[i].Date.ToString("dd MMM", CultureInfo.InvariantCulture) + "   " +
+                history.AppendLine(days[i].Date.ToString("dd MMM", CultureInfo.InvariantCulture) + "     " +
                     SystemMetricsMonitor.FormatBytes(days[i].DownloadBytes) + " / " + SystemMetricsMonitor.FormatBytes(days[i].UploadBytes));
             _networkHistoryLabel.Text = history.ToString().TrimEnd();
         }
 
         private void BuildCalculatorSection()
         {
-            Panel panel = NewSection("calculator", 203);
+            Panel panel = NewSection("calculator", 238);
             AddSectionHeader(panel, "calculator", T("Calculator", "ماشین‌حساب"), 0);
             _calculatorDisplay = new TextBox();
             _calculatorDisplay.ReadOnly = true;
@@ -691,26 +738,42 @@ namespace ChronoDeskWidget
             _calculatorDisplay.Size = new Size(panel.Width - 24, 31);
             _calculatorDisplay.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
             panel.Controls.Add(_calculatorDisplay);
-
-            string[] keys = { "7", "8", "9", "÷", "4", "5", "6", "×", "1", "2", "3", "−", "C", "0", ".", "+", "±", "=" };
-            int columns = 6;
+            TableLayoutPanel keypad = new TableLayoutPanel();
+            keypad.Location = new Point(10, 71);
+            keypad.Size = new Size(panel.Width - 20, 157);
+            keypad.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
+            keypad.ColumnCount = 4;
+            keypad.RowCount = 5;
+            keypad.Margin = new Padding(0);
+            keypad.Padding = new Padding(0);
+            keypad.BackColor = panel.BackColor;
+            for (int i = 0; i < 4; i++) keypad.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 25F));
+            for (int i = 0; i < 5; i++) keypad.RowStyles.Add(new RowStyle(SizeType.Percent, 20F));
+            string[] keys = { "7", "8", "9", "÷", "4", "5", "6", "×", "1", "2", "3", "−", "C", "0", ".", "+" };
             for (int i = 0; i < keys.Length; i++)
-            {
-                string key = keys[i];
-                Button button = new Button();
-                button.Text = key;
-                button.Size = new Size(39, 27);
-                button.Location = new Point(10 + (i % columns) * 43, 73 + (i / columns) * 31);
-                button.FlatStyle = FlatStyle.Flat;
-                button.FlatAppearance.BorderSize = 0;
-                button.BackColor = (key == "=" || key == "+" || key == "−" || key == "×" || key == "÷") ? _themeAccent : _themeButton;
-                button.ForeColor = (key == "=" || key == "+" || key == "−" || key == "×" || key == "÷") ? _themeAccentText : _themeText;
-                button.Font = GetUiFont(8.5F, FontStyle.Bold);
-                button.Cursor = Cursors.Hand;
-                button.Click += delegate { CalculatorPress(key); };
-                panel.Controls.Add(button);
-            }
-            panel.Resize += delegate { _calculatorDisplay.Width = panel.ClientSize.Width - 24; };
+                keypad.Controls.Add(CreateCalculatorButton(keys[i]), i % 4, i / 4);
+            keypad.Controls.Add(CreateCalculatorButton("±"), 0, 4);
+            Button equalsButton = CreateCalculatorButton("=");
+            keypad.Controls.Add(equalsButton, 1, 4);
+            keypad.SetColumnSpan(equalsButton, 3);
+            panel.Controls.Add(keypad);
+            panel.Resize += delegate { _calculatorDisplay.Width = panel.ClientSize.Width - 24; keypad.Width = panel.ClientSize.Width - 20; };
+        }
+
+        private Button CreateCalculatorButton(string key)
+        {
+            Button button = new RoundedButton();
+            button.Text = key;
+            button.Dock = DockStyle.Fill;
+            button.Margin = new Padding(2);
+            button.FlatStyle = FlatStyle.Flat;
+            button.FlatAppearance.BorderSize = 0;
+            button.BackColor = (key == "=" || key == "+" || key == "−" || key == "×" || key == "÷") ? _themeAccent : _themeButton;
+            button.ForeColor = (key == "=" || key == "+" || key == "−" || key == "×" || key == "÷") ? _themeAccentText : _themeText;
+            button.Font = GetUiFont(8.5F, FontStyle.Bold);
+            button.Cursor = Cursors.Hand;
+            button.Click += delegate { CalculatorPress(key); };
+            return button;
         }
 
         private void CalculatorPress(string key)
@@ -730,7 +793,7 @@ namespace ChronoDeskWidget
             if (key == "=" || key == "+" || key == "−" || key == "×" || key == "÷")
             {
                 if (_calculatorPending != null && !_calculatorStartNew) current = Calculate(_calculatorAccumulator, current, _calculatorPending);
-                _calculatorAccumulator = key == "=" ? current : current;
+                _calculatorAccumulator = current;
                 _calculatorDisplay.Text = current.ToString("G12", CultureInfo.InvariantCulture);
                 _calculatorPending = key == "=" ? null : key;
                 _calculatorStartNew = true;
@@ -744,13 +807,13 @@ namespace ChronoDeskWidget
 
         private void BuildSystemSection()
         {
-            Panel panel = NewSection("system", 250);
+            Panel panel = NewSection("system", 270);
             AddSectionHeader(panel, "system", T("System Monitor", "پایش سیستم"), 0);
             string[] keys = { "CPU", "RAM", "GPU", "Disk" };
             for (int i = 0; i < keys.Length; i++)
             {
                 string key = keys[i];
-                int y = 39 + i * 38;
+                int y = 39 + i * 39;
                 Label name = new Label();
                 name.Text = key;
                 name.Location = new Point(12, y);
@@ -759,29 +822,28 @@ namespace ChronoDeskWidget
                 name.ForeColor = _themeMutedText;
                 name.Font = GetUiFont(7.5F, FontStyle.Bold);
                 panel.Controls.Add(name);
-
-                ProgressBar bar = new ProgressBar();
+                ThemedProgressBar bar = new ThemedProgressBar();
                 bar.Location = new Point(55, y + 1);
-                bar.Size = new Size(panel.Width - 115, 14);
+                bar.Size = new Size(panel.Width - 178, 14);
                 bar.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
-                bar.Minimum = 0; bar.Maximum = 100; bar.Style = ProgressBarStyle.Continuous;
+                bar.TrackColor = _themeMode == "light" || (_themeMode == "system" && _themeUsesLightTaskbar) ? Color.White : _themeInput;
+                bar.FillColor = _themeAccent;
                 panel.Controls.Add(bar);
                 _systemBars[key] = bar;
-
                 Label value = new Label();
-                value.Location = new Point(panel.Width - 55, y - 1);
-                value.Size = new Size(45, 18);
+                value.Location = new Point(panel.Width - 118, y - 5);
+                value.Size = new Size(106, 29);
                 value.Anchor = AnchorStyles.Top | AnchorStyles.Right;
                 value.BackColor = panel.BackColor;
                 value.ForeColor = _themeText;
-                value.Font = GetUiFont(7.2F, FontStyle.Bold);
+                value.Font = GetUiFont(6.8F, FontStyle.Bold);
                 value.TextAlign = ContentAlignment.MiddleRight;
+                value.AutoEllipsis = true;
                 panel.Controls.Add(value);
                 _systemValues[key] = value;
             }
-
             _systemUptimeLabel = new Label();
-            _systemUptimeLabel.Location = new Point(12, 197);
+            _systemUptimeLabel.Location = new Point(12, 226);
             _systemUptimeLabel.Size = new Size(panel.Width - 24, 25);
             _systemUptimeLabel.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
             _systemUptimeLabel.BackColor = panel.BackColor;
@@ -790,8 +852,8 @@ namespace ChronoDeskWidget
             panel.Controls.Add(_systemUptimeLabel);
             panel.Resize += delegate
             {
-                foreach (ProgressBar bar in _systemBars.Values) bar.Width = panel.ClientSize.Width - 115;
-                foreach (Label value in _systemValues.Values) value.Left = panel.ClientSize.Width - 55;
+                foreach (ThemedProgressBar bar in _systemBars.Values) bar.Width = panel.ClientSize.Width - 178;
+                foreach (Label value in _systemValues.Values) value.Left = panel.ClientSize.Width - 118;
                 _systemUptimeLabel.Width = panel.ClientSize.Width - 24;
             };
         }
@@ -799,25 +861,29 @@ namespace ChronoDeskWidget
         private void RenderSystemWidget()
         {
             if (_systemMonitor == null || _systemUptimeLabel == null || _systemUptimeLabel.IsDisposed) return;
+            string ramValue = _systemMonitor.RamPercent.ToString("0") + "% · " +
+                SystemMetricsMonitor.FormatBytes(_systemMonitor.UsedRamBytes) + "/" +
+                SystemMetricsMonitor.FormatBytes(_systemMonitor.TotalRamBytes);
+            string diskValue = _systemMonitor.DiskPercent.ToString("0") + "% · " +
+                SystemMetricsMonitor.FormatBytes(_systemMonitor.UsedDiskBytes) + "/" +
+                SystemMetricsMonitor.FormatBytes(_systemMonitor.TotalDiskBytes);
             SetSystemMetric("CPU", _systemMonitor.CpuPercent, _systemMonitor.CpuPercent.ToString("0") + "%");
-            SetSystemMetric("RAM", _systemMonitor.RamPercent, _systemMonitor.RamPercent.ToString("0") + "%");
+            SetSystemMetric("RAM", _systemMonitor.RamPercent, ramValue);
             SetSystemMetric("GPU", _systemMonitor.GpuPercent, _systemMonitor.GpuPercent < 0 ? "N/A" : _systemMonitor.GpuPercent.ToString("0") + "%");
-            SetSystemMetric("Disk", _systemMonitor.DiskPercent, _systemMonitor.DiskPercent.ToString("0") + "%");
-            _systemUptimeLabel.Text = T("Uptime  ", "مدت روشن بودن  ") + _systemMonitor.Uptime.Days + T("d ", "روز ") +
-                _systemMonitor.Uptime.Hours + T("h ", "ساعت ") + _systemMonitor.Uptime.Minutes + T("m", "دقیقه");
+            SetSystemMetric("Disk", _systemMonitor.DiskPercent, diskValue);
             if (_systemMonitor.HasBattery)
             {
                 if (!_systemBars.ContainsKey("Battery"))
                 {
-                    Label name = new Label(); name.Text = T("Battery", "باتری"); name.Location = new Point(12, 191); name.Size = new Size(42, 18);
+                    Label name = new Label(); name.Text = T("Battery", "باتری"); name.Location = new Point(12, 199); name.Size = new Size(42, 18);
                     name.BackColor = _systemUptimeLabel.BackColor; name.ForeColor = _themeMutedText; name.Font = GetUiFont(7.5F, FontStyle.Bold);
-                    ProgressBar bar = new ProgressBar(); bar.Location = new Point(55, 192); bar.Size = new Size(130, 14); bar.Minimum = 0; bar.Maximum = 100; bar.Style = ProgressBarStyle.Continuous; bar.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
-                    Label value = new Label(); value.Location = new Point(205, 190); value.Size = new Size(45, 18); value.Anchor = AnchorStyles.Top | AnchorStyles.Right; value.BackColor = _systemUptimeLabel.BackColor; value.ForeColor = _themeText; value.Font = GetUiFont(7.2F, FontStyle.Bold); value.TextAlign = ContentAlignment.MiddleRight;
+                    ThemedProgressBar bar = new ThemedProgressBar(); bar.Location = new Point(55, 200); bar.Size = new Size(130, 14); bar.TrackColor = _themeMode == "light" || (_themeMode == "system" && _themeUsesLightTaskbar) ? Color.White : _themeInput; bar.FillColor = _themeAccent; bar.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
+                    Label value = new Label(); value.Location = new Point(_systemUptimeLabel.Parent.ClientSize.Width - 118, 195); value.Size = new Size(106, 29); value.Anchor = AnchorStyles.Top | AnchorStyles.Right; value.BackColor = _systemUptimeLabel.BackColor; value.ForeColor = _themeText; value.Font = GetUiFont(6.8F, FontStyle.Bold); value.TextAlign = ContentAlignment.MiddleRight;
                     _systemUptimeLabel.Parent.Controls.Add(name); _systemUptimeLabel.Parent.Controls.Add(bar); _systemUptimeLabel.Parent.Controls.Add(value);
                     _systemBars["Battery"] = bar; _systemValues["Battery"] = value;
                 }
-                SetSystemMetric("Battery", _systemMonitor.BatteryPercent, _systemMonitor.BatteryPercent + "%" + (_systemMonitor.BatteryCharging ? " +" : ""));
-                _systemUptimeLabel.Top = 218;
+                SetSystemMetric("Battery", _systemMonitor.BatteryPercent, _systemMonitor.BatteryPercent + "%" + (_systemMonitor.BatteryCharging ? " · " + T("Charging", "در حال شارژ") : ""));
+                _systemUptimeLabel.Top = 229;
             }
             else
             {
@@ -828,18 +894,26 @@ namespace ChronoDeskWidget
                     parent.Controls.Remove(_systemValues["Battery"]); _systemValues["Battery"].Dispose();
                     _systemBars.Remove("Battery"); _systemValues.Remove("Battery");
                 }
-                _systemUptimeLabel.Top = 197;
+                _systemUptimeLabel.Top = 226;
+            }
+            if (_toolTip != null)
+            {
+                _toolTip.SetToolTip(_systemValues["RAM"], SystemMetricsMonitor.FormatBytes(_systemMonitor.UsedRamBytes) + " used of " + SystemMetricsMonitor.FormatBytes(_systemMonitor.TotalRamBytes));
+                _toolTip.SetToolTip(_systemValues["Disk"], SystemMetricsMonitor.FormatBytes(_systemMonitor.UsedDiskBytes) + " used · " +
+                    SystemMetricsMonitor.FormatBytes(_systemMonitor.FreeDiskBytes) + " free · " + SystemMetricsMonitor.FormatBytes(_systemMonitor.TotalDiskBytes) +
+                    " total across all ready fixed disks");
             }
         }
 
         private void SetSystemMetric(string key, float percent, string value)
         {
-            ProgressBar bar; Label label;
+            ThemedProgressBar bar; Label label;
             if (_systemBars.TryGetValue(key, out bar) && bar != null && !bar.IsDisposed)
             {
                 bar.Value = Math.Max(0, Math.Min(100, (int)Math.Round(percent < 0 ? 0 : percent)));
                 label = _systemValues[key];
                 label.Text = value;
+                if (_toolTip != null) _toolTip.SetToolTip(label, value);
             }
         }
 
