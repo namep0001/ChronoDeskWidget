@@ -1,5 +1,7 @@
 name: Build ChronoDesk Widget (Windows)
 
+run-name: Windows build · ${{ github.ref_name }}
+
 on:
   push:
     branches: [main]
@@ -25,3 +27,4 @@ jobs:
           name: ChronoDeskWidget-Windows
           path: bin/Release/ChronoDeskWidget.exe
           if-no-files-found: error
+          retention-days: 14
