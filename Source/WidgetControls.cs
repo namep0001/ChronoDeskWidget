@@ -39,7 +39,7 @@ namespace ChronoDeskWidget
                 switch (Kind)
                 {
                     case "play":
-                        PointF[] play = { new PointF(9, 5), new PointF(20, 12), new PointF(9, 19) };
+                        PointF[] play = { new PointF(8.3F, 5), new PointF(19.3F, 12), new PointF(8.3F, 19) };
                         g.FillPolygon(brush, play);
                         break;
                     case "pause":
@@ -258,7 +258,7 @@ namespace ChronoDeskWidget
         private void UpdateIconLayout()
         {
             if (_icon == null) return;
-            int iconSize = Math.Max(12, Math.Min(Width, Height) - 8);
+            int iconSize = Math.Max(12, Math.Min(Width, Height) - 4);
             _icon.Size = new Size(iconSize, iconSize);
             _icon.Location = new Point((Width - iconSize) / 2, (Height - iconSize) / 2);
             _icon.ForeColor = ForeColor;
