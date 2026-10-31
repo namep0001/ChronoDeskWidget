@@ -1,69 +1,84 @@
 # ChronoDesk Widget
 
-A lightweight Windows 10/11 desktop widget built with WinForms and .NET Framework 4.8. It has no third-party runtime dependencies.
+A lightweight Windows desktop companion built with C#, Windows Forms, and .NET Framework 4.8. The application runs locally, keeps tasks and notes on the device, and retrieves online data only for market quotes.
+
+**[Project website](https://namep0001.github.io/ChronoDeskWidget/)** · **[Source code](https://github.com/namep0001/ChronoDeskWidget)** · **[Latest Windows build](https://github.com/namep0001/ChronoDeskWidget/actions/workflows/build-windows.yml)**
 
 ## Features
 
-- Frameless, draggable desktop widget with a compact, responsive two-column flow.
-- Visible widgets retain their order: Clock, Calendar, Tasks, Pomodoro, Quick Notes, Market Rates. Hiding a widget pulls the following tiles upward to fill its position. An odd final tile spans the row.
-- The window contracts to a single-tile width when only one widget is visible.
-- Clock displays Gregorian and Solar Hijri dates together. The calendar switches between Solar Hijri and Gregorian views.
-- Rounded card surfaces with explicitly painted outer corners, monochrome vector section icons, and Windows accent-color details.
-- Tray theme selector: System, Light, or Dark. System follows the Windows app theme; Light and Dark override the surface palette. The accent color continues to follow Windows automatically in all three modes.
-- Saved window position and widget opacity from 50% to 100%. No backdrop blur option.
-- Persistent local tasks with completion counts, add/complete/remove, and a scrollable list.
-- Pomodoro focus/rest timer (25-minute focus / 5-minute rest), with a circular remaining-time ring, centered timer text, and vector Play/Pause, Reset, and Rest controls. The ring begins full and shrinks to empty as the timer counts down.
-- Persistent quick notes with automatic local saving and Save As export to a UTF-8 .txt file.
-- Live USD, EUR, and 18-karat gold-per-gram quotes. Choose display currency independently of interface language: Dollar ($) or Toman (T).
-- Colored circular currency badges for USD, EUR, and gold; the widget-heading icons and Pomodoro controls use monochrome vector artwork.
-- English and Persian interface.
-- Tray submenus for visible widgets, widget opacity, theme, market-rate refresh and currency, language, and font; also includes always-on-top, Windows startup, and exit.
+- **Clock and calendar** — Gregorian and Solar Hijri dates, with a calendar that can switch between both systems.
+- **Tasks** — local task list with completion tracking.
+- **Pomodoro** — focus and rest timer with circular progress and timer controls.
+- **Quick notes** — notes saved locally, with export to a UTF-8 text file.
+- **Market rates** — USD, EUR, and 18-karat gold per gram, displayed in Dollar ($) or Toman (T).
+- **Appearance** — System, Light, and Dark themes; Windows accent color; adjustable opacity and font.
+- **Widget controls** — independently show or hide widgets, keep the widget on top, and start with Windows.
+- **English and Persian** — interface language can be changed from the tray menu.
 
-## Appearance controls
+## Get the app
 
-The tray menu provides:
-- **Visible widgets** — independently show or hide Clock, Calendar, Tasks, Pomodoro, Quick Note, and Market Rates.
-- **Widget opacity** — 100%, 90%, 80%, 70%, 60%, or 50%.
-- **Theme** — System, Light, or Dark.
-- **Market rates** — refresh quotes and choose Dollar ($) or Toman (T).
-- **Language** — English or Persian.
-- **Font** — Segoe UI, Arial, Calibri, Tahoma, Verdana, or Microsoft YaHei UI.
+1. Open **[the latest Windows build](https://github.com/namep0001/ChronoDeskWidget/actions/workflows/build-windows.yml)**.
+2. Select the latest successful run on the main branch.
+3. Under **Artifacts**, download `ChronoDeskWidget-Windows`.
+4. Extract the artifact and run `ChronoDeskWidget.exe`.
 
-The accent color is read from Windows and remains automatic even when a Light or Dark theme override is selected. Theme, opacity, font, widget visibility, currency choice, and window position are stored locally.
+The artifact is built by GitHub Actions on a Windows runner. Artifacts are temporary downloads managed by GitHub and may expire.
 
-## Download
+## Run from source
 
-Open this repository and select Code → Download ZIP to get the complete source project.
+**Requirements**
+- Windows 10 or Windows 11
+- .NET Framework 4.8
+- Windows .NET Framework C# compiler, or Visual Studio Build Tools with the .NET desktop build tools
 
-## Build and run
+**Steps**
+1. Download or clone this repository.
+2. Run `Start-Widget.bat`.
+3. The launcher builds the application if the executable is missing or source files are newer, then starts it.
 
-1. Extract the repository ZIP to a normal folder.
-2. Double-click Start-Widget.bat. It restores the main source file if necessary, builds the app, and launches it.
-3. The compiled program is generated at bin\Release\ChronoDeskWidget.exe.
+To build without launching, run `build.bat`. The executable is written to `bin\\Release\\ChronoDeskWidget.exe`.
 
-To compile manually, run build.bat. Alternatively, in Windows PowerShell 5.1 run Set-ExecutionPolicy -Scope Process Bypass, then .\build.ps1.
+You can also open `ChronoDeskWidget.csproj` in Visual Studio and build the Release configuration.
 
-The project targets .NET Framework 4.8. If no C# compiler is available, install Visual Studio Build Tools with the .NET desktop build tools.
+## Repository layout
 
-## Main source restoration
+```text
+ChronoDeskWidget/
+├── .github/workflows/
+│   ├── build-windows.yml       # Windows build and downloadable artifact
+│   └── pages.yml               # Project website deployment
+├── docs/
+│   └── index.html              # Project website
+├── Source/
+│   ├── Program.cs              # Application entry point
+│   ├── MainForm.cs             # Main window and widget UI
+│   ├── LocalStore.cs            # Local settings and data persistence
+│   ├── TgjuClient.cs            # Market-rate retrieval and parsing
+│   └── Generate-AppIcon.ps1    # Creates the executable icon during builds
+├── ChronoDeskWidget.csproj
+├── Start-Widget.bat
+├── build.bat
+└── README.md
+```
 
-Source\MainForm.cs.gz.b64 is a compressed backup of the current main form source. restore-mainform.ps1 reconstructs Source\MainForm.cs and verifies the restored file against its SHA-256 checksum before the build continues. A GitHub Actions workflow keeps the compressed backup and checksum synchronized with the readable source.
+## Data and privacy
 
-## Market data
+Tasks, notes, settings, window position, and the startup error log are stored in:
 
-Rates require internet access. The app reads current quotes from the following TGJU source pages:
-- https://www.tgju.org/profile/price_dollar_rl
-- https://www.tgju.org/profile/price_eur
-- https://www.tgju.org/profile/geram18
+```text
+%LOCALAPPDATA%\\ChronoDeskWidget\\
+```
 
-The source quotes are provided in Rial. Toman display divides each quote by ten. Dollar display converts the EUR and gold quotes using the live USD quote as the reference; the USD quote displays as $1.00. Rial is not offered as a display currency. When the source is unreachable or its page structure changes, the app reports unavailable/partial data rather than inventing a quote.
+Task and note data stay on the computer. Market-rate requests use the following public TGJU pages:
 
-## Local data and privacy
+- [Dollar](https://www.tgju.org/profile/price_dollar_rl)
+- [Euro](https://www.tgju.org/profile/price_eur)
+- [18-karat gold](https://www.tgju.org/profile/geram18)
 
-Tasks, notes, settings, the saved widget position, and the startup error log are stored under %LOCALAPPDATA%\ChronoDeskWidget\.
+TGJU quotes are sourced in Rial. Toman display divides the source value by ten. Dollar display uses the live USD quote as its conversion reference. Internet access is required for market rates; unavailable source data is shown as unavailable rather than fabricated.
 
-Tasks and notes remain local; the app only makes network requests for market prices.
+## Build automation
 
-## Validation
+Every push to `main` and every pull request targeting `main` triggers the Windows build workflow. A successful run publishes the executable as the `ChronoDeskWidget-Windows` artifact.
 
-The Windows GitHub Actions workflow compiles the project on a Windows runner and attaches the executable as a downloadable workflow artifact. Compilation does not replace interactive GUI checks on Windows 10/11; see TEST-RESULTS.md for the current build status and manual smoke-test checklist.
+The project targets .NET Framework 4.8 and does not require third-party runtime packages.
