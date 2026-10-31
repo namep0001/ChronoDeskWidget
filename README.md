@@ -45,10 +45,8 @@ You can also open `ChronoDeskWidget.csproj` in Visual Studio and build the Relea
 ```text
 ChronoDeskWidget/
 ├── .github/workflows/
-│   ├── build-windows.yml       # Windows build and downloadable artifact
-│   └── pages.yml               # Project website deployment
-├── docs/
-│   └── index.html              # Project website
+│   └── build-windows.yml       # Windows build and downloadable artifact
+├── index.html                  # Project landing page
 ├── Source/
 │   ├── Program.cs              # Application entry point
 │   ├── MainForm.cs             # Main window and widget UI
