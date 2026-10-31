@@ -28,7 +28,9 @@ namespace ChronoDeskWidget
         private readonly List<Panel> _sections = new List<Panel>();
         private readonly MarketRate[] _rateDefinitions = TgjuClient.Definitions();
         private readonly Dictionary<string, Label> _rateValueLabels = new Dictionary<string, Label>();
+        private readonly Dictionary<string, Label> _rateChangeLabels = new Dictionary<string, Label>();
         private readonly Dictionary<string, string> _rateValues = new Dictionary<string, string>();
+        private readonly Dictionary<string, string> _rateChanges = new Dictionary<string, string>();
         private readonly Dictionary<string, string> _rateErrors = new Dictionary<string, string>();
         private readonly Dictionary<string, bool> _rateFreshThisFetch = new Dictionary<string, bool>();
         private readonly Dictionary<string, bool> _widgetVisibility = new Dictionary<string, bool>(StringComparer.OrdinalIgnoreCase);
@@ -978,18 +980,20 @@ namespace ChronoDeskWidget
 
                 CurrencyBadgeIcon rateIcon = new CurrencyBadgeIcon(iconKind);
                 rateIcon.Size = new Size(25, 25);
-                rateIcon.Location = new Point(10, rowY + 1);
+                rateIcon.Location = new Point(8, rowY + 1);
                 rateIcon.BackColor = Color.Transparent;
                 panel.Controls.Add(rateIcon);
 
                 Label name = new Label();
                 name.Text = _language == "fa" ? rate.DisplayNamePersian : rate.DisplayNameEnglish;
                 name.BackColor = panel.BackColor;
-                name.Location = new Point(42, rowY);
-                name.Size = new Size(66, 27);
+                name.Location = new Point(36, rowY);
+                name.Size = new Size(91, 27);
                 name.ForeColor = _themeText;
-                name.Font = GetUiFont(7.8F, FontStyle.Regular);
+                name.Font = GetUiFont(7.1F, FontStyle.Regular);
                 name.TextAlign = _language == "fa" ? ContentAlignment.MiddleRight : ContentAlignment.MiddleLeft;
+                name.AutoEllipsis = true;
+                name.AutoSize = false;
                 name.Cursor = Cursors.Hand;
                 name.Tag = rate.Url;
                 name.Click += OpenMarketPage;
@@ -998,24 +1002,41 @@ namespace ChronoDeskWidget
                 Label value = new Label();
                 value.Text = "—";
                 value.BackColor = panel.BackColor;
-                value.Location = new Point(108, rowY);
-                value.Size = new Size(panel.Width - 120, 27);
-                value.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
+                value.Location = new Point(127, rowY);
+                value.Size = new Size(70, 27);
+                value.Anchor = AnchorStyles.Top | AnchorStyles.Left;
                 value.ForeColor = _themeAccentText;
-                value.Font = GetUiFont(8.1F, FontStyle.Bold);
-                value.TextAlign = _language == "fa" ? ContentAlignment.MiddleLeft : ContentAlignment.MiddleRight;
+                value.Font = GetUiFont(6.7F, FontStyle.Bold);
+                value.TextAlign = ContentAlignment.MiddleRight;
+                value.AutoEllipsis = true;
                 value.Tag = rate.Url;
                 value.Cursor = Cursors.Hand;
                 value.Click += OpenMarketPage;
                 panel.Controls.Add(value);
                 _rateValueLabels[rate.Key] = value;
 
+                Label change = new Label();
+                change.Text = "";
+                change.BackColor = panel.BackColor;
+                change.Location = new Point(198, rowY);
+                change.Size = new Size(panel.Width - 207, 27);
+                change.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
+                change.ForeColor = _themeMutedText;
+                change.Font = GetUiFont(6.2F, FontStyle.Bold);
+                change.TextAlign = ContentAlignment.MiddleRight;
+                change.AutoEllipsis = true;
+                change.Tag = rate.Url;
+                change.Cursor = Cursors.Hand;
+                change.Click += OpenMarketPage;
+                panel.Controls.Add(change);
+                _rateChangeLabels[rate.Key] = change;
+
                 if (i < _rateDefinitions.Length - 1)
                 {
                     Panel separator = new Panel();
                     separator.BackColor = _themeBorder;
-                    separator.Location = new Point(42, rowY + 29);
-                    separator.Size = new Size(panel.Width - 54, 1);
+                    separator.Location = new Point(36, rowY + 29);
+                    separator.Size = new Size(panel.Width - 48, 1);
                     separator.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
                     panel.Controls.Add(separator);
                 }
@@ -1024,10 +1045,10 @@ namespace ChronoDeskWidget
             _ratesStatusLabel = new Label();
             _ratesStatusLabel.Text = T("Waiting for live market data…", "در انتظار داده زنده بازار…");
             _ratesStatusLabel.BackColor = panel.BackColor;
-            _ratesStatusLabel.Location = new Point(12, 126);
-            _ratesStatusLabel.Size = new Size(panel.Width - 24, 16);
+            _ratesStatusLabel.Location = new Point(10, 128);
+            _ratesStatusLabel.Size = new Size(panel.Width - 20, 16);
             _ratesStatusLabel.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
-            _ratesStatusLabel.Font = GetUiFont(6.8F, FontStyle.Regular);
+            _ratesStatusLabel.Font = GetUiFont(6.4F, FontStyle.Regular);
             _ratesStatusLabel.ForeColor = _themeMutedText;
             _ratesStatusLabel.TextAlign = _language == "fa" ? ContentAlignment.MiddleRight : ContentAlignment.MiddleLeft;
             panel.Controls.Add(_ratesStatusLabel);
@@ -1035,14 +1056,14 @@ namespace ChronoDeskWidget
             panel.Resize += delegate
             {
                 _ratesRefreshButton.Left = panel.ClientSize.Width - _ratesRefreshButton.Width - 8;
-                foreach (Control child in panel.Controls)
+                foreach (KeyValuePair<string, Label> pair in _rateValueLabels)
+                    pair.Value.Width = 68;
+                foreach (KeyValuePair<string, Label> pair in _rateChangeLabels)
                 {
-                    if (child is Label && child.Tag is string && child.Location.Y >= firstY && child.Location.Y < firstY + 3 * 30 && child.Location.X >= 100)
-                        child.Width = panel.ClientSize.Width - child.Left - 12;
-                    else if (child is Panel && child.Height == 1 && child.Location.Y >= firstY)
-                        child.Width = panel.ClientSize.Width - child.Left - 12;
+                    pair.Value.Left = 198;
+                    pair.Value.Width = Math.Max(35, panel.ClientSize.Width - pair.Value.Left - 8);
                 }
-                _ratesStatusLabel.Width = panel.ClientSize.Width - 24;
+                _ratesStatusLabel.Width = panel.ClientSize.Width - 20;
             };
         }
 
@@ -1466,6 +1487,7 @@ namespace ChronoDeskWidget
                             if (!string.IsNullOrEmpty(result.Value))
                             {
                                 _rateValues[result.Key] = result.Value;
+                                _rateChanges[result.Key] = result.Change ?? string.Empty;
                                 _rateErrors[result.Key] = string.Empty;
                                 _rateFreshThisFetch[result.Key] = true;
                             }
@@ -1485,7 +1507,7 @@ namespace ChronoDeskWidget
                                 if (_ratesStatusLabel != null)
                                 {
                                     if (succeeded == _rateDefinitions.Length)
-                                        _ratesStatusLabel.Text = T("Updated ", "به‌روزرسانی ") + (_language == "fa" ? ToPersianDigits(DateTime.Now.ToString("HH:mm")) : DateTime.Now.ToString("HH:mm")) + " · " + (_rateUnit == "T" ? "Toman (T)" : "Dollar ($)");
+                                        UpdateRatesStatus();
                                     else if (succeeded > 0)
                                         _ratesStatusLabel.Text = T("Partially updated · check connection", "به‌روزرسانی ناقص · اتصال را بررسی کنید");
                                     else
@@ -1509,39 +1531,71 @@ namespace ChronoDeskWidget
             foreach (MarketRate definition in _rateDefinitions)
             {
                 Label label;
+                Label changeLabel;
                 if (!_rateValueLabels.TryGetValue(definition.Key, out label) || label == null || label.IsDisposed) continue;
+                if (!_rateChangeLabels.TryGetValue(definition.Key, out changeLabel) || changeLabel == null || changeLabel.IsDisposed) continue;
+
                 string value;
                 long parsed;
                 if (_rateValues.TryGetValue(definition.Key, out value) &&
                     !string.IsNullOrEmpty(value) &&
                     long.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out parsed))
                 {
-                    string formatted;
-                    if (_rateUnit == "T")
-                        formatted = (parsed / 10L).ToString("N0", CultureInfo.InvariantCulture) + " T";
-                    else if (hasUsd)
-                    {
-                        decimal dollars = (decimal)parsed / (decimal)usdRial;
-                        formatted = "$" + dollars.ToString("N2", CultureInfo.InvariantCulture);
-                    }
-                    else
-                        formatted = "—";
-
+                    string formatted = FormatRateAmount(parsed, usdRial, hasUsd);
                     if (_language == "fa") formatted = ToPersianDigits(formatted);
                     label.Text = formatted;
                     label.ForeColor = _rateFreshThisFetch[definition.Key] ? _themeAccentText : _themeMutedText;
+
+                    string changeText;
+                    long change;
+                    if (_rateChanges.TryGetValue(definition.Key, out changeText) &&
+                        long.TryParse(changeText, NumberStyles.Integer, CultureInfo.InvariantCulture, out change) && change != 0)
+                    {
+                        decimal amount = _rateUnit == "T" ? Math.Abs(change) / 10M :
+                            (hasUsd ? Math.Abs((decimal)change / usdRial) : 0M);
+                        string magnitude = _rateUnit == "T"
+                            ? amount.ToString("N0", CultureInfo.InvariantCulture)
+                            : (hasUsd ? amount.ToString("$0.00", CultureInfo.InvariantCulture) : "");
+                        string arrow = change > 0 ? "▲ " : "▼ ";
+                        changeLabel.Text = arrow + magnitude;
+                        if (_language == "fa") changeLabel.Text = ToPersianDigits(changeLabel.Text);
+                        changeLabel.ForeColor = change > 0 ? Color.FromArgb(42, 176, 105) : Color.FromArgb(224, 78, 78);
+                    }
+                    else
+                    {
+                        changeLabel.Text = "";
+                        changeLabel.ForeColor = _themeMutedText;
+                    }
                 }
                 else
                 {
                     label.Text = "—";
                     label.ForeColor = _themeMutedText;
+                    changeLabel.Text = "";
+                    changeLabel.ForeColor = _themeMutedText;
                 }
             }
-            if (_ratesStatusLabel != null && !_rateFetchInProgress && _lastRateRefreshLocal != DateTime.MinValue)
-            {
-                string unitName = _rateUnit == "T" ? "Toman (T)" : "Dollar ($)";
-                _ratesStatusLabel.Text = T("Prices in ", "قیمت‌ها به ") + unitName;
-            }
+
+            UpdateRatesStatus();
+        }
+
+        private string FormatRateAmount(long rialValue, long usdRial, bool hasUsd)
+        {
+            if (_rateUnit == "T")
+                return (rialValue / 10L).ToString("N0", CultureInfo.InvariantCulture) + " T";
+            if (hasUsd)
+                return "$" + ((decimal)rialValue / (decimal)usdRial).ToString("N2", CultureInfo.InvariantCulture);
+            return "—";
+        }
+
+        private void UpdateRatesStatus()
+        {
+            if (_ratesStatusLabel == null || _ratesStatusLabel.IsDisposed || _rateFetchInProgress) return;
+            if (_lastRateRefreshLocal == DateTime.MinValue) return;
+            string updated = T("Updated ", "به‌روزرسانی ") +
+                (_language == "fa" ? ToPersianDigits(_lastRateRefreshLocal.ToString("HH:mm")) : _lastRateRefreshLocal.ToString("HH:mm"));
+            string unit = _rateUnit == "T" ? "T" : "$";
+            _ratesStatusLabel.Text = updated + " · " + T("Prices in ", "قیمت‌ها به ") + unit;
         }
 
         private void BuildTrayIcon()
