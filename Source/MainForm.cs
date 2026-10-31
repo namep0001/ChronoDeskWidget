@@ -371,7 +371,7 @@ namespace ChronoDeskWidget
                 case "notes": return 203;
                 case "rates": return 203;
                 case "network": return 203;
-                case "calculator": return 203;
+                case "calculator": return 238;
                 case "system": return 270;
                 default: return 0;
             }
@@ -864,9 +864,9 @@ namespace ChronoDeskWidget
             string ramValue = _systemMonitor.RamPercent.ToString("0") + "% · " +
                 SystemMetricsMonitor.FormatBytes(_systemMonitor.UsedRamBytes) + "/" +
                 SystemMetricsMonitor.FormatBytes(_systemMonitor.TotalRamBytes);
-            string diskValue = _systemMonitor.DiskPercent.ToString("0") + "% · " +
-                SystemMetricsMonitor.FormatBytes(_systemMonitor.UsedDiskBytes) + "/" +
-                SystemMetricsMonitor.FormatBytes(_systemMonitor.TotalDiskBytes);
+            string diskValue = _systemMonitor.DiskPercent.ToString("0") + "% full" + Environment.NewLine +
+                SystemMetricsMonitor.FormatBytes(_systemMonitor.UsedDiskBytes) + " used · " +
+                SystemMetricsMonitor.FormatBytes(_systemMonitor.FreeDiskBytes) + " free";
             SetSystemMetric("CPU", _systemMonitor.CpuPercent, _systemMonitor.CpuPercent.ToString("0") + "%");
             SetSystemMetric("RAM", _systemMonitor.RamPercent, ramValue);
             SetSystemMetric("GPU", _systemMonitor.GpuPercent, _systemMonitor.GpuPercent < 0 ? "N/A" : _systemMonitor.GpuPercent.ToString("0") + "%");
@@ -877,12 +877,14 @@ namespace ChronoDeskWidget
                 {
                     Label name = new Label(); name.Text = T("Battery", "باتری"); name.Location = new Point(12, 199); name.Size = new Size(42, 18);
                     name.BackColor = _systemUptimeLabel.BackColor; name.ForeColor = _themeMutedText; name.Font = GetUiFont(7.5F, FontStyle.Bold);
-                    ThemedProgressBar bar = new ThemedProgressBar(); bar.Location = new Point(55, 200); bar.Size = new Size(130, 14); bar.TrackColor = _themeMode == "light" || (_themeMode == "system" && _themeUsesLightTaskbar) ? Color.White : _themeInput; bar.FillColor = _themeAccent; bar.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
-                    Label value = new Label(); value.Location = new Point(_systemUptimeLabel.Parent.ClientSize.Width - 118, 195); value.Size = new Size(106, 29); value.Anchor = AnchorStyles.Top | AnchorStyles.Right; value.BackColor = _systemUptimeLabel.BackColor; value.ForeColor = _themeText; value.Font = GetUiFont(6.8F, FontStyle.Bold); value.TextAlign = ContentAlignment.MiddleRight;
+                    ThemedProgressBar bar = new ThemedProgressBar(); bar.Location = new Point(55, 200); bar.Size = new Size(_systemUptimeLabel.Parent.ClientSize.Width - 178, 14); bar.TrackColor = _themeMode == "light" || (_themeMode == "system" && _themeUsesLightTaskbar) ? Color.White : _themeInput; bar.FillColor = _themeAccent; bar.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
+                    Label value = new Label(); value.Location = new Point(_systemUptimeLabel.Parent.ClientSize.Width - 118, 193); value.Size = new Size(106, 29); value.Anchor = AnchorStyles.Top | AnchorStyles.Right; value.BackColor = _systemUptimeLabel.BackColor; value.ForeColor = _themeText; value.Font = GetUiFont(6.8F, FontStyle.Bold); value.TextAlign = ContentAlignment.MiddleRight;
                     _systemUptimeLabel.Parent.Controls.Add(name); _systemUptimeLabel.Parent.Controls.Add(bar); _systemUptimeLabel.Parent.Controls.Add(value);
                     _systemBars["Battery"] = bar; _systemValues["Battery"] = value;
                 }
                 SetSystemMetric("Battery", _systemMonitor.BatteryPercent, _systemMonitor.BatteryPercent + "%" + (_systemMonitor.BatteryCharging ? " · " + T("Charging", "در حال شارژ") : ""));
+                _systemBars["Battery"].Width = _systemUptimeLabel.Parent.ClientSize.Width - 178;
+                _systemValues["Battery"].Left = _systemUptimeLabel.Parent.ClientSize.Width - 118;
                 _systemUptimeLabel.Top = 229;
             }
             else
