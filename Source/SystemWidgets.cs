@@ -264,16 +264,30 @@ namespace ChronoDeskWidget
 
             try
             {
-                DriveInfo drive = DriveInfo.GetDrives().FirstOrDefault(d => d.IsReady && d.DriveType == DriveType.Fixed && string.Equals(d.Name, Path.GetPathRoot(Environment.GetFolderPath(Environment.SpecialFolder.Windows)), StringComparison.OrdinalIgnoreCase));
-                if (drive == null) drive = DriveInfo.GetDrives().FirstOrDefault(d => d.IsReady && d.DriveType == DriveType.Fixed);
-                if (drive != null)
+                long total = 0;
+                long free = 0;
+                foreach (DriveInfo drive in DriveInfo.GetDrives())
                 {
-                    long used = drive.TotalSize - drive.AvailableFreeSpace;
-                    DiskText = FormatBytes(used) + " / " + FormatBytes(drive.TotalSize);
-                    DiskPercent = drive.TotalSize <= 0 ? 0 : (float)(used * 100.0 / drive.TotalSize);
+                    try
+                    {
+                        if (!drive.IsReady || drive.DriveType != DriveType.Fixed) continue;
+                        total += drive.TotalSize;
+                        free += drive.AvailableFreeSpace;
+                    }
+                    catch { }
                 }
+                if (total > 0)
+                {
+                    long used = Math.Max(0, total - free);
+                    TotalDiskBytes = total;
+                    FreeDiskBytes = free;
+                    UsedDiskBytes = used;
+                    DiskPercent = (float)(used * 100.0 / total);
+                    DiskText = FormatBytes(used) + " used · " + FormatBytes(free) + " free / " + FormatBytes(total);
+                }
+                else { DiskText = "Unavailable"; DiskPercent = 0; TotalDiskBytes = 0; FreeDiskBytes = 0; UsedDiskBytes = 0; }
             }
-            catch { DiskText = "Unavailable"; DiskPercent = 0; }
+            catch { DiskText = "Unavailable"; DiskPercent = 0; TotalDiskBytes = 0; FreeDiskBytes = 0; UsedDiskBytes = 0; }
 
             try
             {
@@ -286,6 +300,9 @@ namespace ChronoDeskWidget
         }
 
         public float DiskPercent { get; private set; }
+        public long TotalDiskBytes { get; private set; }
+        public long UsedDiskBytes { get; private set; }
+        public long FreeDiskBytes { get; private set; }
         public static string FormatBytes(double bytes)
         {
             string[] units = { "B", "KB", "MB", "GB", "TB" };
