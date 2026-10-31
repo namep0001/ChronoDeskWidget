@@ -1007,7 +1007,7 @@ namespace ChronoDeskWidget
                 value.Size = new Size(70, 27);
                 value.Anchor = AnchorStyles.Top | AnchorStyles.Left;
                 value.ForeColor = _themeAccentText;
-                value.Font = GetUiFont(6.7F, FontStyle.Bold);
+                value.Font = GetUiFont(8.0F, FontStyle.Bold);
                 value.TextAlign = ContentAlignment.MiddleRight;
                 value.AutoEllipsis = true;
                 value.Tag = rate.Url;
@@ -1023,7 +1023,7 @@ namespace ChronoDeskWidget
                 change.Size = new Size(panel.Width - 207, 27);
                 change.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
                 change.ForeColor = _themeMutedText;
-                change.Font = GetUiFont(6.2F, FontStyle.Bold);
+                change.Font = GetUiFont(7.2F, FontStyle.Bold);
                 change.TextAlign = ContentAlignment.MiddleRight;
                 change.AutoEllipsis = true;
                 change.Tag = rate.Url;
@@ -1046,10 +1046,10 @@ namespace ChronoDeskWidget
             _ratesStatusLabel = new Label();
             _ratesStatusLabel.Text = T("Waiting for live market data…", "در انتظار داده زنده بازار…");
             _ratesStatusLabel.BackColor = panel.BackColor;
-            _ratesStatusLabel.Location = new Point(10, 128);
+            _ratesStatusLabel.Location = new Point(10, panel.ClientSize.Height - 22);
             _ratesStatusLabel.Size = new Size(panel.Width - 20, 16);
-            _ratesStatusLabel.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
-            _ratesStatusLabel.Font = GetUiFont(6.4F, FontStyle.Regular);
+            _ratesStatusLabel.Anchor = AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
+            _ratesStatusLabel.Font = GetUiFont(7.2F, FontStyle.Regular);
             _ratesStatusLabel.ForeColor = _themeMutedText;
             _ratesStatusLabel.TextAlign = _language == "fa" ? ContentAlignment.MiddleRight : ContentAlignment.MiddleLeft;
             panel.Controls.Add(_ratesStatusLabel);
@@ -1065,6 +1065,7 @@ namespace ChronoDeskWidget
                     pair.Value.Width = Math.Max(35, panel.ClientSize.Width - pair.Value.Left - 8);
                 }
                 _ratesStatusLabel.Width = panel.ClientSize.Width - 20;
+                _ratesStatusLabel.Top = panel.ClientSize.Height - _ratesStatusLabel.Height - 6;
             };
         }
 
@@ -1595,7 +1596,7 @@ namespace ChronoDeskWidget
             if (_lastRateRefreshLocal == DateTime.MinValue) return;
             string updated = T("Updated ", "به‌روزرسانی ") +
                 (_language == "fa" ? ToPersianDigits(_lastRateRefreshLocal.ToString("HH:mm")) : _lastRateRefreshLocal.ToString("HH:mm"));
-            string unit = _rateUnit == "T" ? "T" : "$";
+            string unit = _rateUnit == "T" ? T("Toman", "تومان") : T("Dollars", "دلار");
             _ratesStatusLabel.Text = updated + " · " + T("Prices in ", "قیمت‌ها به ") + unit;
         }
 
