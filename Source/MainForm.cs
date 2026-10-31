@@ -8,6 +8,7 @@ using System.IO;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Text;
+using System.Data;
 using System.Windows.Forms;
 using Microsoft.Win32;
 
@@ -34,7 +35,7 @@ namespace ChronoDeskWidget
         private readonly Dictionary<string, string> _rateErrors = new Dictionary<string, string>();
         private readonly Dictionary<string, bool> _rateFreshThisFetch = new Dictionary<string, bool>();
         private readonly Dictionary<string, bool> _widgetVisibility = new Dictionary<string, bool>(StringComparer.OrdinalIgnoreCase);
-        private readonly string[] _widgetKeys = { "clock", "calendar", "tasks", "pomodoro", "notes", "rates" };
+        private readonly string[] _widgetKeys = { "clock", "calendar", "tasks", "pomodoro", "notes", "rates", "network", "calculator", "system" };
         private readonly string[] _fontFamilies = { "Segoe UI", "Arial", "Calibri", "Tahoma", "Verdana", "Microsoft YaHei UI" };
 
         private Color _themeBackground;
@@ -105,6 +106,18 @@ namespace ChronoDeskWidget
         private Icon _generatedIcon;
         private ToolTip _toolTip;
         private readonly Dictionary<string, Font> _fontCache = new Dictionary<string, Font>(StringComparer.Ordinal);
+        private NetworkUsageMonitor _networkMonitor;
+        private SystemMetricsMonitor _systemMonitor;
+        private Label _networkSummaryLabel;
+        private Label _networkSpeedLabel;
+        private Label _networkHistoryLabel;
+        private Label _systemUptimeLabel;
+        private readonly Dictionary<string, ProgressBar> _systemBars = new Dictionary<string, ProgressBar>();
+        private readonly Dictionary<string, Label> _systemValues = new Dictionary<string, Label>();
+        private TextBox _calculatorDisplay;
+        private double _calculatorAccumulator;
+        private string _calculatorPending;
+        private bool _calculatorStartNew = true;
 
         [DllImport("user32.dll")]
         private static extern bool ReleaseCapture();
@@ -139,6 +152,8 @@ namespace ChronoDeskWidget
             foreach (string widgetKey in _widgetKeys)
                 _widgetVisibility[widgetKey] = LocalStore.LoadSetting("widget." + widgetKey, "1") != "0";
             _tasks = LocalStore.LoadTasks();
+            _networkMonitor = new NetworkUsageMonitor();
+            _systemMonitor = new SystemMetricsMonitor();
             foreach (MarketRate rate in _rateDefinitions)
             {
                 _rateValues[rate.Key] = string.Empty;
@@ -354,6 +369,9 @@ namespace ChronoDeskWidget
                 case "pomodoro": return 203;
                 case "notes": return 203;
                 case "rates": return 203;
+                case "network": return 203;
+                case "calculator": return 203;
+                case "system": return 250;
                 default: return 0;
             }
         }
@@ -368,7 +386,8 @@ namespace ChronoDeskWidget
 
         private int DetermineLayoutColumns()
         {
-            return GetVisibleWidgetCount() > 1 ? 2 : 1;
+            int visible = GetVisibleWidgetCount();
+            return visible > 2 ? 3 : (visible > 1 ? 2 : 1);
         }
 
         private void ConfigureContentGrid()
@@ -470,6 +489,13 @@ namespace ChronoDeskWidget
             _pomodoroProgressIndicator = null;
             _ratesStatusLabel = null;
             _ratesRefreshButton = null;
+            _networkSummaryLabel = null;
+            _networkSpeedLabel = null;
+            _networkHistoryLabel = null;
+            _systemUptimeLabel = null;
+            _systemBars.Clear();
+            _systemValues.Clear();
+            _calculatorDisplay = null;
             _sections.Clear();
             _rateValueLabels.Clear();
             _rateChangeLabels.Clear();
@@ -498,6 +524,9 @@ namespace ChronoDeskWidget
             if (IsWidgetVisible("pomodoro")) BuildPomodoroSection();
             if (IsWidgetVisible("notes")) BuildNotesSection();
             if (IsWidgetVisible("rates")) BuildRatesSection();
+            if (IsWidgetVisible("network")) BuildNetworkSection();
+            if (IsWidgetVisible("calculator")) BuildCalculatorSection();
+            if (IsWidgetVisible("system")) BuildSystemSection();
 
             ConfigureContentGrid();
             UpdateSectionWidths();
@@ -506,6 +535,8 @@ namespace ChronoDeskWidget
             RenderTasks();
             UpdatePomodoroDisplay();
             RenderRates();
+            RenderNetworkWidget();
+            RenderSystemWidget();
             ApplyScrollBarTheme();
             ResizeWidgetToContent();
             _buildingContent = false;
@@ -576,6 +607,237 @@ namespace ChronoDeskWidget
                 if (_language == "fa") icon.Left = panel.ClientSize.Width - icon.Width - 12;
                 title.Width = Math.Max(72, panel.ClientSize.Width - 62 - reservedRight);
             };
+        }
+
+
+        private void BuildNetworkSection()
+        {
+            Panel panel = NewSection("network", 203);
+            AddSectionHeader(panel, "network", T("Network Monitor", "پایش شبکه"), 0);
+            _networkSummaryLabel = new Label();
+            _networkSummaryLabel.Location = new Point(12, 37);
+            _networkSummaryLabel.Size = new Size(panel.Width - 24, 42);
+            _networkSummaryLabel.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
+            _networkSummaryLabel.BackColor = panel.BackColor;
+            _networkSummaryLabel.ForeColor = _themeText;
+            _networkSummaryLabel.Font = GetUiFont(8.2F, FontStyle.Bold);
+            _networkSummaryLabel.TextAlign = ContentAlignment.MiddleLeft;
+            panel.Controls.Add(_networkSummaryLabel);
+
+            _networkSpeedLabel = new Label();
+            _networkSpeedLabel.Location = new Point(12, 82);
+            _networkSpeedLabel.Size = new Size(panel.Width - 24, 34);
+            _networkSpeedLabel.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
+            _networkSpeedLabel.BackColor = panel.BackColor;
+            _networkSpeedLabel.ForeColor = _themeAccentText;
+            _networkSpeedLabel.Font = GetUiFont(8F, FontStyle.Bold);
+            _networkSpeedLabel.TextAlign = ContentAlignment.MiddleLeft;
+            panel.Controls.Add(_networkSpeedLabel);
+
+            _networkHistoryLabel = new Label();
+            _networkHistoryLabel.Location = new Point(12, 121);
+            _networkHistoryLabel.Size = new Size(panel.Width - 24, 70);
+            _networkHistoryLabel.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
+            _networkHistoryLabel.BackColor = panel.BackColor;
+            _networkHistoryLabel.ForeColor = _themeMutedText;
+            _networkHistoryLabel.Font = GetUiFont(7.2F, FontStyle.Regular);
+            _networkHistoryLabel.TextAlign = ContentAlignment.TopLeft;
+            panel.Controls.Add(_networkHistoryLabel);
+            panel.Resize += delegate
+            {
+                _networkSummaryLabel.Width = panel.ClientSize.Width - 24;
+                _networkSpeedLabel.Width = panel.ClientSize.Width - 24;
+                _networkHistoryLabel.Width = panel.ClientSize.Width - 24;
+            };
+        }
+
+        private void RenderNetworkWidget()
+        {
+            if (_networkMonitor == null || _networkSummaryLabel == null || _networkSummaryLabel.IsDisposed) return;
+            IList<NetworkUsageDay> days = _networkMonitor.GetDays();
+            long down = 0, up = 0;
+            foreach (NetworkUsageDay day in days) { down += day.DownloadBytes; up += day.UploadBytes; }
+            string month = DateTime.Today.ToString("MMMM yyyy", CultureInfo.InvariantCulture);
+            _networkSummaryLabel.Text = T("This month · ", "این ماه · ") + month + Environment.NewLine +
+                "↓ " + SystemMetricsMonitor.FormatBytes(down) + "     ↑ " + SystemMetricsMonitor.FormatBytes(up);
+            _networkSpeedLabel.Text = (_networkMonitor.Connected ? T("Online", "متصل") : T("Offline", "قطع")) +
+                "   ↓ " + SystemMetricsMonitor.FormatBytes(_networkMonitor.DownloadBytesPerSecond) + "/s   ↑ " +
+                SystemMetricsMonitor.FormatBytes(_networkMonitor.UploadBytesPerSecond) + "/s";
+            StringBuilder history = new StringBuilder(T("Daily usage (download / upload)", "مصرف روزانه (دریافت / ارسال)"));
+            history.AppendLine();
+            int first = Math.Max(0, days.Count - 4);
+            for (int i = first; i < days.Count; i++)
+                history.AppendLine(days[i].Date.ToString("dd MMM", CultureInfo.InvariantCulture) + "   " +
+                    SystemMetricsMonitor.FormatBytes(days[i].DownloadBytes) + " / " + SystemMetricsMonitor.FormatBytes(days[i].UploadBytes));
+            _networkHistoryLabel.Text = history.ToString().TrimEnd();
+        }
+
+        private void BuildCalculatorSection()
+        {
+            Panel panel = NewSection("calculator", 203);
+            AddSectionHeader(panel, "calculator", T("Calculator", "ماشین‌حساب"), 0);
+            _calculatorDisplay = new TextBox();
+            _calculatorDisplay.ReadOnly = true;
+            _calculatorDisplay.Text = "0";
+            _calculatorDisplay.TextAlign = HorizontalAlignment.Right;
+            _calculatorDisplay.Font = GetUiFont(17F, FontStyle.Bold);
+            _calculatorDisplay.BackColor = _themeInput;
+            _calculatorDisplay.ForeColor = _themeText;
+            _calculatorDisplay.BorderStyle = BorderStyle.FixedSingle;
+            _calculatorDisplay.Location = new Point(12, 35);
+            _calculatorDisplay.Size = new Size(panel.Width - 24, 31);
+            _calculatorDisplay.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
+            panel.Controls.Add(_calculatorDisplay);
+
+            string[] keys = { "7", "8", "9", "÷", "4", "5", "6", "×", "1", "2", "3", "−", "C", "0", ".", "+", "±", "=" };
+            int columns = 6;
+            for (int i = 0; i < keys.Length; i++)
+            {
+                string key = keys[i];
+                Button button = new Button();
+                button.Text = key;
+                button.Size = new Size(39, 27);
+                button.Location = new Point(10 + (i % columns) * 43, 73 + (i / columns) * 31);
+                button.FlatStyle = FlatStyle.Flat;
+                button.FlatAppearance.BorderSize = 0;
+                button.BackColor = (key == "=" || key == "+" || key == "−" || key == "×" || key == "÷") ? _themeAccent : _themeButton;
+                button.ForeColor = (key == "=" || key == "+" || key == "−" || key == "×" || key == "÷") ? _themeAccentText : _themeText;
+                button.Font = GetUiFont(8.5F, FontStyle.Bold);
+                button.Cursor = Cursors.Hand;
+                button.Click += delegate { CalculatorPress(key); };
+                panel.Controls.Add(button);
+            }
+            panel.Resize += delegate { _calculatorDisplay.Width = panel.ClientSize.Width - 24; };
+        }
+
+        private void CalculatorPress(string key)
+        {
+            if (_calculatorDisplay == null || _calculatorDisplay.IsDisposed) return;
+            double current;
+            if (!double.TryParse(_calculatorDisplay.Text, NumberStyles.Float, CultureInfo.InvariantCulture, out current)) current = 0;
+            if (key == "C") { _calculatorDisplay.Text = "0"; _calculatorAccumulator = 0; _calculatorPending = null; _calculatorStartNew = true; return; }
+            if (key == "±") { _calculatorDisplay.Text = (-current).ToString("G12", CultureInfo.InvariantCulture); return; }
+            if (key == ".") { if (_calculatorStartNew) { _calculatorDisplay.Text = "0."; _calculatorStartNew = false; } else if (!_calculatorDisplay.Text.Contains(".")) _calculatorDisplay.Text += "."; return; }
+            if (key.Length == 1 && key[0] >= '0' && key[0] <= '9')
+            {
+                if (_calculatorStartNew || _calculatorDisplay.Text == "0") _calculatorDisplay.Text = key;
+                else _calculatorDisplay.Text += key;
+                _calculatorStartNew = false; return;
+            }
+            if (key == "=" || key == "+" || key == "−" || key == "×" || key == "÷")
+            {
+                if (_calculatorPending != null && !_calculatorStartNew) current = Calculate(_calculatorAccumulator, current, _calculatorPending);
+                _calculatorAccumulator = key == "=" ? current : current;
+                _calculatorDisplay.Text = current.ToString("G12", CultureInfo.InvariantCulture);
+                _calculatorPending = key == "=" ? null : key;
+                _calculatorStartNew = true;
+            }
+        }
+
+        private double Calculate(double left, double right, string operation)
+        {
+            switch (operation) { case "+": return left + right; case "−": return left - right; case "×": return left * right; case "÷": return right == 0 ? 0 : left / right; default: return right; }
+        }
+
+        private void BuildSystemSection()
+        {
+            Panel panel = NewSection("system", 250);
+            AddSectionHeader(panel, "system", T("System Monitor", "پایش سیستم"), 0);
+            string[] keys = { "CPU", "RAM", "GPU", "Disk" };
+            for (int i = 0; i < keys.Length; i++)
+            {
+                string key = keys[i];
+                int y = 39 + i * 38;
+                Label name = new Label();
+                name.Text = key;
+                name.Location = new Point(12, y);
+                name.Size = new Size(42, 18);
+                name.BackColor = panel.BackColor;
+                name.ForeColor = _themeMutedText;
+                name.Font = GetUiFont(7.5F, FontStyle.Bold);
+                panel.Controls.Add(name);
+
+                ProgressBar bar = new ProgressBar();
+                bar.Location = new Point(55, y + 1);
+                bar.Size = new Size(panel.Width - 115, 14);
+                bar.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
+                bar.Minimum = 0; bar.Maximum = 100; bar.Style = ProgressBarStyle.Continuous;
+                panel.Controls.Add(bar);
+                _systemBars[key] = bar;
+
+                Label value = new Label();
+                value.Location = new Point(panel.Width - 55, y - 1);
+                value.Size = new Size(45, 18);
+                value.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+                value.BackColor = panel.BackColor;
+                value.ForeColor = _themeText;
+                value.Font = GetUiFont(7.2F, FontStyle.Bold);
+                value.TextAlign = ContentAlignment.MiddleRight;
+                panel.Controls.Add(value);
+                _systemValues[key] = value;
+            }
+
+            _systemUptimeLabel = new Label();
+            _systemUptimeLabel.Location = new Point(12, 197);
+            _systemUptimeLabel.Size = new Size(panel.Width - 24, 35);
+            _systemUptimeLabel.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
+            _systemUptimeLabel.BackColor = panel.BackColor;
+            _systemUptimeLabel.ForeColor = _themeMutedText;
+            _systemUptimeLabel.Font = GetUiFont(7.5F, FontStyle.Regular);
+            panel.Controls.Add(_systemUptimeLabel);
+            panel.Resize += delegate
+            {
+                foreach (ProgressBar bar in _systemBars.Values) bar.Width = panel.ClientSize.Width - 115;
+                foreach (Label value in _systemValues.Values) value.Left = panel.ClientSize.Width - 55;
+                _systemUptimeLabel.Width = panel.ClientSize.Width - 24;
+            };
+        }
+
+        private void RenderSystemWidget()
+        {
+            if (_systemMonitor == null || _systemUptimeLabel == null || _systemUptimeLabel.IsDisposed) return;
+            SetSystemMetric("CPU", _systemMonitor.CpuPercent, _systemMonitor.CpuPercent.ToString("0") + "%");
+            SetSystemMetric("RAM", _systemMonitor.RamPercent, SystemMetricsMonitor.FormatBytes(_systemMonitor.UsedRamBytes) + " / " + SystemMetricsMonitor.FormatBytes(_systemMonitor.TotalRamBytes));
+            SetSystemMetric("GPU", _systemMonitor.GpuPercent, _systemMonitor.GpuPercent < 0 ? "N/A" : _systemMonitor.GpuPercent.ToString("0") + "%");
+            SetSystemMetric("Disk", _systemMonitor.DiskPercent, _systemMonitor.DiskText ?? "N/A");
+            _systemUptimeLabel.Text = T("Uptime  ", "مدت روشن بودن  ") + _systemMonitor.Uptime.Days + T("d ", "روز ") +
+                _systemMonitor.Uptime.Hours + T("h ", "ساعت ") + _systemMonitor.Uptime.Minutes + T("m", "دقیقه");
+            if (_systemMonitor.HasBattery)
+            {
+                if (!_systemBars.ContainsKey("Battery"))
+                {
+                    Label name = new Label(); name.Text = T("Battery", "باتری"); name.Location = new Point(12, 191); name.Size = new Size(42, 18);
+                    name.BackColor = _systemUptimeLabel.BackColor; name.ForeColor = _themeMutedText; name.Font = GetUiFont(7.5F, FontStyle.Bold);
+                    ProgressBar bar = new ProgressBar(); bar.Location = new Point(55, 192); bar.Size = new Size(130, 14); bar.Minimum = 0; bar.Maximum = 100; bar.Style = ProgressBarStyle.Continuous; bar.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
+                    Label value = new Label(); value.Location = new Point(205, 190); value.Size = new Size(45, 18); value.Anchor = AnchorStyles.Top | AnchorStyles.Right; value.BackColor = _systemUptimeLabel.BackColor; value.ForeColor = _themeText; value.Font = GetUiFont(7.2F, FontStyle.Bold); value.TextAlign = ContentAlignment.MiddleRight;
+                    _systemUptimeLabel.Parent.Controls.Add(name); _systemUptimeLabel.Parent.Controls.Add(bar); _systemUptimeLabel.Parent.Controls.Add(value);
+                    _systemBars["Battery"] = bar; _systemValues["Battery"] = value;
+                }
+                SetSystemMetric("Battery", _systemMonitor.BatteryPercent, _systemMonitor.BatteryPercent + "%" + (_systemMonitor.BatteryCharging ? " +" : ""));
+                _systemUptimeLabel.Top = 221;
+            }
+            else
+            {
+                if (_systemBars.ContainsKey("Battery"))
+                {
+                    Control parent = _systemBars["Battery"].Parent;
+                    parent.Controls.Remove(_systemBars["Battery"]); _systemBars["Battery"].Dispose();
+                    parent.Controls.Remove(_systemValues["Battery"]); _systemValues["Battery"].Dispose();
+                    _systemBars.Remove("Battery"); _systemValues.Remove("Battery");
+                }
+                _systemUptimeLabel.Top = 197;
+            }
+        }
+
+        private void SetSystemMetric(string key, float percent, string value)
+        {
+            ProgressBar bar; Label label;
+            if (_systemBars.TryGetValue(key, out bar) && bar != null && !bar.IsDisposed)
+            {
+                bar.Value = Math.Max(0, Math.Min(100, (int)Math.Round(percent < 0 ? 0 : percent)));
+                label = _systemValues[key];
+                label.Text = value;
+            }
         }
 
         private void BuildClockSection()
@@ -1467,6 +1729,8 @@ namespace ChronoDeskWidget
             if (_notesDirty) SaveNotesIfNeeded();
             if (IsWidgetVisible("rates") && !_rateFetchInProgress && (DateTime.Now - _lastRateRefreshLocal).TotalMinutes >= 5)
                 RefreshRates();
+            if (_networkMonitor != null) { _networkMonitor.Tick(); RenderNetworkWidget(); }
+            if (_systemMonitor != null) { _systemMonitor.Update(); RenderSystemWidget(); }
         }
 
         private void RefreshRates()
@@ -1742,6 +2006,9 @@ namespace ChronoDeskWidget
             AddWidgetToggle(widgetsItem, "pomodoro", T("Pomodoro timer", "زمان‌سنج پومودورو"));
             AddWidgetToggle(widgetsItem, "notes", T("Quick note", "یادداشت سریع"));
             AddWidgetToggle(widgetsItem, "rates", T("Market rates", "نرخ بازار"));
+            AddWidgetToggle(widgetsItem, "network", T("Network monitor", "پایش شبکه"));
+            AddWidgetToggle(widgetsItem, "calculator", T("Calculator", "ماشین‌حساب"));
+            AddWidgetToggle(widgetsItem, "system", T("System monitor", "پایش سیستم"));
             menu.Items.Add(widgetsItem);
 
             ToolStripMenuItem opacityItem = new ToolStripMenuItem(T("Widget opacity", "شفافیت ویجت"));
@@ -2007,6 +2274,8 @@ namespace ChronoDeskWidget
             {
                 ShowFromTray();
                 if (key == "rates") RefreshRates();
+                if (key == "network") RenderNetworkWidget();
+                if (key == "system") RenderSystemWidget();
             }
         }
 
@@ -2163,6 +2432,8 @@ namespace ChronoDeskWidget
             if (_tickTimer != null) { _tickTimer.Stop(); _tickTimer.Dispose(); }
             if (_positionSaveTimer != null) { _positionSaveTimer.Stop(); _positionSaveTimer.Dispose(); }
             if (_trayMenu != null) _trayMenu.Dispose();
+            if (_networkMonitor != null) { _networkMonitor.Dispose(); _networkMonitor = null; }
+            if (_systemMonitor != null) { _systemMonitor.Dispose(); _systemMonitor = null; }
             if (_generatedIcon != null) _generatedIcon.Dispose();
         }
 
