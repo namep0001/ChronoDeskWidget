@@ -2,7 +2,7 @@
 
 A lightweight Windows desktop companion built with C#, Windows Forms, and .NET Framework 4.8. The application runs locally, keeps tasks and notes on the device, and retrieves online data only for market quotes.
 
-**[Project website](https://namep0001.github.io/ChronoDeskWidget/)** · **[Source code](https://github.com/namep0001/ChronoDeskWidget)** · **[Latest Windows build](https://github.com/namep0001/ChronoDeskWidget/actions/workflows/build-windows.yml)**
+**[Website preview source](https://github.com/namep0001/ChronoDeskWidget/blob/main/index.html)** · **[Source code](https://github.com/namep0001/ChronoDeskWidget)** · **[Latest Windows build](https://github.com/namep0001/ChronoDeskWidget/actions/workflows/build-windows.yml)**
 
 ## Features
 
@@ -14,6 +14,10 @@ A lightweight Windows desktop companion built with C#, Windows Forms, and .NET F
 - **Appearance** — System, Light, and Dark themes; Windows accent color; adjustable opacity and font.
 - **Widget controls** — independently show or hide widgets, keep the widget on top, and start with Windows.
 - **English and Persian** — interface language can be changed from the tray menu.
+
+## Publish the project website
+
+The responsive landing page is in the repository root as `index.html`. To make it public as a live site, open **Settings → Pages** in the repository, choose **Deploy from a branch**, select `main` and `/(root)`, then save. The expected site address is [namep0001.github.io/ChronoDeskWidget](https://namep0001.github.io/ChronoDeskWidget/).
 
 ## Get the app
 
