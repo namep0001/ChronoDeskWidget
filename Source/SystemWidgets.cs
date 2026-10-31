@@ -20,6 +20,7 @@ namespace ChronoDeskWidget
     {
         private readonly string _path = Path.Combine(LocalStore.Folder, "network-month.csv");
         private readonly Dictionary<DateTime, NetworkUsageDay> _days = new Dictionary<DateTime, NetworkUsageDay>();
+        private readonly object _sync = new object();
         private Dictionary<string, long[]> _lastCounters = new Dictionary<string, long[]>();
         private long _previousReceived;
         private long _previousSent;
@@ -59,6 +60,8 @@ namespace ChronoDeskWidget
 
         private void SampleMonthlyUsage()
         {
+            lock (_sync)
+            {
             Dictionary<string, long[]> current = ReadCounters();
             DateTime today = DateTime.Today;
             NetworkUsageDay day;
@@ -82,10 +85,13 @@ namespace ChronoDeskWidget
             TrimMonth();
             Save();
             UpdateTotals();
+            }
         }
 
         public void Tick()
         {
+            lock (_sync)
+            {
             long received, sent;
             ReadTotals(out received, out sent);
             if (_previousReceived > 0 && received >= _previousReceived)
@@ -100,9 +106,10 @@ namespace ChronoDeskWidget
 
             // Daily collection is intentionally limited to one check per date.
             if (!_days.ContainsKey(DateTime.Today)) SampleMonthlyUsage();
+            }
         }
 
-        private void UpdateSpeedBaseline() { ReadTotals(out _previousReceived, out _previousSent); DownloadBytesPerSecond = 0; UploadBytesPerSecond = 0; }
+        private void UpdateSpeedBaseline() { lock (_sync) { ReadTotals(out _previousReceived, out _previousSent); DownloadBytesPerSecond = 0; UploadBytesPerSecond = 0; } }
         private void ReadTotals(out long received, out long sent)
         {
             received = 0; sent = 0;
@@ -157,9 +164,12 @@ namespace ChronoDeskWidget
 
         public IList<NetworkUsageDay> GetDays()
         {
+            lock (_sync)
+            {
             List<NetworkUsageDay> result = new List<NetworkUsageDay>(_days.Values);
             result.Sort(delegate(NetworkUsageDay a, NetworkUsageDay b) { return a.Date.CompareTo(b.Date); });
             return result;
+            }
         }
 
         public void Dispose()
@@ -258,7 +268,7 @@ namespace ChronoDeskWidget
             try
             {
                 System.Windows.Forms.PowerStatus power = System.Windows.Forms.SystemInformation.PowerStatus;
-                HasBattery = power.BatteryChargeStatus != System.Windows.Forms.BatteryChargeStatus.NoSystemBattery && power.BatteryLifePercent >= 0;
+                HasBattery = power.BatteryChargeStatus != System.Windows.Forms.BatteryChargeStatus.NoSystemBattery && power.BatteryLifePercent >= 0 && power.BatteryLifePercent <= 1.0F;
                 BatteryPercent = HasBattery ? (int)Math.Round(power.BatteryLifePercent * 100) : 0;
                 BatteryCharging = HasBattery && (power.BatteryChargeStatus & System.Windows.Forms.BatteryChargeStatus.Charging) != 0;
             }
