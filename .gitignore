@@ -1,0 +1,14 @@
+# Visual Studio and build outputs
+.vs/
+bin/
+obj/
+*.user
+*.suo
+*.pdb
+
+# Build-generated application icon
+Source/ChronoDeskWidget.ico
+
+# Local logs and temporary files
+*.log
+*.tmp
