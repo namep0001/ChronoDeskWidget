@@ -1523,6 +1523,7 @@ namespace ChronoDeskWidget
         private void BuildTrayIcon()
         {
             _generatedIcon = CreateWidgetIcon();
+            Icon = (Icon)_generatedIcon.Clone();
             _trayMenu = CreateTrayMenu();
             _trayIcon = new NotifyIcon();
             _trayIcon.Icon = _generatedIcon;
@@ -1604,7 +1605,12 @@ namespace ChronoDeskWidget
                 string themeName = _themeUsesLightTaskbar ? "Explorer" : "DarkMode_Explorer";
                 // Custom surfaces own their background colours; keep native theme painting off them.
                 if (_notesBox != null && !_notesBox.IsDisposed)
+                {
                     _notesBox.BackColor = _themeInput;
+                    if (_notesBox.IsHandleCreated) SetWindowTheme(_notesBox.Handle, _themeUsesLightTaskbar ? "Explorer" : "DarkMode_Explorer", null);
+                }
+                if (_taskRowsPanel != null && !_taskRowsPanel.IsDisposed && _taskRowsPanel.IsHandleCreated)
+                    SetWindowTheme(_taskRowsPanel.Handle, _themeUsesLightTaskbar ? "Explorer" : "DarkMode_Explorer", null);
                 if (_calendarModeCombo != null && !_calendarModeCombo.IsDisposed)
                     SetWindowTheme(_calendarModeCombo.Handle, _themeUsesLightTaskbar ? "Explorer" : "DarkMode_CFD", null);
             }
@@ -1864,13 +1870,13 @@ namespace ChronoDeskWidget
                                 g.DrawLine(pen, 3, 9, 15, 9);
                                 break;
                             case "font":
-                                using (Font fontGlyph = new Font("Segoe UI", 8.5F, FontStyle.Bold, GraphicsUnit.Pixel))
-                                using (StringFormat centered = new StringFormat())
-                                {
-                                    centered.Alignment = StringAlignment.Center;
-                                    centered.LineAlignment = StringAlignment.Center;
-                                    g.DrawString("Aa", fontGlyph, brush, new RectangleF(0, 0, 18, 18), centered);
-                                }
+                                g.DrawLine(pen, 3, 15, 8, 3);
+                                g.DrawLine(pen, 8, 3, 13, 15);
+                                g.DrawLine(pen, 5, 10, 11, 10);
+                                g.DrawLine(pen, 13, 15, 17, 15);
+                                g.DrawLine(pen, 17, 15, 17, 8);
+                                g.DrawLine(pen, 17, 8, 15, 8);
+                                g.DrawLine(pen, 15, 8, 15, 15);
                                 break;
                             case "pin":
                                 g.DrawLine(pen, 6, 2, 12, 8);
