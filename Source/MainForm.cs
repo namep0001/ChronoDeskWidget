@@ -347,7 +347,7 @@ namespace ChronoDeskWidget
             switch (key)
             {
                 case "clock": return 203;
-                case "calendar": return 228;
+                case "calendar": return 250;
                 case "tasks": return 203;
                 case "pomodoro": return 203;
                 case "notes": return 203;
@@ -624,7 +624,7 @@ namespace ChronoDeskWidget
 
         private void BuildCalendarSection()
         {
-            Panel panel = NewSection("calendar", 228);
+            Panel panel = NewSection("calendar", 250);
             AddSectionHeader(panel, "calendar", T("Calendar", "تقویم"), 0);
 
             Button previous = MakeSmallButton("‹", T("Previous month", "ماه قبل"), 24);
@@ -692,7 +692,7 @@ namespace ChronoDeskWidget
 
             _calendarGrid = new WidgetCalendarGrid();
             _calendarGrid.Location = new Point(12, 82);
-            _calendarGrid.Size = new Size(panel.Width - 24, 140);
+            _calendarGrid.Size = new Size(panel.Width - 24, 162);
             _calendarGrid.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
             _calendarGrid.ColumnCount = 7;
             _calendarGrid.RowCount = 7;
@@ -702,7 +702,7 @@ namespace ChronoDeskWidget
             _calendarGrid.CellBorderStyle = TableLayoutPanelCellBorderStyle.None;
             for (int i = 0; i < 7; i++) _calendarGrid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F / 7F));
             _calendarGrid.RowStyles.Add(new RowStyle(SizeType.Absolute, 18));
-            for (int i = 0; i < 6; i++) _calendarGrid.RowStyles.Add(new RowStyle(SizeType.Absolute, 20));
+            for (int i = 0; i < 6; i++) _calendarGrid.RowStyles.Add(new RowStyle(SizeType.Absolute, 24));
             panel.Controls.Add(_calendarGrid);
 
             panel.Resize += delegate
@@ -1636,8 +1636,8 @@ namespace ChronoDeskWidget
                 }
                 if (_taskRowsPanel != null && !_taskRowsPanel.IsDisposed && _taskRowsPanel.IsHandleCreated)
                     SetWindowTheme(_taskRowsPanel.Handle, _themeUsesLightTaskbar ? "Explorer" : "DarkMode_Explorer", null);
-                if (_calendarModeCombo != null && !_calendarModeCombo.IsDisposed)
-                    SetWindowTheme(_calendarModeCombo.Handle, _themeUsesLightTaskbar ? "Explorer" : "DarkMode_CFD", null);
+                if (_calendarSolarButton != null && !_calendarSolarButton.IsDisposed) _calendarSolarButton.Invalidate();
+                if (_calendarGregorianButton != null && !_calendarGregorianButton.IsDisposed) _calendarGregorianButton.Invalidate();
             }
             catch { }
         }
