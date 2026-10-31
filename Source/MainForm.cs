@@ -1003,8 +1003,8 @@ namespace ChronoDeskWidget
                 Label value = new Label();
                 value.Text = "—";
                 value.BackColor = panel.BackColor;
-                value.Location = new Point(127, rowY);
-                value.Size = new Size(70, 27);
+                value.Location = new Point(135, rowY);
+                value.Size = new Size(68, 27);
                 value.Anchor = AnchorStyles.Top | AnchorStyles.Left;
                 value.ForeColor = _themeAccentText;
                 value.Font = GetUiFont(8.0F, FontStyle.Bold);
@@ -1019,8 +1019,8 @@ namespace ChronoDeskWidget
                 Label change = new Label();
                 change.Text = "";
                 change.BackColor = panel.BackColor;
-                change.Location = new Point(198, rowY);
-                change.Size = new Size(panel.Width - 207, 27);
+                change.Location = new Point(207, rowY);
+                change.Size = new Size(panel.Width - 216, 27);
                 change.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
                 change.ForeColor = _themeMutedText;
                 change.Font = GetUiFont(7.2F, FontStyle.Bold);
@@ -1058,10 +1058,10 @@ namespace ChronoDeskWidget
             {
                 _ratesRefreshButton.Left = panel.ClientSize.Width - _ratesRefreshButton.Width - 8;
                 foreach (KeyValuePair<string, Label> pair in _rateValueLabels)
-                    pair.Value.Width = 68;
+                    pair.Value.Left = 135;
                 foreach (KeyValuePair<string, Label> pair in _rateChangeLabels)
                 {
-                    pair.Value.Left = 198;
+                    pair.Value.Left = 207;
                     pair.Value.Width = Math.Max(35, panel.ClientSize.Width - pair.Value.Left - 8);
                 }
                 _ratesStatusLabel.Width = panel.ClientSize.Width - 20;
@@ -1553,11 +1553,11 @@ namespace ChronoDeskWidget
                     if (_rateChanges.TryGetValue(definition.Key, out changeText) &&
                         long.TryParse(changeText, NumberStyles.Integer, CultureInfo.InvariantCulture, out change) && change != 0)
                     {
-                        decimal amount = _rateUnit == "T" ? Math.Abs(change) / 10M :
-                            (hasUsd ? Math.Abs((decimal)change / usdRial) : 0M);
-                        string magnitude = _rateUnit == "T"
-                            ? amount.ToString("N0", CultureInfo.InvariantCulture)
-                            : (hasUsd ? amount.ToString("$0.00", CultureInfo.InvariantCulture) : "");
+                        long previousValue = parsed - change;
+                        decimal percentage = previousValue > 0
+                            ? Math.Abs((decimal)change / previousValue) * 100M
+                            : 0M;
+                        string magnitude = percentage.ToString("0.00", CultureInfo.InvariantCulture) + "%";
                         string arrow = change > 0 ? "▲ " : "▼ ";
                         changeLabel.Text = arrow + magnitude;
                         if (_language == "fa") changeLabel.Text = ToPersianDigits(changeLabel.Text);
