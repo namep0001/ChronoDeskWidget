@@ -2,6 +2,15 @@
 
 All notable project changes are documented here.
 
+## [Unreleased]
+
+### Added
+- Three-column widget layout when more than two widgets are visible.
+- Network monitor with live transfer speed and daily download/upload totals retained for the current calendar month.
+- Calculator widget with basic arithmetic, decimal input, and sign toggle.
+- System monitor with CPU, RAM, GPU, system-drive usage, laptop battery status, and uptime progress indicators.
+- Local monthly network history stored in `network-month.csv` under the application data folder.
+
 ## [1.0] — 2026-10-31
 
 First official release of ChronoDesk Widget.
