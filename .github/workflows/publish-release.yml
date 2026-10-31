@@ -1,0 +1,32 @@
+name: Publish ChronoDesk Widget Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+    steps:
+      - name: Check out tagged source
+        uses: actions/checkout@v4
+      - name: Build application
+        shell: cmd
+        run: build.bat
+      - name: Package Windows release
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path release | Out-Null
+          Compress-Archive -Path bin/Release/ChronoDeskWidget.exe -DestinationPath release/ChronoDeskWidget-Windows.zip -Force
+      - name: Publish GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: ChronoDesk Widget ${{ github.ref_name }}
+          body_path: CHANGELOG.md
+          files: release/ChronoDeskWidget-Windows.zip
+          draft: false
+          prerelease: false
