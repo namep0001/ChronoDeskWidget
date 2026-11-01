@@ -371,9 +371,9 @@ namespace ChronoDeskWidget
                 case "pomodoro": return 203;
                 case "notes": return 203;
                 case "rates": return 203;
-                case "network": return 230;
-                case "calculator": return 238;
-                case "system": return 320;
+                case "network": return 250;
+                case "calculator": return 250;
+                case "system": return 250;
                 default: return 0;
             }
         }
@@ -616,7 +616,7 @@ namespace ChronoDeskWidget
 
         private void BuildNetworkSection()
         {
-            Panel panel = NewSection("network", 230);
+            Panel panel = NewSection("network", 250);
             AddSectionHeader(panel, "network", T("Network Monitor", "پایش شبکه"), 0);
             _networkSummaryLabel = new Label();
             _networkSummaryLabel.Location = new Point(12, 30);
@@ -765,7 +765,7 @@ namespace ChronoDeskWidget
 
         private void BuildCalculatorSection()
         {
-            Panel panel = NewSection("calculator", 238);
+            Panel panel = NewSection("calculator", 250);
             AddSectionHeader(panel, "calculator", T("Calculator", "ماشین‌حساب"), 0);
             _calculatorDisplay = new TextBox();
             _calculatorDisplay.ReadOnly = true;
@@ -861,7 +861,7 @@ namespace ChronoDeskWidget
 
         private void BuildSystemSection()
         {
-            Panel panel = NewSection("system", 320);
+            Panel panel = NewSection("system", 250);
             AddSectionHeader(panel, "system", T("System Monitor", "پایش سیستم"), 0);
             string[] keys = { "CPU", "RAM", "GPU", "Disk" };
             for (int i = 0; i < keys.Length; i++)
@@ -917,63 +917,16 @@ namespace ChronoDeskWidget
         private void RenderSystemWidget()
         {
             if (_systemMonitor == null || _systemUptimeLabel == null || _systemUptimeLabel.IsDisposed) return;
-            string ramValue = _systemMonitor.RamPercent.ToString("0") + "%  ·  " +
-                SystemMetricsMonitor.FormatBytes(_systemMonitor.UsedRamBytes) + " / " +
+            string ramValue = _systemMonitor.RamPercent.ToString("0") + "% " +
+                SystemMetricsMonitor.FormatBytes(_systemMonitor.UsedRamBytes) + "/" +
                 SystemMetricsMonitor.FormatBytes(_systemMonitor.TotalRamBytes);
-            string diskValue = _systemMonitor.DiskPercent.ToString("0") + "%  ·  " +
-                SystemMetricsMonitor.FormatBytes(_systemMonitor.UsedDiskBytes) + " used  ·  " +
-                SystemMetricsMonitor.FormatBytes(_systemMonitor.FreeDiskBytes) + " free";
+            string diskValue = _systemMonitor.DiskPercent.ToString("0") + "% " +
+                SystemMetricsMonitor.FormatBytes(_systemMonitor.UsedDiskBytes) + " / " +
+                SystemMetricsMonitor.FormatBytes(_systemMonitor.TotalDiskBytes);
             SetSystemMetric("CPU", _systemMonitor.CpuPercent, _systemMonitor.CpuPercent.ToString("0") + "%");
             SetSystemMetric("RAM", _systemMonitor.RamPercent, ramValue);
             SetSystemMetric("GPU", _systemMonitor.GpuPercent, _systemMonitor.GpuPercent < 0 ? "N/A" : _systemMonitor.GpuPercent.ToString("0") + "%");
             SetSystemMetric("Disk", _systemMonitor.DiskPercent, diskValue);
-            if (_systemMonitor.HasBattery)
-            {
-                if (!_systemBars.ContainsKey("Battery"))
-                {
-                    Control parent = _systemUptimeLabel.Parent;
-                    Label name = new Label();
-                    name.Text = T("Battery", "باتری");
-                    name.Location = new Point(12, 229);
-                    name.Size = new Size(62, 15);
-                    name.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
-                    name.BackColor = parent.BackColor;
-                    name.ForeColor = _themeMutedText;
-                    name.Font = GetUiFont(7.2F, FontStyle.Bold);
-                    ThemedProgressBar bar = new ThemedProgressBar();
-                    bar.Location = new Point(12, 248);
-                    bar.Size = new Size(parent.ClientSize.Width - 24, 12);
-                    bar.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
-                    bar.TrackColor = _themeMode == "light" || (_themeMode == "system" && _themeUsesLightTaskbar) ? Color.White : _themeInput;
-                    bar.FillColor = _themeAccent;
-                    Label value = new Label();
-                    value.Location = new Point(76, 229);
-                    value.Size = new Size(parent.ClientSize.Width - 88, 16);
-                    value.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
-                    value.BackColor = parent.BackColor;
-                    value.ForeColor = _themeText;
-                    value.Font = GetUiFont(6.8F, FontStyle.Bold);
-                    value.TextAlign = ContentAlignment.MiddleRight;
-                    parent.Controls.Add(name);
-                    parent.Controls.Add(bar);
-                    parent.Controls.Add(value);
-                    _systemBars["Battery"] = bar;
-                    _systemValues["Battery"] = value;
-                }
-                SetSystemMetric("Battery", _systemMonitor.BatteryPercent,
-                    _systemMonitor.BatteryPercent + "%" + (_systemMonitor.BatteryCharging ? "  ·  " + T("Charging", "در حال شارژ") : ""));
-            }
-            else if (_systemBars.ContainsKey("Battery"))
-            {
-                Control parent = _systemBars["Battery"].Parent;
-                Control batteryName = null;
-                foreach (Control control in parent.Controls)
-                    if (control is Label && ((Label)control).Text == T("Battery", "باتری")) { batteryName = control; break; }
-                foreach (Control control in new Control[] { _systemBars["Battery"], _systemValues["Battery"], batteryName })
-                    if (control != null) { parent.Controls.Remove(control); control.Dispose(); }
-                _systemBars.Remove("Battery");
-                _systemValues.Remove("Battery");
-            }
             TimeSpan uptime = _systemMonitor.Uptime;
             string uptimeText = uptime.Days > 0
                 ? uptime.Days + "d  " + uptime.Hours + "h  " + uptime.Minutes + "m"
