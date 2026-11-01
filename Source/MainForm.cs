@@ -988,16 +988,16 @@ namespace ChronoDeskWidget
 
         private void BuildClockSection()
         {
-            Panel panel = NewSection("clock", 146);
+            Panel panel = NewSection("clock", 203);
             panel.BackColor = _themeSurface;
             AddSectionHeader(panel, "clock", T("Clock", "ساعت"), 0);
 
             _clockLabel = new Label();
             _clockLabel.BackColor = panel.BackColor;
-            _clockLabel.Location = new Point(8, 39);
-            _clockLabel.Size = new Size(panel.Width - 16, 60);
+            _clockLabel.Location = new Point(8, 43);
+            _clockLabel.Size = new Size(panel.Width - 16, 68);
             _clockLabel.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
-            _clockLabel.Font = GetUiFont(31F, FontStyle.Regular);
+            _clockLabel.Font = GetUiFont(40F, FontStyle.Regular);
             _clockLabel.ForeColor = _themeText;
             _clockLabel.TextAlign = ContentAlignment.MiddleCenter;
             _clockLabel.MouseDown += StartWindowDrag;
@@ -1005,10 +1005,10 @@ namespace ChronoDeskWidget
 
             _dateEnglishLabel = new Label();
             _dateEnglishLabel.BackColor = panel.BackColor;
-            _dateEnglishLabel.Location = new Point(8, 108);
-            _dateEnglishLabel.Size = new Size(panel.Width - 16, 20);
+            _dateEnglishLabel.Location = new Point(8, 119);
+            _dateEnglishLabel.Size = new Size(panel.Width - 16, 24);
             _dateEnglishLabel.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
-            _dateEnglishLabel.Font = GetUiFont(8.2F, FontStyle.Regular);
+            _dateEnglishLabel.Font = GetUiFont(9.5F, FontStyle.Regular);
             _dateEnglishLabel.ForeColor = _themeText;
             _dateEnglishLabel.TextAlign = ContentAlignment.MiddleCenter;
             _dateEnglishLabel.MouseDown += StartWindowDrag;
@@ -1016,12 +1016,13 @@ namespace ChronoDeskWidget
 
             _dateSolarLabel = new Label();
             _dateSolarLabel.BackColor = panel.BackColor;
-            _dateSolarLabel.Location = new Point(8, 131);
-            _dateSolarLabel.Size = new Size(panel.Width - 16, 20);
+            _dateSolarLabel.Location = new Point(8, 148);
+            _dateSolarLabel.Size = new Size(panel.Width - 16, 30);
             _dateSolarLabel.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
-            _dateSolarLabel.Font = GetUiFont(8F, FontStyle.Regular);
+            _dateSolarLabel.Font = GetFont("B Roya", 12F, FontStyle.Regular);
             _dateSolarLabel.ForeColor = _themeText;
             _dateSolarLabel.TextAlign = ContentAlignment.MiddleCenter;
+            _dateSolarLabel.RightToLeft = RightToLeft.Yes;
             _dateSolarLabel.MouseDown += StartWindowDrag;
             panel.Controls.Add(_dateSolarLabel);
 
@@ -1186,12 +1187,25 @@ namespace ChronoDeskWidget
             {
                 if (e.KeyCode == Keys.Enter) { AddTask(); e.SuppressKeyPress = true; }
             };
+            _taskInput.HandleCreated += delegate
+            {
+                SendMessageText(_taskInput.Handle, 0x1501, IntPtr.Zero, "Add a new task...");
+            };
             taskInputFrame.Controls.Add(_taskInput);
 
-            _addTaskButton = MakeSmallButton(T("Add", "افزودن"), T("Add task", "افزودن وظیفه"), 72);
-            _addTaskButton.Location = new Point(panel.Width - 84, 35);
+            _addTaskButton = MakeSmallButton("+", T("Add task", "افزودن وظیفه"), 28);
+            _addTaskButton.Size = new Size(28, 28);
+            _addTaskButton.Location = new Point(panel.Width - 40, 35);
             _addTaskButton.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-            _addTaskButton.Height = 28;
+            _addTaskButton.Font = GetUiFont(12F, FontStyle.Bold);
+            _addTaskButton.BackColor = _themeAccent;
+            _addTaskButton.ForeColor = ContrastText(_themeAccent);
+            _addTaskButton.FlatAppearance.BorderColor = _themeAccent;
+            using (GraphicsPath addButtonCircle = new GraphicsPath())
+            {
+                addButtonCircle.AddEllipse(0, 0, 28, 28);
+                _addTaskButton.Region = new Region(addButtonCircle);
+            }
             _addTaskButton.Click += delegate { AddTask(); };
             panel.Controls.Add(_addTaskButton);
 
@@ -1206,7 +1220,7 @@ namespace ChronoDeskWidget
             panel.Resize += delegate
             {
                 _taskCountLabel.Left = _language == "fa" ? panel.ClientSize.Width - 130 : panel.ClientSize.Width - _taskCountLabel.Width - 12;
-                taskInputFrame.Width = Math.Max(90, panel.ClientSize.Width - 106);
+                taskInputFrame.Width = Math.Max(90, panel.ClientSize.Width - 60);
                 _taskInput.Width = Math.Max(72, taskInputFrame.ClientSize.Width - 16);
                 _addTaskButton.Left = panel.ClientSize.Width - _addTaskButton.Width - 12;
                 _taskRowsPanel.Width = panel.ClientSize.Width - 24;
@@ -1515,8 +1529,10 @@ namespace ChronoDeskWidget
 
             string gregorian = now.ToString("dddd, dd MMMM yyyy", english);
             string solar = GetSolarLongDate(now, _language == "fa");
+            int weekdayIndex = ((int)now.DayOfWeek + 6) % 7;
+            string solarWeekday = _weekdaysFa[weekdayIndex];
             _dateEnglishLabel.Text = _language == "fa" ? "میلادی  ·  " + ToPersianDigits(now.ToString("yyyy/MM/dd", CultureInfo.InvariantCulture)) : gregorian;
-            _dateSolarLabel.Text = _language == "fa" ? solar : GetSolarLongDate(now, false);
+            _dateSolarLabel.Text = solarWeekday + " " + solar;
 
             if (now.Date != _calendarAnchor.Date && _calendarAnchor.Date == _selectedDate.Date && _calendarAnchor.Date == now.Date.AddDays(-1))
             {
@@ -1531,14 +1547,14 @@ namespace ChronoDeskWidget
             int year = _persianCalendar.GetYear(date);
             int month = _persianCalendar.GetMonth(date);
             int day = _persianCalendar.GetDayOfMonth(date);
-            string monthName = persianDigits ? _solarMonthsFa[month - 1] : _solarMonthsEn[month - 1];
+            string monthName = _solarMonthsFa[month - 1];
             string value = day + " " + monthName + " " + year;
             return persianDigits ? ToPersianDigits(value) : value;
         }
 
         private Font GetUiFont(float size, FontStyle style = FontStyle.Regular, GraphicsUnit unit = GraphicsUnit.Point)
         {
-            return GetFont(_fontFamily, size, style, unit);
+            return GetFont(_language == "fa" ? "B Roya" : _fontFamily, size, style, unit);
         }
 
         private Font GetFont(string family, float size, FontStyle style = FontStyle.Regular, GraphicsUnit unit = GraphicsUnit.Point)
