@@ -9,7 +9,7 @@ on:
       tag:
         description: Release tag to publish
         required: true
-        default: v1.0
+        default: v1.1
 
 permissions:
   contents: write
@@ -23,18 +23,27 @@ jobs:
       - name: Build application
         shell: cmd
         run: build.bat
-      - name: Package Windows release
+      - name: Prepare release package and notes
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force -Path release | Out-Null
-          Compress-Archive -Path bin/Release/ChronoDeskWidget.exe -DestinationPath release/ChronoDeskWidget-Windows.zip -Force
+          Copy-Item bin/Release/ChronoDeskWidget.exe release/
+          Copy-Item README.md release/
+          Copy-Item CHANGELOG.md release/
+          $changelog = Get-Content CHANGELOG.md -Raw
+          $match = [regex]::Match($changelog, '(?ms)^## \[1\.1\.0\].*?(?=^## |\z)')
+          if (-not $match.Success) {
+            throw "Could not find the v1.1.0 release notes in CHANGELOG.md."
+          }
+          Set-Content -Path release/release-notes.md -Value $match.Value.Trim() -Encoding utf8
+          Compress-Archive -Path release/ChronoDeskWidget.exe, release/README.md, release/CHANGELOG.md -DestinationPath release/ChronoDeskWidget-Windows.zip -Force
       - name: Publish GitHub release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ inputs.tag || github.ref_name }}
           target_commitish: ${{ github.sha }}
           name: ChronoDesk Widget ${{ inputs.tag || github.ref_name }}
-          body_path: CHANGELOG.md
+          body_path: release/release-notes.md
           files: release/ChronoDeskWidget-Windows.zip
           draft: false
           prerelease: false
