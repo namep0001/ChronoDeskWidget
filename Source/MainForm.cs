@@ -1197,7 +1197,9 @@ namespace ChronoDeskWidget
             _addTaskButton.Size = new Size(28, 28);
             _addTaskButton.Location = new Point(panel.Width - 40, 35);
             _addTaskButton.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-            _addTaskButton.Font = GetUiFont(12F, FontStyle.Bold);
+            _addTaskButton.Font = GetUiFont(14F, FontStyle.Bold);
+            _addTaskButton.TextAlign = ContentAlignment.MiddleCenter;
+            _addTaskButton.Padding = Padding.Empty;
             _addTaskButton.BackColor = _themeAccent;
             _addTaskButton.ForeColor = ContrastText(_themeAccent);
             _addTaskButton.FlatAppearance.BorderColor = _themeAccent;
