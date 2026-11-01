@@ -1698,6 +1698,7 @@ namespace ChronoDeskWidget
                 }
             }
             _calendarMonthLabel.Text = monthText;
+            _calendarMonthLabel.Font = _showSolarCalendar ? GetFont("B Roya", 9F, FontStyle.Bold) : GetUiFont(9F, FontStyle.Bold);
             int offset = _showSolarCalendar ? ((int)first.DayOfWeek + 1) % 7 : ((int)first.DayOfWeek + 6) % 7;
             for (int slot = 0; slot < 42; slot++)
             {
