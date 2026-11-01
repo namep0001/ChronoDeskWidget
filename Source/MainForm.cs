@@ -113,6 +113,10 @@ namespace ChronoDeskWidget
         private Label _networkHistoryLabel;
         private Label _networkDownloadTotalLabel;
         private Label _networkUploadTotalLabel;
+        private Label _networkMonthlyDownloadLabel;
+        private Label _networkMonthlyUploadLabel;
+        private Label _networkTodayUsageLabel;
+        private Label _networkStatusLabel;
         private Label _systemUptimeLabel;
         private readonly Dictionary<string, ThemedProgressBar> _systemBars = new Dictionary<string, ThemedProgressBar>();
         private readonly Dictionary<string, Label> _systemValues = new Dictionary<string, Label>();
@@ -496,6 +500,10 @@ namespace ChronoDeskWidget
             _networkHistoryLabel = null;
             _networkDownloadTotalLabel = null;
             _networkUploadTotalLabel = null;
+            _networkMonthlyDownloadLabel = null;
+            _networkMonthlyUploadLabel = null;
+            _networkTodayUsageLabel = null;
+            _networkStatusLabel = null;
             _systemUptimeLabel = null;
             _systemBars.Clear();
             _systemValues.Clear();
@@ -614,126 +622,112 @@ namespace ChronoDeskWidget
         }
 
 
+        private RoundedSurfacePanel CreateNetworkMetricCard(Panel parent, int x, int y, int width, string caption, string icon, out Label value)
+        {
+            RoundedSurfacePanel card = new RoundedSurfacePanel();
+            card.Location = new Point(x, y);
+            card.Size = new Size(width, 52);
+            card.FillColor = _themeSurfaceAlt;
+            card.BorderColor = _themeBorder;
+            parent.Controls.Add(card);
+
+            Label captionLabel = new Label();
+            captionLabel.Text = icon + "  " + caption;
+            captionLabel.Location = new Point(8, 4);
+            captionLabel.Size = new Size(width - 16, 15);
+            captionLabel.BackColor = card.FillColor;
+            captionLabel.ForeColor = _themeMutedText;
+            captionLabel.Font = GetUiFont(6.4F, FontStyle.Regular);
+            captionLabel.AutoEllipsis = true;
+            card.Controls.Add(captionLabel);
+
+            value = new Label();
+            value.Location = new Point(8, 21);
+            value.Size = new Size(width - 16, 24);
+            value.BackColor = card.FillColor;
+            value.ForeColor = _themeAccent;
+            value.Font = GetUiFont(8.8F, FontStyle.Bold);
+            value.TextAlign = ContentAlignment.MiddleLeft;
+            value.AutoEllipsis = true;
+            card.Controls.Add(value);
+            return card;
+        }
+
         private void BuildNetworkSection()
         {
             Panel panel = NewSection("network", 250);
-            AddSectionHeader(panel, "network", T("Network Monitor", "پایش شبکه"), 0);
+            AddSectionHeader(panel, "network", T("Network Monitor", "پایش شبکه"), 92);
+
+            _networkStatusLabel = new Label();
+            _networkStatusLabel.Location = new Point(panel.Width - 91, 8);
+            _networkStatusLabel.Size = new Size(80, 19);
+            _networkStatusLabel.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+            _networkStatusLabel.BackColor = panel.BackColor;
+            _networkStatusLabel.Font = GetUiFont(6.8F, FontStyle.Bold);
+            _networkStatusLabel.TextAlign = ContentAlignment.MiddleRight;
+            panel.Controls.Add(_networkStatusLabel);
+
             _networkSummaryLabel = new Label();
             _networkSummaryLabel.Location = new Point(12, 30);
-            _networkSummaryLabel.Size = new Size(panel.Width - 24, 16);
+            _networkSummaryLabel.Size = new Size(panel.Width - 24, 17);
             _networkSummaryLabel.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
             _networkSummaryLabel.BackColor = panel.BackColor;
             _networkSummaryLabel.ForeColor = _themeMutedText;
-            _networkSummaryLabel.Font = GetUiFont(7.1F, FontStyle.Bold);
+            _networkSummaryLabel.Font = GetUiFont(7.0F, FontStyle.Bold);
             panel.Controls.Add(_networkSummaryLabel);
 
-            int gap = 8;
-            int cardWidth = (panel.Width - 24 - gap) / 2;
-            RoundedSurfacePanel downloadCard = new RoundedSurfacePanel();
-            downloadCard.Location = new Point(12, 49);
-            downloadCard.Size = new Size(cardWidth, 53);
-            downloadCard.FillColor = _themeSurfaceAlt;
-            downloadCard.BorderColor = _themeBorder;
-            panel.Controls.Add(downloadCard);
-            RoundedSurfacePanel uploadCard = new RoundedSurfacePanel();
-            uploadCard.Location = new Point(12 + cardWidth + gap, 49);
-            uploadCard.Size = new Size(cardWidth, 53);
-            uploadCard.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-            uploadCard.FillColor = _themeSurfaceAlt;
-            uploadCard.BorderColor = _themeBorder;
-            panel.Controls.Add(uploadCard);
+            int cardWidth = (panel.ClientSize.Width - 32) / 2;
+            RoundedSurfacePanel downloadSpeedCard = CreateNetworkMetricCard(panel, 12, 52, cardWidth, T("Download speed", "سرعت دریافت"), "↓", out _networkDownloadTotalLabel);
+            RoundedSurfacePanel uploadSpeedCard = CreateNetworkMetricCard(panel, 20 + cardWidth, 52, cardWidth, T("Upload speed", "سرعت ارسال"), "↑", out _networkUploadTotalLabel);
+            uploadSpeedCard.Anchor = AnchorStyles.Top | AnchorStyles.Right;
 
-            Label downCaption = new Label();
-            downCaption.Text = "↓  " + T("DOWNLOAD", "دریافت");
-            downCaption.Location = new Point(9, 5);
-            downCaption.Size = new Size(cardWidth - 18, 15);
-            downCaption.BackColor = downloadCard.FillColor;
-            downCaption.ForeColor = _themeMutedText;
-            downCaption.Font = GetUiFont(6.8F, FontStyle.Regular);
-            downloadCard.Controls.Add(downCaption);
-            _networkDownloadTotalLabel = new Label();
-            _networkDownloadTotalLabel.Location = new Point(9, 22);
-            _networkDownloadTotalLabel.Size = new Size(cardWidth - 18, 23);
-            _networkDownloadTotalLabel.BackColor = downloadCard.FillColor;
-            _networkDownloadTotalLabel.ForeColor = _themeAccent;
-            _networkDownloadTotalLabel.Font = GetUiFont(9.2F, FontStyle.Bold);
-            downloadCard.Controls.Add(_networkDownloadTotalLabel);
+            RoundedSurfacePanel monthlyDownloadCard = CreateNetworkMetricCard(panel, 12, 110, cardWidth, T("Monthly Download", "دریافت ماهانه"), "↓", out _networkMonthlyDownloadLabel);
+            RoundedSurfacePanel monthlyUploadCard = CreateNetworkMetricCard(panel, 20 + cardWidth, 110, cardWidth, T("Monthly Upload", "ارسال ماهانه"), "↑", out _networkMonthlyUploadLabel);
+            monthlyUploadCard.Anchor = AnchorStyles.Top | AnchorStyles.Right;
 
-            Label upCaption = new Label();
-            upCaption.Text = "↑  " + T("UPLOAD", "ارسال");
-            upCaption.Location = new Point(9, 5);
-            upCaption.Size = new Size(cardWidth - 18, 15);
-            upCaption.BackColor = uploadCard.FillColor;
-            upCaption.ForeColor = _themeMutedText;
-            upCaption.Font = GetUiFont(6.8F, FontStyle.Regular);
-            uploadCard.Controls.Add(upCaption);
-            _networkUploadTotalLabel = new Label();
-            _networkUploadTotalLabel.Location = new Point(9, 22);
-            _networkUploadTotalLabel.Size = new Size(cardWidth - 18, 23);
-            _networkUploadTotalLabel.BackColor = uploadCard.FillColor;
-            _networkUploadTotalLabel.ForeColor = _themeAccent;
-            _networkUploadTotalLabel.Font = GetUiFont(9.2F, FontStyle.Bold);
-            uploadCard.Controls.Add(_networkUploadTotalLabel);
+            RoundedSurfacePanel todayCard = new RoundedSurfacePanel();
+            todayCard.Location = new Point(12, 168);
+            todayCard.Size = new Size(panel.ClientSize.Width - 24, 44);
+            todayCard.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
+            todayCard.FillColor = _themeSurfaceAlt;
+            todayCard.BorderColor = _themeBorder;
+            panel.Controls.Add(todayCard);
 
-            Panel separator = new Panel();
-            separator.Location = new Point(12, 109);
-            separator.Size = new Size(panel.Width - 24, 1);
-            separator.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
-            separator.BackColor = _themeBorder;
-            panel.Controls.Add(separator);
+            Label todayCaption = new Label();
+            todayCaption.Text = "◎  " + T("Today's Usage", "مصرف امروز");
+            todayCaption.Location = new Point(10, 4);
+            todayCaption.Size = new Size(todayCard.Width - 92, 35);
+            todayCaption.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
+            todayCaption.BackColor = todayCard.FillColor;
+            todayCaption.ForeColor = _themeMutedText;
+            todayCaption.Font = GetUiFont(7.0F, FontStyle.Bold);
+            todayCaption.TextAlign = ContentAlignment.MiddleLeft;
+            todayCard.Controls.Add(todayCaption);
 
-            RoundedSurfacePanel speedCard = new RoundedSurfacePanel();
-            speedCard.Location = new Point(12, 117);
-            speedCard.Size = new Size(panel.Width - 24, 48);
-            speedCard.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
-            speedCard.FillColor = _themeSurfaceAlt;
-            speedCard.BorderColor = _themeBorder;
-            panel.Controls.Add(speedCard);
-            _networkSpeedLabel = new Label();
-            _networkSpeedLabel.Location = new Point(10, 3);
-            _networkSpeedLabel.Size = new Size(speedCard.Width - 20, 42);
-            _networkSpeedLabel.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
-            _networkSpeedLabel.BackColor = speedCard.FillColor;
-            _networkSpeedLabel.ForeColor = _themeText;
-            _networkSpeedLabel.Font = GetUiFont(7.3F, FontStyle.Bold);
-            _networkSpeedLabel.TextAlign = ContentAlignment.MiddleLeft;
-            speedCard.Controls.Add(_networkSpeedLabel);
-
-            Label historyTitle = new Label();
-            historyTitle.Text = T("RECENT DAILY USAGE", "مصرف روزانه اخیر");
-            historyTitle.Location = new Point(12, 171);
-            historyTitle.Size = new Size(panel.Width - 24, 14);
-            historyTitle.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
-            historyTitle.BackColor = panel.BackColor;
-            historyTitle.ForeColor = _themeMutedText;
-            historyTitle.Font = GetUiFont(6.8F, FontStyle.Bold);
-            panel.Controls.Add(historyTitle);
-            _networkHistoryLabel = new Label();
-            _networkHistoryLabel.Location = new Point(12, 187);
-            _networkHistoryLabel.Size = new Size(panel.Width - 24, 37);
-            _networkHistoryLabel.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
-            _networkHistoryLabel.BackColor = panel.BackColor;
-            _networkHistoryLabel.ForeColor = _themeText;
-            _networkHistoryLabel.Font = GetUiFont(6.9F, FontStyle.Regular);
-            _networkHistoryLabel.TextAlign = ContentAlignment.TopLeft;
-            panel.Controls.Add(_networkHistoryLabel);
+            _networkTodayUsageLabel = new Label();
+            _networkTodayUsageLabel.Location = new Point(todayCard.Width - 86, 4);
+            _networkTodayUsageLabel.Size = new Size(76, 35);
+            _networkTodayUsageLabel.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+            _networkTodayUsageLabel.BackColor = todayCard.FillColor;
+            _networkTodayUsageLabel.ForeColor = _themeAccent;
+            _networkTodayUsageLabel.Font = GetUiFont(8.8F, FontStyle.Bold);
+            _networkTodayUsageLabel.TextAlign = ContentAlignment.MiddleRight;
+            todayCard.Controls.Add(_networkTodayUsageLabel);
 
             panel.Resize += delegate
             {
                 int width = (panel.ClientSize.Width - 32) / 2;
-                downloadCard.Width = width;
-                uploadCard.Left = 20 + width;
-                uploadCard.Width = width;
-                downCaption.Width = downloadCard.ClientSize.Width - 18;
-                _networkDownloadTotalLabel.Width = downloadCard.ClientSize.Width - 18;
-                upCaption.Width = uploadCard.ClientSize.Width - 18;
-                _networkUploadTotalLabel.Width = uploadCard.ClientSize.Width - 18;
+                downloadSpeedCard.Width = width;
+                uploadSpeedCard.Left = 20 + width;
+                uploadSpeedCard.Width = width;
+                monthlyDownloadCard.Width = width;
+                monthlyUploadCard.Left = 20 + width;
+                monthlyUploadCard.Width = width;
+                todayCard.Width = panel.ClientSize.Width - 24;
+                todayCaption.Width = todayCard.ClientSize.Width - 92;
+                _networkTodayUsageLabel.Left = todayCard.ClientSize.Width - 86;
                 _networkSummaryLabel.Width = panel.ClientSize.Width - 24;
-                separator.Width = panel.ClientSize.Width - 24;
-                speedCard.Width = panel.ClientSize.Width - 24;
-                _networkSpeedLabel.Width = speedCard.ClientSize.Width - 20;
-                historyTitle.Width = panel.ClientSize.Width - 24;
-                _networkHistoryLabel.Width = panel.ClientSize.Width - 24;
+                _networkStatusLabel.Left = panel.ClientSize.Width - 91;
             };
         }
 
@@ -741,26 +735,32 @@ namespace ChronoDeskWidget
         {
             if (_networkMonitor == null || _networkSummaryLabel == null || _networkSummaryLabel.IsDisposed) return;
             IList<NetworkUsageDay> days = _networkMonitor.GetDays();
-            long down = 0, up = 0;
-            foreach (NetworkUsageDay day in days) { down += day.DownloadBytes; up += day.UploadBytes; }
-            string month = DateTime.Today.ToString("MMMM yyyy", CultureInfo.InvariantCulture);
-            _networkSummaryLabel.Text = T("MONTH TO DATE  ·  ", "مجموع ماه  ·  ") + month;
-            if (_networkDownloadTotalLabel != null) _networkDownloadTotalLabel.Text = SystemMetricsMonitor.FormatBytes(down);
-            if (_networkUploadTotalLabel != null) _networkUploadTotalLabel.Text = SystemMetricsMonitor.FormatBytes(up);
-            _networkSpeedLabel.Text = (_networkMonitor.Connected ? "● " + T("Online", "متصل") : "● " + T("Offline", "قطع")) + Environment.NewLine +
-                "↓ " + SystemMetricsMonitor.FormatBytes(_networkMonitor.DownloadBytesPerSecond) + "/s    ↑ " +
-                SystemMetricsMonitor.FormatBytes(_networkMonitor.UploadBytesPerSecond) + "/s";
-            StringBuilder history = new StringBuilder();
-            int first = Math.Max(0, days.Count - 2);
-            for (int i = first; i < days.Count; i++)
+            long down = 0, up = 0, todayUsage = 0;
+            foreach (NetworkUsageDay day in days)
             {
-                if (history.Length > 0) history.AppendLine();
-                history.Append(days[i].Date.ToString("dd MMM", CultureInfo.InvariantCulture)).Append("     ↓ ")
-                    .Append(SystemMetricsMonitor.FormatBytes(days[i].DownloadBytes)).Append("     ↑ ")
-                    .Append(SystemMetricsMonitor.FormatBytes(days[i].UploadBytes));
+                down += day.DownloadBytes;
+                up += day.UploadBytes;
+                if (day.Date.Date == DateTime.Today) todayUsage = day.DownloadBytes + day.UploadBytes;
             }
-            if (history.Length == 0) history.Append(T("No daily samples yet", "هنوز داده روزانه‌ای ثبت نشده"));
-            _networkHistoryLabel.Text = history.ToString();
+
+            DateTime today = DateTime.Today;
+            int solarMonth = _persianCalendar.GetMonth(today);
+            int solarYear = _persianCalendar.GetYear(today);
+            _networkSummaryLabel.Text = today.ToString("MMMM yyyy", CultureInfo.InvariantCulture) + "  ·  " +
+                _solarMonthsFa[solarMonth - 1] + " " + solarYear;
+
+            if (_networkStatusLabel != null)
+            {
+                bool online = _networkMonitor.InternetConnected;
+                _networkStatusLabel.Text = online ? "● " + T("Online", "متصل") : "● " + T("Offline", "قطع");
+                _networkStatusLabel.ForeColor = online ? Color.FromArgb(48, 190, 112) : Color.FromArgb(225, 78, 78);
+            }
+
+            if (_networkDownloadTotalLabel != null) _networkDownloadTotalLabel.Text = SystemMetricsMonitor.FormatBytes(_networkMonitor.DownloadBytesPerSecond) + "/s";
+            if (_networkUploadTotalLabel != null) _networkUploadTotalLabel.Text = SystemMetricsMonitor.FormatBytes(_networkMonitor.UploadBytesPerSecond) + "/s";
+            if (_networkMonthlyDownloadLabel != null) _networkMonthlyDownloadLabel.Text = SystemMetricsMonitor.FormatBytes(down);
+            if (_networkMonthlyUploadLabel != null) _networkMonthlyUploadLabel.Text = SystemMetricsMonitor.FormatBytes(up);
+            if (_networkTodayUsageLabel != null) _networkTodayUsageLabel.Text = SystemMetricsMonitor.FormatBytes(todayUsage);
         }
 
         private void BuildCalculatorSection()
