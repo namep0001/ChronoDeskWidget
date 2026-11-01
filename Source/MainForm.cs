@@ -700,7 +700,7 @@ namespace ChronoDeskWidget
 
             Label historyTitle = new Label();
             historyTitle.Text = T("RECENT DAILY USAGE", "مصرف روزانه اخیر");
-            historyTitle.Location = new Point(12, 244);
+            historyTitle.Location = new Point(12, 188);
             historyTitle.Size = new Size(panel.Width - 24, 14);
             historyTitle.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
             historyTitle.BackColor = panel.BackColor;
@@ -708,8 +708,8 @@ namespace ChronoDeskWidget
             historyTitle.Font = GetUiFont(7.4F, FontStyle.Bold);
             panel.Controls.Add(historyTitle);
             _networkHistoryLabel = new Label();
-            _networkHistoryLabel.Location = new Point(12, 265);
-            _networkHistoryLabel.Size = new Size(panel.Width - 24, 70);
+            _networkHistoryLabel.Location = new Point(12, 207);
+            _networkHistoryLabel.Size = new Size(panel.Width - 24, 120);
             _networkHistoryLabel.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
             _networkHistoryLabel.BackColor = panel.BackColor;
             _networkHistoryLabel.ForeColor = _themeText;
