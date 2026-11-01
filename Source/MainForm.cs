@@ -2675,7 +2675,7 @@ namespace ChronoDeskWidget
                 {
                     if (key == null) throw new InvalidOperationException("Could not access the current-user Run registry key.");
                     if (enabled)
-                        key.SetValue(RunValueName, "\"" + Application.ExecutablePath + "\" --tray", RegistryValueKind.String);
+                        key.SetValue(RunValueName, "\"" + Application.ExecutablePath + "\"", RegistryValueKind.String);
                     else
                         key.DeleteValue(RunValueName, false);
                 }
@@ -2734,6 +2734,7 @@ namespace ChronoDeskWidget
             if (_trayIcon != null) { _trayIcon.Visible = false; _trayIcon.Dispose(); }
             if (_tickTimer != null) { _tickTimer.Stop(); _tickTimer.Dispose(); }
             if (_positionSaveTimer != null) { _positionSaveTimer.Stop(); _positionSaveTimer.Dispose(); }
+            if (_calculatorErrorTimer != null) { _calculatorErrorTimer.Stop(); _calculatorErrorTimer.Dispose(); }
             if (_trayMenu != null) _trayMenu.Dispose();
             if (_networkMonitor != null) { _networkMonitor.Dispose(); _networkMonitor = null; }
             if (_systemMonitor != null) { _systemMonitor.Dispose(); _systemMonitor = null; }
