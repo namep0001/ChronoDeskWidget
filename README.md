@@ -1,96 +1,100 @@
 # ChronoDesk Widget
 
-<sub><strong>First official release · v1.0</strong></sub>
+<sub><strong>Version 1.1.0 · Windows 10 / 11</strong></sub>
 
-A lightweight Windows desktop companion built with C#, Windows Forms, and .NET Framework 4.8. It keeps everyday tools accessible on the desktop, stores personal task and note data locally, and connects to the internet only to retrieve market quotes.
+A lightweight Windows desktop companion built with C#, Windows Forms, and .NET Framework 4.8. ChronoDesk keeps productivity tools, calendars, market quotes, and system information accessible from one compact desktop widget.
 
-**[Download v1.0](https://github.com/namep0001/ChronoDeskWidget/releases/tag/v1.0)** · **[Project website](https://namep0001.github.io/ChronoDeskWidget/)** · **[Source code](https://github.com/namep0001/ChronoDeskWidget)**
+**[Download v1.1](https://github.com/namep0001/ChronoDeskWidget/releases/tag/v1.1)** · **[Project website](https://namep0001.github.io/ChronoDeskWidget/)** · **[Source code](https://github.com/namep0001/ChronoDeskWidget)**
 
-## What's included
+## Features
 
-- **Clock and calendar** — live clock, Gregorian and Solar Hijri dates, and a calendar that switches between both systems.
-- **Tasks** — local task list with completion tracking.
-- **Pomodoro** — focus and rest timer with circular progress and dedicated controls.
-- **Quick notes** — locally saved notes with UTF-8 text export.
-- **Market rates** — USD, EUR, and 18-karat gold per gram, with Toman or Dollar display and daily percentage movement.
-- **Network monitor** — live download/upload speed, monthly traffic totals, and daily download/upload history retained from the first through the last day of each month.
-- **Calculator** — compact desktop calculator with arithmetic, sign toggle, and decimal input.
-- **System monitor** — CPU, RAM, GPU, disk, optional laptop battery usage, and system uptime with progress bars.
-- **Appearance** — System, Light, and Dark themes, Windows accent color, adjustable opacity, and font selection.
-- **Widget controls** — independently show or hide widgets, keep the widget on top, and launch with Windows.
-- **Bilingual interface** — English and Persian, switchable from the system-tray menu.
+| Widget | Capabilities |
+| --- | --- |
+| Clock & Calendar | Live clock, Gregorian and Solar Hijri dates, and switchable calendar systems. |
+| Tasks | Local task list with completion tracking. |
+| Pomodoro | Focus and break timer with circular progress and dedicated controls. |
+| Quick Notes | Locally saved notes with UTF-8 text export. |
+| Market Rates | USD, EUR, and 18-karat gold per gram, with Toman or Dollar display and daily movement. |
+| Network Monitor | Live download/upload speeds, internet status, monthly traffic totals, and daily usage. |
+| System Monitor | CPU, RAM, GPU, system-drive usage, optional battery status, and uptime. |
+| Calculator | Basic arithmetic, decimal input, and sign toggle. |
+
+### Personalization
+- English and Persian interface languages.
+- Persian weekday labels and B Roya typography for the Solar Hijri calendar.
+- System, Light, and Dark themes, including Windows accent color support.
+- Adjustable opacity and font selection.
+- Independent widget visibility, always-on-top mode, and optional Windows startup.
+- System-tray controls.
 
 ## Download and install
 
-1. Open the **[v1.0 release page](https://github.com/namep0001/ChronoDeskWidget/releases/tag/v1.0)**.
-2. Download the Windows release package.
-3. Extract the archive to a folder of your choice.
-4. Run `ChronoDeskWidget.exe`.
+1. Open the **[v1.1 release page](https://github.com/namep0001/ChronoDeskWidget/releases/tag/v1.1)**.
+2. Download ChronoDeskWidget-Windows.zip.
+3. Extract the archive.
+4. Run ChronoDeskWidget.exe.
 
-Windows 10/11 and .NET Framework 4.8 are required. The app does not require third-party runtime packages.
+**Requirements:** Windows 10/11 and .NET Framework 4.8. No third-party runtime packages are required.
 
-## Run from source
+## Build from source
 
 **Requirements**
-- Windows 10 or Windows 11
-- .NET Framework 4.8
-- Windows .NET Framework C# compiler, or Visual Studio Build Tools with the .NET desktop build tools
+- Windows 10 or Windows 11.
+- .NET Framework 4.8.
+- Windows .NET Framework C# compiler, or Visual Studio Build Tools with the .NET desktop build tools.
 
-**Steps**
+**Build and run**
 1. Clone or download this repository.
-2. Run `Start-Widget.bat` to build when needed and launch the app.
-3. Run `build.bat` to build without launching.
+2. Run build.bat to build the Release executable.
+3. Run Start-Widget.bat to build when needed and launch the application.
 
-The executable is written to `bin/Release/ChronoDeskWidget.exe`. You can also open `ChronoDeskWidget.csproj` in Visual Studio and build the Release configuration.
+The executable is generated at bin/Release/ChronoDeskWidget.exe. You can also open ChronoDeskWidget.csproj in Visual Studio and build the Release configuration.
 
 ## Repository layout
 
-```text
-ChronoDeskWidget/
-├── .github/workflows/
-│   ├── build-windows.yml       # Continuous Windows build
-│   └── publish-release.yml     # Build and publish tagged releases
-├── Source/
-│   ├── AssemblyInfo.cs         # Product and assembly version metadata
-│   ├── Program.cs              # Application entry point
-│   ├── MainForm.cs             # Main window and widget composition
-│   ├── WidgetControls.cs       # Reusable custom controls and drawing
-│   ├── LocalStore.cs           # Local settings and data persistence
-│   ├── TgjuClient.cs           # Market-rate retrieval and parsing
-│   ├── SystemWidgets.cs        # Network usage and system metrics
-│   └── Generate-AppIcon.ps1    # Generates the executable icon
-├── ChronoDeskWidget.csproj
-├── Start-Widget.bat
-├── build.bat
-├── CHANGELOG.md
-├── index.html                  # Project landing page
-└── README.md
-```
+    ChronoDeskWidget/
+    ├── .github/workflows/       # Windows CI and release automation
+    ├── Source/
+    │   ├── AssemblyInfo.cs     # Product and assembly metadata
+    │   ├── Program.cs          # Application entry point
+    │   ├── MainForm.cs         # Main window and widget composition
+    │   ├── WidgetControls.cs   # Reusable controls and drawing
+    │   ├── LocalStore.cs       # Local settings and data persistence
+    │   ├── TgjuClient.cs       # Market quote retrieval and parsing
+    │   ├── SystemWidgets.cs    # Network and system metrics
+    │   └── Generate-AppIcon.ps1
+    ├── ChronoDeskWidget.csproj
+    ├── Start-Widget.bat
+    ├── build.bat
+    ├── CHANGELOG.md
+    ├── index.html              # Project website
+    └── README.md
 
 ## Data and privacy
 
-Tasks, notes, settings, window position, network traffic history, and the startup error log are stored locally in:
+Tasks, notes, settings, window position, network usage history, and startup error logs are stored locally under:
 
-```text
-%LOCALAPPDATA%\ChronoDeskWidget\
-```
+    %LOCALAPPDATA%\ChronoDeskWidget\
 
-Task, note, and network history data stay on the computer. Network history is sampled while the app is running, at most once per day and when Windows reports a network change; traffic while the app is closed cannot be reconstructed. Market-rate requests use public TGJU pages:
+The application does not upload task, note, settings, or network-history data. Network monitoring reads Windows network counters and performs periodic connectivity checks. Usage history is collected only while the application is running; traffic during periods when it is closed cannot be reconstructed.
 
-- [Dollar](https://www.tgju.org/profile/price_dollar_rl)
-- [Euro](https://www.tgju.org/profile/price_eur)
+Market quotes are retrieved from public TGJU pages:
+- [USD](https://www.tgju.org/profile/price_dollar_rl)
+- [EUR](https://www.tgju.org/profile/price_eur)
 - [18-karat gold](https://www.tgju.org/profile/geram18)
 
-TGJU quotes are sourced in Rial. Toman display divides the source value by ten. Dollar display uses the live USD quote as its conversion reference. Internet access is required for market rates; unavailable source data is displayed as unavailable.
+TGJU quotes are sourced in Rial. Toman display divides the source value by ten. Dollar display uses the live USD quote as its conversion reference. Market rates require an internet connection; unavailable source data is shown as unavailable.
 
 ## Build and release automation
 
-Every push to `main` and every pull request targeting `main` runs the Windows build workflow. Pushing a version tag such as `v1.0` runs the release workflow, which builds the executable and publishes a GitHub release containing the Windows ZIP package.
+- Pushes to main and pull requests targeting main run the Windows build workflow.
+- Version tags matching v* trigger the Windows release workflow.
+- The release workflow builds the application and packages ChronoDeskWidget.exe into a Windows ZIP archive.
 
 ## Version
 
-- Product version: **1.0**
-- Assembly version: **1.0.0.0**
+- Product version: **1.1.0**
+- Assembly version: **1.1.0.0**
 - Target framework: **.NET Framework 4.8**
 
-See [CHANGELOG.md](CHANGELOG.md) for the v1.0 release notes.
+See [CHANGELOG.md](CHANGELOG.md) for release history.
