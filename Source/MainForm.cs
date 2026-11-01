@@ -1568,7 +1568,6 @@ namespace ChronoDeskWidget
 
             string gregorian = now.ToString("dddd, dd MMMM yyyy", english);
             string solar = GetSolarLongDate(now, _language == "fa");
-            int weekdayIndex = ((int)now.DayOfWeek + 6) % 7;
             string solarWeekday = _weekdaysFa[((int)now.DayOfWeek + 1) % 7];
             _dateEnglishLabel.Text = _language == "fa" ? "میلادی  ·  " + ToPersianDigits(now.ToString("yyyy/MM/dd", CultureInfo.InvariantCulture)) : gregorian;
             _dateSolarLabel.Text = solarWeekday + " " + solar;
