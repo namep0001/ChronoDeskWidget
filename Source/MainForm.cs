@@ -774,14 +774,21 @@ namespace ChronoDeskWidget
             _calculatorDisplay.Font = GetUiFont(17F, FontStyle.Bold);
             _calculatorDisplay.BackColor = _themeInput;
             _calculatorDisplay.ForeColor = _themeText;
-            _calculatorDisplay.BorderStyle = BorderStyle.FixedSingle;
-            _calculatorDisplay.Location = new Point(12, 35);
-            _calculatorDisplay.Size = new Size(panel.Width - 24, 31);
+            _calculatorDisplay.BorderStyle = BorderStyle.None;
+            _calculatorDisplay.Location = new Point(6, 2);
+            _calculatorDisplay.Size = new Size(panel.Width - 36, 27);
             _calculatorDisplay.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
-            panel.Controls.Add(_calculatorDisplay);
+            RoundedSurfacePanel displaySurface = new RoundedSurfacePanel();
+            displaySurface.Location = new Point(12, 35);
+            displaySurface.Size = new Size(panel.Width - 24, 31);
+            displaySurface.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
+            displaySurface.FillColor = _themeInput;
+            displaySurface.BorderColor = _themeBorder;
+            displaySurface.Controls.Add(_calculatorDisplay);
+            panel.Controls.Add(displaySurface);
             TableLayoutPanel keypad = new TableLayoutPanel();
-            keypad.Location = new Point(10, 71);
-            keypad.Size = new Size(panel.Width - 20, 157);
+            keypad.Location = new Point(10, 73);
+            keypad.Size = new Size(panel.Width - 20, 155);
             keypad.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
             keypad.ColumnCount = 4;
             keypad.RowCount = 5;
@@ -790,15 +797,21 @@ namespace ChronoDeskWidget
             keypad.BackColor = panel.BackColor;
             for (int i = 0; i < 4; i++) keypad.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 25F));
             for (int i = 0; i < 5; i++) keypad.RowStyles.Add(new RowStyle(SizeType.Percent, 20F));
-            string[] keys = { "7", "8", "9", "÷", "4", "5", "6", "×", "1", "2", "3", "−", "C", "0", ".", "+" };
+            string[] keys = { "7", "8", "9", "÷", "4", "5", "6", "×", "1", "2", "3", "−", "±", "0", ".", "+" };
             for (int i = 0; i < keys.Length; i++)
                 keypad.Controls.Add(CreateCalculatorButton(keys[i]), i % 4, i / 4);
-            keypad.Controls.Add(CreateCalculatorButton("±"), 0, 4);
+            Button clearButton = CreateCalculatorButton("C");
+            keypad.Controls.Add(clearButton, 0, 4);
             Button equalsButton = CreateCalculatorButton("=");
             keypad.Controls.Add(equalsButton, 1, 4);
             keypad.SetColumnSpan(equalsButton, 3);
             panel.Controls.Add(keypad);
-            panel.Resize += delegate { _calculatorDisplay.Width = panel.ClientSize.Width - 24; keypad.Width = panel.ClientSize.Width - 20; };
+            panel.Resize += delegate
+            {
+                displaySurface.Width = panel.ClientSize.Width - 24;
+                _calculatorDisplay.Width = displaySurface.ClientSize.Width - 12;
+                keypad.Width = panel.ClientSize.Width - 20;
+            };
         }
 
         private Button CreateCalculatorButton(string key)
@@ -810,7 +823,7 @@ namespace ChronoDeskWidget
             button.FlatStyle = FlatStyle.Flat;
             button.FlatAppearance.BorderSize = 0;
             button.BackColor = key == "=" ? _themeAccent : _themeButton;
-            button.ForeColor = key == "=" ? _themeAccentText : _themeText;
+            button.ForeColor = key == "=" ? ContrastText(_themeAccent) : _themeText;
             button.Font = GetUiFont(8.5F, FontStyle.Bold);
             button.Cursor = Cursors.Hand;
             button.Click += delegate { CalculatorPress(key); };
@@ -854,18 +867,18 @@ namespace ChronoDeskWidget
             for (int i = 0; i < keys.Length; i++)
             {
                 string key = keys[i];
-                int y = 37 + i * 48;
+                int y = 37 + i * 47;
                 Label name = new Label();
                 name.Text = key;
                 name.Location = new Point(12, y);
-                name.Size = new Size(panel.Width - 24, 15);
+                name.Size = new Size(62, 15);
                 name.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
                 name.BackColor = panel.BackColor;
                 name.ForeColor = _themeMutedText;
                 name.Font = GetUiFont(7.2F, FontStyle.Bold);
                 panel.Controls.Add(name);
                 ThemedProgressBar bar = new ThemedProgressBar();
-                bar.Location = new Point(12, y + 16);
+                bar.Location = new Point(12, y + 19);
                 bar.Size = new Size(panel.Width - 24, 12);
                 bar.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
                 bar.TrackColor = _themeMode == "light" || (_themeMode == "system" && _themeUsesLightTaskbar) ? Color.White : _themeInput;
@@ -873,8 +886,8 @@ namespace ChronoDeskWidget
                 panel.Controls.Add(bar);
                 _systemBars[key] = bar;
                 Label value = new Label();
-                value.Location = new Point(12, y + 28);
-                value.Size = new Size(panel.Width - 24, 17);
+                value.Location = new Point(76, y);
+                value.Size = new Size(panel.Width - 88, 16);
                 value.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
                 value.BackColor = panel.BackColor;
                 value.ForeColor = _themeText;
@@ -896,7 +909,7 @@ namespace ChronoDeskWidget
             panel.Resize += delegate
             {
                 foreach (ThemedProgressBar bar in _systemBars.Values) bar.Width = panel.ClientSize.Width - 24;
-                foreach (Label value in _systemValues.Values) { value.Left = 12; value.Width = panel.ClientSize.Width - 24; }
+                foreach (Label value in _systemValues.Values) { value.Left = 76; value.Width = panel.ClientSize.Width - 88; }
                 _systemUptimeLabel.Width = panel.ClientSize.Width - 24;
             };
         }
@@ -1346,7 +1359,7 @@ namespace ChronoDeskWidget
             _notesBox.HandleCreated += delegate
             {
                 SendMessageText(_notesBox.Handle, 0x1501, new IntPtr(1),
-                    T("Ideas, reminders, or anything to remember…", "ایده‌ها، یادآوری‌ها یا هر چیزی برای به‌خاطر سپردن…"));
+                    T("What's on your mind?...", "چه چیزی در ذهن شماست؟..."));
             };
             _notesBox.TextChanged += delegate
             {
