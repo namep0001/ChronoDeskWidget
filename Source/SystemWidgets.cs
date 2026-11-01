@@ -325,15 +325,9 @@ namespace ChronoDeskWidget
                 if (!PerformanceCounterCategory.Exists("GPU Engine")) return;
                 PerformanceCounterCategory category = new PerformanceCounterCategory("GPU Engine");
                 string[] names = category.GetInstanceNames();
-                List<string> preferred = new List<string>();
-                List<string> fallback = new List<string>();
-                foreach (string name in names)
-                {
-                    fallback.Add(name);
-                    if (name.IndexOf("engtype_3D", StringComparison.OrdinalIgnoreCase) >= 0)
-                        preferred.Add(name);
-                }
-                string[] selected = preferred.Count > 0 ? preferred.ToArray() : fallback.ToArray();
+                // Task Manager can display the busiest GPU engine (3D, copy, video decode, etc.).
+                // Keep all engine instances and report the maximum utilization rather than summing them.
+                string[] selected = names;
                 foreach (string name in selected)
                 {
                     try { _gpuCounters.Add(new PerformanceCounter("GPU Engine", "Utilization Percentage", name, true)); }
