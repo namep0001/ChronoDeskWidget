@@ -239,9 +239,6 @@ namespace ChronoDeskWidget
         public long UsedRamBytes { get; private set; }
         public long TotalRamBytes { get; private set; }
         public string DiskText { get; private set; }
-        public int BatteryPercent { get; private set; }
-        public bool HasBattery { get; private set; }
-        public bool BatteryCharging { get; private set; }
         public TimeSpan Uptime { get { return TimeSpan.FromMilliseconds(GetTickCount64()); } }
 
         public SystemMetricsMonitor()
@@ -280,7 +277,9 @@ namespace ChronoDeskWidget
             {
                 try
                 {
-                    gpuUsage += Math.Max(0, counter.NextValue());
+                    // Task Manager's overall GPU percentage follows the busiest engine,
+                    // rather than adding utilization percentages from every engine/process.
+                    gpuUsage = Math.Max(gpuUsage, Math.Max(0, counter.NextValue()));
                     gpuReadCount++;
                 }
                 catch { }
@@ -314,14 +313,6 @@ namespace ChronoDeskWidget
             }
             catch { DiskText = "Unavailable"; DiskPercent = 0; TotalDiskBytes = 0; FreeDiskBytes = 0; UsedDiskBytes = 0; }
 
-            try
-            {
-                System.Windows.Forms.PowerStatus power = System.Windows.Forms.SystemInformation.PowerStatus;
-                HasBattery = power.BatteryChargeStatus != System.Windows.Forms.BatteryChargeStatus.NoSystemBattery && power.BatteryLifePercent >= 0 && power.BatteryLifePercent <= 1.0F;
-                BatteryPercent = HasBattery ? (int)Math.Round(power.BatteryLifePercent * 100) : 0;
-                BatteryCharging = HasBattery && (power.BatteryChargeStatus & System.Windows.Forms.BatteryChargeStatus.Charging) != 0;
-            }
-            catch { HasBattery = false; }
         }
 
         private void RefreshGpuCounters()
