@@ -871,7 +871,7 @@ namespace ChronoDeskWidget
                 Label name = new Label();
                 name.Text = key;
                 name.Location = new Point(12, y);
-                name.Size = new Size(62, 15);
+                name.Size = new Size(32, 15);
                 name.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
                 name.BackColor = panel.BackColor;
                 name.ForeColor = _themeMutedText;
@@ -886,8 +886,8 @@ namespace ChronoDeskWidget
                 panel.Controls.Add(bar);
                 _systemBars[key] = bar;
                 Label value = new Label();
-                value.Location = new Point(76, y);
-                value.Size = new Size(panel.Width - 88, 16);
+                value.Location = new Point(48, y);
+                value.Size = new Size(panel.Width - 60, 16);
                 value.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
                 value.BackColor = panel.BackColor;
                 value.ForeColor = _themeText;
@@ -909,7 +909,7 @@ namespace ChronoDeskWidget
             panel.Resize += delegate
             {
                 foreach (ThemedProgressBar bar in _systemBars.Values) bar.Width = panel.ClientSize.Width - 24;
-                foreach (Label value in _systemValues.Values) { value.Left = 76; value.Width = panel.ClientSize.Width - 88; }
+                foreach (Label value in _systemValues.Values) { value.Left = 48; value.Width = panel.ClientSize.Width - 60; }
                 _systemUptimeLabel.Width = panel.ClientSize.Width - 24;
             };
         }
