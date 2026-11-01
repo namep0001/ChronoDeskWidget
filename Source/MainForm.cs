@@ -1445,6 +1445,8 @@ namespace ChronoDeskWidget
             int footerTop = panel.ClientSize.Height - 28;
             int rowHeight = Math.Max(32, (footerTop - firstY) / Math.Max(1, _rateDefinitions.Length));
             List<Panel> rateSeparators = new List<Panel>();
+            List<CurrencyBadgeIcon> rateIcons = new List<CurrencyBadgeIcon>();
+            List<Label> rateNameLabels = new List<Label>();
             for (int i = 0; i < _rateDefinitions.Length; i++)
             {
                 MarketRate rate = _rateDefinitions[i];
@@ -1456,6 +1458,7 @@ namespace ChronoDeskWidget
                 rateIcon.Location = new Point(8, rowY + (rowHeight - 27) / 2);
                 rateIcon.BackColor = Color.Transparent;
                 panel.Controls.Add(rateIcon);
+                rateIcons.Add(rateIcon);
 
                 Label name = new Label();
                 name.Text = _language == "fa" ? rate.DisplayNamePersian : rate.DisplayNameEnglish;
@@ -1471,6 +1474,7 @@ namespace ChronoDeskWidget
                 name.Tag = rate.Url;
                 name.Click += OpenMarketPage;
                 panel.Controls.Add(name);
+                rateNameLabels.Add(name);
 
                 Label value = new Label();
                 value.Text = "—";
@@ -1543,6 +1547,9 @@ namespace ChronoDeskWidget
                 for (int i = 0; i < _rateDefinitions.Length; i++)
                 {
                     int rowY = firstY + i * currentRowHeight;
+                    rateIcons[i].Top = rowY + (currentRowHeight - rateIcons[i].Height) / 2;
+                    rateNameLabels[i].Top = rowY;
+                    rateNameLabels[i].Height = currentRowHeight - 2;
                     Label valueLabel = _rateValueLabels[_rateDefinitions[i].Key];
                     valueLabel.Left = 110;
                     valueLabel.Width = Math.Min(106, Math.Max(82, panel.ClientSize.Width - 190));
