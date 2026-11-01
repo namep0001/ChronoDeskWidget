@@ -1640,7 +1640,7 @@ namespace ChronoDeskWidget
         {
             if (_calendarGrid == null || _calendarGrid.IsDisposed) return;
             _calendarGrid.SuspendLayout();
-            _calendarGrid.RightToLeft = _showSolarCalendar && _language == "fa" ? RightToLeft.Yes : RightToLeft.No;
+            _calendarGrid.RightToLeft = _showSolarCalendar ? RightToLeft.Yes : (_language == "fa" ? RightToLeft.Yes : RightToLeft.No);
             ClearAndDisposeControls(_calendarGrid);
             _calendarGrid.ColumnStyles.Clear();
             _calendarGrid.RowStyles.Clear();
@@ -1650,18 +1650,18 @@ namespace ChronoDeskWidget
             _calendarGrid.RowCount = 7;
             _calendarGrid.ColumnCount = 7;
 
-            string[] weekdays = _language == "fa" ? _weekdaysFa : _weekdaysEn;
+            string[] weekdays = _showSolarCalendar || _language == "fa" ? _weekdaysFa : _weekdaysEn;
             for (int col = 0; col < 7; col++)
             {
-                int index = _showSolarCalendar ? (_language == "fa" ? col : (col + 5) % 7) : (_language == "fa" ? (col + 2) % 7 : col);
+                int index = _showSolarCalendar ? col : (_language == "fa" ? (col + 2) % 7 : col);
                 Label weekday = new Label();
                 weekday.Text = weekdays[index];
                 weekday.BackColor = _calendarGrid.BackColor;
-                if (_showSolarCalendar && _language != "fa") weekday.Text = new string[] { "Sat", "Sun", "Mon", "Tue", "Wed", "Thu", "Fri" }[col];
+                
                 weekday.Dock = DockStyle.Fill;
                 weekday.Margin = new Padding(1);
                 weekday.TextAlign = ContentAlignment.MiddleCenter;
-                weekday.Font = GetUiFont(_language == "fa" ? 6.8F : 7.2F, FontStyle.Bold);
+                weekday.Font = _showSolarCalendar ? GetFont("B Roya", 7.2F, FontStyle.Bold) : GetUiFont(_language == "fa" ? 6.8F : 7.2F, FontStyle.Bold);
                 weekday.ForeColor = _themeMutedText;
                 _calendarGrid.Controls.Add(weekday, col, 0);
             }
@@ -1714,7 +1714,7 @@ namespace ChronoDeskWidget
                 bool todayDate = date.Date == DateTime.Today;
                 bool selected = date.Date == _selectedDate.Date;
                 dayButton.Text = _language == "fa" ? ToPersianDigits(number.ToString()) : number.ToString();
-                dayButton.Font = GetUiFont(7.6F, selected || todayDate ? FontStyle.Bold : FontStyle.Regular);
+                dayButton.Font = _showSolarCalendar ? GetFont("B Roya", 8.2F, selected || todayDate ? FontStyle.Bold : FontStyle.Regular) : GetUiFont(7.6F, selected || todayDate ? FontStyle.Bold : FontStyle.Regular);
                 dayButton.Cursor = Cursors.Hand;
                 dayButton.Tag = date.Date;
                 dayButton.BackColor = _calendarGrid.BackColor;
