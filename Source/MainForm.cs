@@ -92,6 +92,7 @@ namespace ChronoDeskWidget
         private Button _addTaskButton;
         private Label _taskCountLabel;
         private TextBox _notesBox;
+        private Panel _notesScrollPanel;
         private Label _notesStatusLabel;
         private Label _pomodoroStatusLabel;
         private CircularIconButton _pomodoroStartButton;
@@ -1239,8 +1240,8 @@ namespace ChronoDeskWidget
             AddSectionHeader(panel, "pomodoro", T("Pomodoro", "پومودورو"), 0);
 
             _pomodoroProgressIndicator = new CircularProgressIndicator();
-            _pomodoroProgressIndicator.Size = new Size(112, 112);
-            _pomodoroProgressIndicator.Location = new Point((panel.Width - 112) / 2, 31);
+            _pomodoroProgressIndicator.Size = new Size(120, 120);
+            _pomodoroProgressIndicator.Location = new Point((panel.Width - 120) / 2, 27);
             _pomodoroProgressIndicator.Anchor = AnchorStyles.Top;
             _pomodoroProgressIndicator.TrackColor = _themeBorder;
             _pomodoroProgressIndicator.ProgressColor = _themeAccent;
@@ -1322,14 +1323,22 @@ namespace ChronoDeskWidget
             editorFrame.BorderColor = _themeBorder;
             panel.Controls.Add(editorFrame);
 
+            _notesScrollPanel = new Panel();
+            _notesScrollPanel.Location = new Point(10, 7);
+            _notesScrollPanel.Size = new Size(editorFrame.Width - 20, editorFrame.Height - 14);
+            _notesScrollPanel.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
+            _notesScrollPanel.AutoScroll = true;
+            _notesScrollPanel.BackColor = _themeInput;
+            editorFrame.Controls.Add(_notesScrollPanel);
+
             _notesBox = new TextBox();
-            _notesBox.Location = new Point(10, 7);
-            _notesBox.Size = new Size(editorFrame.Width - 20, editorFrame.Height - 14);
-            _notesBox.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
+            _notesBox.Location = Point.Empty;
+            _notesBox.Size = new Size(_notesScrollPanel.ClientSize.Width, _notesScrollPanel.ClientSize.Height);
+            _notesBox.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
             _notesBox.Multiline = true;
             _notesBox.AcceptsReturn = true;
             _notesBox.AcceptsTab = true;
-            _notesBox.ScrollBars = ScrollBars.Vertical;
+            _notesBox.ScrollBars = ScrollBars.None;
             _notesBox.BorderStyle = BorderStyle.None;
             _notesBox.BackColor = _themeInput;
             _notesBox.ForeColor = _themeText;
@@ -1337,16 +1346,30 @@ namespace ChronoDeskWidget
             _notesBox.Text = LocalStore.LoadNotes();
             _notesBox.HandleCreated += delegate
             {
-                SendMessageText(_notesBox.Handle, 0x1501, IntPtr.Zero,
+                SendMessageText(_notesBox.Handle, 0x1501, new IntPtr(1),
                     T("Ideas, reminders, or anything to remember…", "ایده‌ها، یادآوری‌ها یا هر چیزی برای به‌خاطر سپردن…"));
             };
             _notesBox.TextChanged += delegate
             {
                 _notesDirty = true;
+                int viewportHeight = Math.Max(30, _notesScrollPanel.ClientSize.Height);
+                int contentHeight = viewportHeight;
+                if (!string.IsNullOrEmpty(_notesBox.Text))
+                {
+                    Size measured = TextRenderer.MeasureText(_notesBox.Text + " ", _notesBox.Font,
+                        new Size(Math.Max(40, _notesBox.Width - 8), int.MaxValue),
+                        TextFormatFlags.WordBreak | TextFormatFlags.TextBoxControl | TextFormatFlags.NoPadding);
+                    contentHeight = Math.Max(viewportHeight, measured.Height + 12);
+                }
+                _notesBox.Height = contentHeight;
+                _notesScrollPanel.AutoScrollMinSize = new Size(0, contentHeight);
+                if (_notesBox.Focused && _notesBox.SelectionStart >= _notesBox.TextLength && contentHeight > viewportHeight)
+                    _notesScrollPanel.AutoScrollPosition = new Point(0, contentHeight - viewportHeight);
                 if (_notesStatusLabel != null) _notesStatusLabel.Text = T("Saving…", "در حال ذخیره…");
             };
             _notesBox.Leave += delegate { SaveNotesIfNeeded(); };
-            editorFrame.Controls.Add(_notesBox);
+            _notesScrollPanel.Controls.Add(_notesBox);
+            editorFrame.Controls.Add(_notesScrollPanel);
 
             VectorIconView savedIcon = new VectorIconView("save");
             savedIcon.Size = new Size(18, 18);
@@ -1371,8 +1394,20 @@ namespace ChronoDeskWidget
                 saveAsButton.Left = panel.ClientSize.Width - saveAsButton.Width - 8;
                 editorFrame.Width = panel.ClientSize.Width - 24;
                 editorFrame.Height = Math.Max(45, panel.ClientSize.Height - editorFrame.Top - 30);
-                _notesBox.Width = editorFrame.ClientSize.Width - 20;
-                _notesBox.Height = editorFrame.ClientSize.Height - 14;
+                _notesScrollPanel.Width = editorFrame.ClientSize.Width - 20;
+                _notesScrollPanel.Height = editorFrame.ClientSize.Height - 14;
+                _notesBox.Width = _notesScrollPanel.ClientSize.Width;
+                int viewportHeight = Math.Max(30, _notesScrollPanel.ClientSize.Height);
+                int contentHeight = viewportHeight;
+                if (!string.IsNullOrEmpty(_notesBox.Text))
+                {
+                    Size measured = TextRenderer.MeasureText(_notesBox.Text + " ", _notesBox.Font,
+                        new Size(Math.Max(40, _notesBox.Width - 8), int.MaxValue),
+                        TextFormatFlags.WordBreak | TextFormatFlags.TextBoxControl | TextFormatFlags.NoPadding);
+                    contentHeight = Math.Max(viewportHeight, measured.Height + 12);
+                }
+                _notesBox.Height = contentHeight;
+                _notesScrollPanel.AutoScrollMinSize = new Size(0, contentHeight);
                 savedIcon.Top = panel.ClientSize.Height - 24;
                 _notesStatusLabel.Top = panel.ClientSize.Height - 25;
                 _notesStatusLabel.Width = panel.ClientSize.Width - 44;
@@ -1397,25 +1432,28 @@ namespace ChronoDeskWidget
             panel.Controls.Add(_ratesRefreshButton);
 
             int firstY = 34;
+            int footerTop = panel.ClientSize.Height - 28;
+            int rowHeight = Math.Max(32, (footerTop - firstY) / Math.Max(1, _rateDefinitions.Length));
+            List<Panel> rateSeparators = new List<Panel>();
             for (int i = 0; i < _rateDefinitions.Length; i++)
             {
                 MarketRate rate = _rateDefinitions[i];
-                int rowY = firstY + i * 30;
+                int rowY = firstY + i * rowHeight;
                 string iconKind = rate.Key == "usd" ? "usd" : (rate.Key == "eur" ? "eur" : "gold");
 
                 CurrencyBadgeIcon rateIcon = new CurrencyBadgeIcon(iconKind);
-                rateIcon.Size = new Size(25, 25);
-                rateIcon.Location = new Point(8, rowY + 1);
+                rateIcon.Size = new Size(27, 27);
+                rateIcon.Location = new Point(8, rowY + (rowHeight - 27) / 2);
                 rateIcon.BackColor = Color.Transparent;
                 panel.Controls.Add(rateIcon);
 
                 Label name = new Label();
                 name.Text = _language == "fa" ? rate.DisplayNamePersian : rate.DisplayNameEnglish;
                 name.BackColor = panel.BackColor;
-                name.Location = new Point(36, rowY);
-                name.Size = new Size(72, 27);
+                name.Location = new Point(40, rowY);
+                name.Size = new Size(68, rowHeight - 2);
                 name.ForeColor = _themeText;
-                name.Font = GetUiFont(7.1F, FontStyle.Regular);
+                name.Font = GetUiFont(8.0F, FontStyle.Regular);
                 name.TextAlign = _language == "fa" ? ContentAlignment.MiddleRight : ContentAlignment.MiddleLeft;
                 name.AutoEllipsis = true;
                 name.AutoSize = false;
@@ -1427,12 +1465,12 @@ namespace ChronoDeskWidget
                 Label value = new Label();
                 value.Text = "—";
                 value.BackColor = panel.BackColor;
-                value.Location = new Point(112, rowY);
-                value.Size = new Size(70, 27);
+                value.Location = new Point(110, rowY);
+                value.Size = new Size(106, rowHeight - 2);
                 value.AutoSize = false;
                 value.Anchor = AnchorStyles.Top | AnchorStyles.Left;
                 value.ForeColor = _themeAccentText;
-                value.Font = GetUiFont(8.0F, FontStyle.Bold);
+                value.Font = GetUiFont(9.6F, FontStyle.Bold);
                 value.TextAlign = ContentAlignment.MiddleRight;
                 value.AutoEllipsis = true;
                 value.Tag = rate.Url;
@@ -1444,11 +1482,11 @@ namespace ChronoDeskWidget
                 Label change = new Label();
                 change.Text = "";
                 change.BackColor = panel.BackColor;
-                change.Location = new Point(185, rowY);
-                change.Size = new Size(panel.Width - 193, 27);
+                change.Location = new Point(218, rowY);
+                change.Size = new Size(Math.Max(25, panel.Width - 226), rowHeight - 2);
                 change.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
                 change.ForeColor = _themeMutedText;
-                change.Font = GetUiFont(6.4F, FontStyle.Bold);
+                change.Font = GetUiFont(7.0F, FontStyle.Bold);
                 change.TextAlign = ContentAlignment.MiddleRight;
                 change.AutoEllipsis = true;
                 change.Tag = rate.Url;
@@ -1461,17 +1499,25 @@ namespace ChronoDeskWidget
                 {
                     Panel separator = new Panel();
                     separator.BackColor = _themeBorder;
-                    separator.Location = new Point(36, rowY + 29);
+                    separator.Location = new Point(40, rowY + rowHeight - 1);
                     separator.Size = new Size(panel.Width - 48, 1);
                     separator.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
                     panel.Controls.Add(separator);
+                    rateSeparators.Add(separator);
                 }
             }
+
+            Panel ratesFooterSeparator = new Panel();
+            ratesFooterSeparator.BackColor = _themeBorder;
+            ratesFooterSeparator.Location = new Point(10, panel.ClientSize.Height - 28);
+            ratesFooterSeparator.Size = new Size(panel.Width - 20, 1);
+            ratesFooterSeparator.Anchor = AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
+            panel.Controls.Add(ratesFooterSeparator);
 
             _ratesStatusLabel = new Label();
             _ratesStatusLabel.Text = T("Waiting for live market data…", "در انتظار داده زنده بازار…");
             _ratesStatusLabel.BackColor = panel.BackColor;
-            _ratesStatusLabel.Location = new Point(10, panel.ClientSize.Height - 22);
+            _ratesStatusLabel.Location = new Point(10, panel.ClientSize.Height - 23);
             _ratesStatusLabel.Size = new Size(panel.Width - 20, 16);
             _ratesStatusLabel.Anchor = AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
             _ratesStatusLabel.Font = GetUiFont(7.2F, FontStyle.Regular);
@@ -1482,17 +1528,32 @@ namespace ChronoDeskWidget
             panel.Resize += delegate
             {
                 _ratesRefreshButton.Left = panel.ClientSize.Width - _ratesRefreshButton.Width - 8;
-                foreach (KeyValuePair<string, Label> pair in _rateValueLabels)
-                    pair.Value.Left = 112;
-                foreach (KeyValuePair<string, Label> pair in _rateValueLabels)
-                    pair.Value.Width = 70;
-                foreach (KeyValuePair<string, Label> pair in _rateChangeLabels)
+                int currentFooterTop = panel.ClientSize.Height - 28;
+                int currentRowHeight = Math.Max(32, (currentFooterTop - firstY) / Math.Max(1, _rateDefinitions.Length));
+                for (int i = 0; i < _rateDefinitions.Length; i++)
                 {
-                    pair.Value.Left = 185;
-                    pair.Value.Width = Math.Max(25, panel.ClientSize.Width - pair.Value.Left - 8);
+                    int rowY = firstY + i * currentRowHeight;
+                    Label valueLabel = _rateValueLabels[_rateDefinitions[i].Key];
+                    valueLabel.Left = 110;
+                    valueLabel.Width = Math.Max(82, Math.Min(106, panel.ClientSize.Width - 218 - 8));
+                    valueLabel.Top = rowY;
+                    valueLabel.Height = currentRowHeight - 2;
+                    Label changeLabel = _rateChangeLabels[_rateDefinitions[i].Key];
+                    changeLabel.Left = 218;
+                    changeLabel.Width = Math.Max(25, panel.ClientSize.Width - changeLabel.Left - 8);
+                    changeLabel.Top = rowY;
+                    changeLabel.Height = currentRowHeight - 2;
+                    if (i < rateSeparators.Count)
+                    {
+                        rateSeparators[i].Left = 40;
+                        rateSeparators[i].Top = rowY + currentRowHeight - 1;
+                        rateSeparators[i].Width = panel.ClientSize.Width - 48;
+                    }
                 }
+                ratesFooterSeparator.Top = panel.ClientSize.Height - 28;
+                ratesFooterSeparator.Width = panel.ClientSize.Width - 20;
                 _ratesStatusLabel.Width = panel.ClientSize.Width - 20;
-                _ratesStatusLabel.Top = panel.ClientSize.Height - _ratesStatusLabel.Height - 6;
+                _ratesStatusLabel.Top = panel.ClientSize.Height - _ratesStatusLabel.Height - 5;
             };
         }
 
