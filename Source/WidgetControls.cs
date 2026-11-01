@@ -501,7 +501,19 @@ namespace ChronoDeskWidget
     {
         public RoundedCardPanel() { SetStyle(ControlStyles.AllPaintingInWmPaint | ControlStyles.OptimizedDoubleBuffer | ControlStyles.UserPaint | ControlStyles.ResizeRedraw, true); }
         protected override void OnSizeChanged(EventArgs e) { base.OnSizeChanged(e); using (GraphicsPath p = Path(new Rectangle(0, 0, Math.Max(1, Width - 1), Math.Max(1, Height - 1)))) Region = new Region(p); }
-        protected override void OnPaintBackground(PaintEventArgs e) { e.Graphics.SmoothingMode = SmoothingMode.AntiAlias; using (GraphicsPath p = Path(new Rectangle(0, 0, Math.Max(1, Width - 1), Math.Max(1, Height - 1)))) using (SolidBrush b = new SolidBrush(BackColor)) using (Pen pen = new Pen(Parent == null ? Color.Gray : ControlPaint.Dark(Parent.BackColor, 0.08F), 1F)) { e.Graphics.FillPath(b, p); e.Graphics.DrawPath(pen, p); } }
+        protected override void OnPaintBackground(PaintEventArgs e)
+        {
+            e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+            Rectangle bounds = new Rectangle(0, 0, Math.Max(1, Width - 1), Math.Max(1, Height - 1));
+            using (GraphicsPath path = Path(bounds))
+            using (LinearGradientBrush fill = new LinearGradientBrush(bounds,
+                ControlPaint.Light(BackColor, 0.045F), BackColor, LinearGradientMode.Vertical))
+            using (Pen border = new Pen(Parent == null ? Color.Gray : ControlPaint.Light(Parent.BackColor, 0.12F), 1F))
+            {
+                e.Graphics.FillPath(fill, path);
+                e.Graphics.DrawPath(border, path);
+            }
+        }
         private static GraphicsPath Path(Rectangle r) { GraphicsPath p = new GraphicsPath(); int d = Math.Min(24, Math.Min(r.Width, r.Height)); p.AddArc(r.Left,r.Top,d,d,180,90); p.AddArc(r.Right-d,r.Top,d,d,270,90); p.AddArc(r.Right-d,r.Bottom-d,d,d,0,90); p.AddArc(r.Left,r.Bottom-d,d,d,90,90); p.CloseFigure(); return p; }
     }
 
