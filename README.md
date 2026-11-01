@@ -4,7 +4,7 @@
 
 A lightweight Windows desktop companion built with C#, Windows Forms, and .NET Framework 4.8. ChronoDesk keeps productivity tools, calendars, market quotes, and system information accessible from one compact desktop widget.
 
-**[Download v1.1](https://github.com/namep0001/ChronoDeskWidget/releases/tag/v1.1)** · **[Project website](https://namep0001.github.io/ChronoDeskWidget/)** · **[Source code](https://github.com/namep0001/ChronoDeskWidget)**
+**[Browse Windows releases](https://github.com/namep0001/ChronoDeskWidget/releases)** · **[Project website](https://namep0001.github.io/ChronoDeskWidget/)** · **[Source code](https://github.com/namep0001/ChronoDeskWidget)**
 
 ## Features
 
@@ -29,7 +29,7 @@ A lightweight Windows desktop companion built with C#, Windows Forms, and .NET F
 
 ## Download and install
 
-1. Open the **[v1.1 release page](https://github.com/namep0001/ChronoDeskWidget/releases/tag/v1.1)**.
+1. Open the **[GitHub releases page](https://github.com/namep0001/ChronoDeskWidget/releases)**.
 2. Download ChronoDeskWidget-Windows.zip.
 3. Extract the archive.
 4. Run ChronoDeskWidget.exe.
