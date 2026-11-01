@@ -22,7 +22,7 @@ namespace ChronoDeskWidget
         private readonly string[] _solarMonthsEn = { "Farvardin", "Ordibehesht", "Khordad", "Tir", "Mordad", "Shahrivar", "Mehr", "Aban", "Azar", "Dey", "Bahman", "Esfand" };
         private readonly string[] _solarMonthsFa = { "فروردین", "اردیبهشت", "خرداد", "تیر", "مرداد", "شهریور", "مهر", "آبان", "آذر", "دی", "بهمن", "اسفند" };
         private readonly string[] _weekdaysEn = { "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun" };
-        private readonly string[] _weekdaysFa = { "دوشنبه", "سه‌شنبه", "چهارشنبه", "پنجشنبه", "جمعه", "شنبه", "یکشنبه" };
+        private readonly string[] _weekdaysFa = { "شنبه", "یکشنبه", "دوشنبه", "سه‌شنبه", "چهارشنبه", "پنجشنبه", "جمعه" };
         private readonly PersianCalendar _persianCalendar = new PersianCalendar();
         private readonly List<TaskItem> _tasks;
         private readonly List<Panel> _sections = new List<Panel>();
@@ -1569,7 +1569,7 @@ namespace ChronoDeskWidget
             string gregorian = now.ToString("dddd, dd MMMM yyyy", english);
             string solar = GetSolarLongDate(now, _language == "fa");
             int weekdayIndex = ((int)now.DayOfWeek + 6) % 7;
-            string solarWeekday = _weekdaysFa[weekdayIndex];
+            string solarWeekday = _weekdaysFa[((int)now.DayOfWeek + 1) % 7];
             _dateEnglishLabel.Text = _language == "fa" ? "میلادی  ·  " + ToPersianDigits(now.ToString("yyyy/MM/dd", CultureInfo.InvariantCulture)) : gregorian;
             _dateSolarLabel.Text = solarWeekday + " " + solar;
 
@@ -1641,6 +1641,7 @@ namespace ChronoDeskWidget
         {
             if (_calendarGrid == null || _calendarGrid.IsDisposed) return;
             _calendarGrid.SuspendLayout();
+            _calendarGrid.RightToLeft = _showSolarCalendar && _language == "fa" ? RightToLeft.Yes : RightToLeft.No;
             ClearAndDisposeControls(_calendarGrid);
             _calendarGrid.ColumnStyles.Clear();
             _calendarGrid.RowStyles.Clear();
@@ -1653,9 +1654,9 @@ namespace ChronoDeskWidget
             string[] weekdays = _language == "fa" ? _weekdaysFa : _weekdaysEn;
             for (int col = 0; col < 7; col++)
             {
-                int index = _showSolarCalendar ? (col + 5) % 7 : col;
+                int index = _showSolarCalendar ? (_language == "fa" ? col : (col + 5) % 7) : (_language == "fa" ? (col + 2) % 7 : col);
                 Label weekday = new Label();
-                weekday.Text = _language == "fa" ? weekdays[index] : weekdays[index];
+                weekday.Text = weekdays[index];
                 weekday.BackColor = _calendarGrid.BackColor;
                 if (_showSolarCalendar && _language != "fa") weekday.Text = new string[] { "Sat", "Sun", "Mon", "Tue", "Wed", "Thu", "Fri" }[col];
                 weekday.Dock = DockStyle.Fill;
