@@ -5,6 +5,7 @@ using System.IO;
 using System.Net.NetworkInformation;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
+using System.Threading;
 using System.Linq;
 
 namespace ChronoDeskWidget
@@ -29,6 +30,9 @@ namespace ChronoDeskWidget
         public long TotalReceived { get; private set; }
         public long TotalSent { get; private set; }
         public bool Connected { get; private set; }
+        public bool InternetConnected { get; private set; }
+        private DateTime _nextInternetCheckUtc = DateTime.MinValue;
+        private bool _internetCheckInProgress;
 
         public NetworkUsageMonitor()
         {
@@ -103,6 +107,33 @@ namespace ChronoDeskWidget
             _previousReceived = received;
             _previousSent = sent;
             Connected = NetworkInterface.GetIsNetworkAvailable();
+            if (!_internetCheckInProgress && DateTime.UtcNow >= _nextInternetCheckUtc)
+            {
+                _internetCheckInProgress = true;
+                _nextInternetCheckUtc = DateTime.UtcNow.AddSeconds(5);
+                ThreadPool.QueueUserWorkItem(delegate
+                {
+                    bool internetAvailable = false;
+                    string[] probes = { "1.1.1.1", "8.8.8.8" };
+                    foreach (string address in probes)
+                    {
+                        try
+                        {
+                            using (Ping ping = new Ping())
+                            {
+                                PingReply reply = ping.Send(address, 1000);
+                                if (reply.Status == IPStatus.Success) { internetAvailable = true; break; }
+                            }
+                        }
+                        catch { }
+                    }
+                    lock (_sync)
+                    {
+                        InternetConnected = internetAvailable;
+                        _internetCheckInProgress = false;
+                    }
+                });
+            }
 
             // Daily collection is intentionally limited to one check per date.
             if (!_days.ContainsKey(DateTime.Today)) SampleMonthlyUsage();
