@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
 using System.Drawing.Drawing2D;
+using System.Drawing.Text;
 using System.Globalization;
 using System.IO;
 using System.Runtime.InteropServices;
@@ -1683,8 +1684,26 @@ namespace ChronoDeskWidget
             Font font;
             if (!_fontCache.TryGetValue(key, out font))
             {
-                try { font = new Font(family, size, style, unit); }
-                catch { font = new Font("Segoe UI", size, style, unit); }
+                string resolvedFamily = family;
+                try
+                {
+                    using (InstalledFontCollection installed = new InstalledFontCollection())
+                    {
+                        bool available = false;
+                        foreach (FontFamily installedFamily in installed.Families)
+                        {
+                            if (string.Equals(installedFamily.Name, family, StringComparison.OrdinalIgnoreCase))
+                            {
+                                available = true;
+                                break;
+                            }
+                        }
+                        if (!available) resolvedFamily = "Segoe UI";
+                    }
+                }
+                catch { resolvedFamily = "Segoe UI"; }
+                try { font = new Font(resolvedFamily, size, style, unit); }
+                catch { font = new Font(FontFamily.GenericSansSerif, size, style, unit); }
                 _fontCache.Add(key, font);
             }
             return font;
