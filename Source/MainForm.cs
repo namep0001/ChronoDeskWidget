@@ -683,14 +683,14 @@ namespace ChronoDeskWidget
 
             RoundedSurfacePanel speedCard = new RoundedSurfacePanel();
             speedCard.Location = new Point(12, 117);
-            speedCard.Size = new Size(panel.Width - 24, 48);
+            speedCard.Size = new Size(panel.Width - 24, 56);
             speedCard.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
             speedCard.FillColor = _themeSurfaceAlt;
             speedCard.BorderColor = _themeBorder;
             panel.Controls.Add(speedCard);
             _networkSpeedLabel = new Label();
             _networkSpeedLabel.Location = new Point(10, 3);
-            _networkSpeedLabel.Size = new Size(speedCard.Width - 20, 42);
+            _networkSpeedLabel.Size = new Size(speedCard.Width - 20, 50);
             _networkSpeedLabel.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
             _networkSpeedLabel.BackColor = speedCard.FillColor;
             _networkSpeedLabel.ForeColor = _themeText;
@@ -700,20 +700,20 @@ namespace ChronoDeskWidget
 
             Label historyTitle = new Label();
             historyTitle.Text = T("RECENT DAILY USAGE", "مصرف روزانه اخیر");
-            historyTitle.Location = new Point(12, 171);
+            historyTitle.Location = new Point(12, 244);
             historyTitle.Size = new Size(panel.Width - 24, 14);
             historyTitle.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
             historyTitle.BackColor = panel.BackColor;
             historyTitle.ForeColor = _themeMutedText;
-            historyTitle.Font = GetUiFont(6.8F, FontStyle.Bold);
+            historyTitle.Font = GetUiFont(7.4F, FontStyle.Bold);
             panel.Controls.Add(historyTitle);
             _networkHistoryLabel = new Label();
-            _networkHistoryLabel.Location = new Point(12, 187);
-            _networkHistoryLabel.Size = new Size(panel.Width - 24, 37);
+            _networkHistoryLabel.Location = new Point(12, 265);
+            _networkHistoryLabel.Size = new Size(panel.Width - 24, 70);
             _networkHistoryLabel.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
             _networkHistoryLabel.BackColor = panel.BackColor;
             _networkHistoryLabel.ForeColor = _themeText;
-            _networkHistoryLabel.Font = GetUiFont(6.9F, FontStyle.Regular);
+            _networkHistoryLabel.Font = GetUiFont(7.5F, FontStyle.Regular);
             _networkHistoryLabel.TextAlign = ContentAlignment.TopLeft;
             panel.Controls.Add(_networkHistoryLabel);
 
@@ -750,7 +750,7 @@ namespace ChronoDeskWidget
                 "↓ " + SystemMetricsMonitor.FormatBytes(_networkMonitor.DownloadBytesPerSecond) + "/s    ↑ " +
                 SystemMetricsMonitor.FormatBytes(_networkMonitor.UploadBytesPerSecond) + "/s";
             StringBuilder history = new StringBuilder();
-            int first = Math.Max(0, days.Count - 2);
+            int first = Math.Max(0, days.Count - 4);
             for (int i = first; i < days.Count; i++)
             {
                 if (history.Length > 0) history.AppendLine();
@@ -884,7 +884,7 @@ namespace ChronoDeskWidget
                 _systemValues[key] = value;
             }
             _systemUptimeLabel = new Label();
-            _systemUptimeLabel.Location = new Point(12, 284);
+            _systemUptimeLabel.Location = new Point(12, 310);
             _systemUptimeLabel.Size = new Size(panel.Width - 24, 23);
             _systemUptimeLabel.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
             _systemUptimeLabel.BackColor = panel.BackColor;
