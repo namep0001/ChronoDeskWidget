@@ -695,9 +695,9 @@ namespace ChronoDeskWidget
             Graphics g = e.Graphics;
             g.SmoothingMode = SmoothingMode.AntiAlias;
             RectangleF bounds = new RectangleF(7, 7, Width - 14, Height - 14);
-            using (Pen track = new Pen(TrackColor, 5.8F))
-            using (Pen glow = new Pen(Color.FromArgb(42, ProgressColor), 9F))
-            using (Pen progress = new Pen(ProgressColor, 5.8F))
+            using (Pen track = new Pen(TrackColor, 7.2F))
+            using (Pen glow = new Pen(Color.FromArgb(42, ProgressColor), 10.5F))
+            using (Pen progress = new Pen(ProgressColor, 7.2F))
             using (SolidBrush face = new SolidBrush(FaceColor))
             using (SolidBrush textBrush = new SolidBrush(TextColor))
             using (SolidBrush modeBrush = new SolidBrush(ModeColor))
