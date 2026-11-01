@@ -232,6 +232,7 @@ namespace ChronoDeskWidget
 
         private ulong _idle, _kernel, _user;
         private readonly List<PerformanceCounter> _gpuCounters = new List<PerformanceCounter>();
+        private DateTime _nextGpuCounterRefreshUtc = DateTime.MinValue;
         public float CpuPercent { get; private set; }
         public float RamPercent { get; private set; }
         public float GpuPercent { get; private set; }
@@ -245,20 +246,7 @@ namespace ChronoDeskWidget
 
         public SystemMetricsMonitor()
         {
-            try
-            {
-                if (PerformanceCounterCategory.Exists("GPU Engine"))
-                {
-                    PerformanceCounterCategory category = new PerformanceCounterCategory("GPU Engine");
-                    string[] names = category.GetInstanceNames();
-                    foreach (string name in names)
-                    {
-                        if (name.IndexOf("engtype_3D", StringComparison.OrdinalIgnoreCase) < 0) continue;
-                        try { _gpuCounters.Add(new PerformanceCounter("GPU Engine", "Utilization Percentage", name, true)); } catch { }
-                    }
-                }
-            }
-            catch { }
+            RefreshGpuCounters();
             Update();
         }
 
@@ -285,17 +273,19 @@ namespace ChronoDeskWidget
                 RamPercent = (float)(UsedRamBytes * 100.0 / TotalRamBytes);
             }
 
-            try
+            if (DateTime.UtcNow >= _nextGpuCounterRefreshUtc) RefreshGpuCounters();
+            double gpuUsage = 0;
+            int gpuReadCount = 0;
+            foreach (PerformanceCounter counter in _gpuCounters)
             {
-                if (_gpuCounters.Count == 0) GpuPercent = -1;
-                else
+                try
                 {
-                    double usage = 0;
-                    foreach (PerformanceCounter counter in _gpuCounters) usage += counter.NextValue();
-                    GpuPercent = (float)Math.Max(0, Math.Min(100, usage));
+                    gpuUsage += Math.Max(0, counter.NextValue());
+                    gpuReadCount++;
                 }
+                catch { }
             }
-            catch { GpuPercent = -1; }
+            GpuPercent = gpuReadCount == 0 ? -1 : (float)Math.Max(0, Math.Min(100, gpuUsage));
 
             try
             {
@@ -332,6 +322,34 @@ namespace ChronoDeskWidget
                 BatteryCharging = HasBattery && (power.BatteryChargeStatus & System.Windows.Forms.BatteryChargeStatus.Charging) != 0;
             }
             catch { HasBattery = false; }
+        }
+
+        private void RefreshGpuCounters()
+        {
+            _nextGpuCounterRefreshUtc = DateTime.UtcNow.AddSeconds(30);
+            foreach (PerformanceCounter counter in _gpuCounters) counter.Dispose();
+            _gpuCounters.Clear();
+            try
+            {
+                if (!PerformanceCounterCategory.Exists("GPU Engine")) return;
+                PerformanceCounterCategory category = new PerformanceCounterCategory("GPU Engine");
+                string[] names = category.GetInstanceNames();
+                List<string> preferred = new List<string>();
+                List<string> fallback = new List<string>();
+                foreach (string name in names)
+                {
+                    fallback.Add(name);
+                    if (name.IndexOf("engtype_3D", StringComparison.OrdinalIgnoreCase) >= 0)
+                        preferred.Add(name);
+                }
+                string[] selected = preferred.Count > 0 ? preferred.ToArray() : fallback.ToArray();
+                foreach (string name in selected)
+                {
+                    try { _gpuCounters.Add(new PerformanceCounter("GPU Engine", "Utilization Percentage", name, true)); }
+                    catch { }
+                }
+            }
+            catch { }
         }
 
         public float DiskPercent { get; private set; }
