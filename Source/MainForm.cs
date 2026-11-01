@@ -1329,7 +1329,6 @@ namespace ChronoDeskWidget
             _notesScrollPanel.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
             _notesScrollPanel.AutoScroll = true;
             _notesScrollPanel.BackColor = _themeInput;
-            editorFrame.Controls.Add(_notesScrollPanel);
 
             _notesBox = new TextBox();
             _notesBox.Location = Point.Empty;
@@ -1370,6 +1369,17 @@ namespace ChronoDeskWidget
             _notesBox.Leave += delegate { SaveNotesIfNeeded(); };
             _notesScrollPanel.Controls.Add(_notesBox);
             editorFrame.Controls.Add(_notesScrollPanel);
+            int initialNotesViewportHeight = Math.Max(30, _notesScrollPanel.ClientSize.Height);
+            int initialNotesHeight = initialNotesViewportHeight;
+            if (!string.IsNullOrEmpty(_notesBox.Text))
+            {
+                Size initialNotesMeasured = TextRenderer.MeasureText(_notesBox.Text + " ", _notesBox.Font,
+                    new Size(Math.Max(40, _notesBox.Width - 8), int.MaxValue),
+                    TextFormatFlags.WordBreak | TextFormatFlags.TextBoxControl | TextFormatFlags.NoPadding);
+                initialNotesHeight = Math.Max(initialNotesViewportHeight, initialNotesMeasured.Height + 12);
+            }
+            _notesBox.Height = initialNotesHeight;
+            _notesScrollPanel.AutoScrollMinSize = new Size(0, initialNotesHeight);
 
             VectorIconView savedIcon = new VectorIconView("save");
             savedIcon.Size = new Size(18, 18);
@@ -1535,7 +1545,7 @@ namespace ChronoDeskWidget
                     int rowY = firstY + i * currentRowHeight;
                     Label valueLabel = _rateValueLabels[_rateDefinitions[i].Key];
                     valueLabel.Left = 110;
-                    valueLabel.Width = Math.Max(82, Math.Min(106, panel.ClientSize.Width - 218 - 8));
+                    valueLabel.Width = Math.Min(106, Math.Max(82, panel.ClientSize.Width - 190));
                     valueLabel.Top = rowY;
                     valueLabel.Height = currentRowHeight - 2;
                     Label changeLabel = _rateChangeLabels[_rateDefinitions[i].Key];
@@ -2181,6 +2191,8 @@ namespace ChronoDeskWidget
                     _notesBox.BackColor = _themeInput;
                     if (_notesBox.IsHandleCreated) SetWindowTheme(_notesBox.Handle, _themeUsesLightTaskbar ? "Explorer" : "DarkMode_Explorer", null);
                 }
+                if (_notesScrollPanel != null && !_notesScrollPanel.IsDisposed && _notesScrollPanel.IsHandleCreated)
+                    SetWindowTheme(_notesScrollPanel.Handle, _themeUsesLightTaskbar ? "Explorer" : "DarkMode_Explorer", null);
                 if (_taskRowsPanel != null && !_taskRowsPanel.IsDisposed && _taskRowsPanel.IsHandleCreated)
                     SetWindowTheme(_taskRowsPanel.Handle, _themeUsesLightTaskbar ? "Explorer" : "DarkMode_Explorer", null);
                 if (_calendarSolarButton != null && !_calendarSolarButton.IsDisposed) _calendarSolarButton.Invalidate();
