@@ -898,7 +898,7 @@ namespace ChronoDeskWidget
                 _systemValues[key] = value;
             }
             _systemUptimeLabel = new Label();
-            _systemUptimeLabel.Location = new Point(12, 284);
+            _systemUptimeLabel.Location = new Point(12, 222);
             _systemUptimeLabel.Size = new Size(panel.Width - 24, 23);
             _systemUptimeLabel.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
             _systemUptimeLabel.BackColor = panel.BackColor;
@@ -918,11 +918,11 @@ namespace ChronoDeskWidget
         {
             if (_systemMonitor == null || _systemUptimeLabel == null || _systemUptimeLabel.IsDisposed) return;
             string ramValue = _systemMonitor.RamPercent.ToString("0") + "% " +
-                SystemMetricsMonitor.FormatBytes(_systemMonitor.UsedRamBytes) + "/" +
-                SystemMetricsMonitor.FormatBytes(_systemMonitor.TotalRamBytes);
+                SystemMetricsMonitor.FormatBytes(_systemMonitor.UsedRamBytes).Replace("GB", " GB").Replace("TB", " TB") + " / " +
+                SystemMetricsMonitor.FormatBytes(_systemMonitor.TotalRamBytes).Replace("GB", " GB").Replace("TB", " TB");
             string diskValue = _systemMonitor.DiskPercent.ToString("0") + "% " +
-                SystemMetricsMonitor.FormatBytes(_systemMonitor.UsedDiskBytes) + " / " +
-                SystemMetricsMonitor.FormatBytes(_systemMonitor.TotalDiskBytes);
+                SystemMetricsMonitor.FormatBytes(_systemMonitor.UsedDiskBytes).Replace("GB", " GB").Replace("TB", " TB") + " / " +
+                SystemMetricsMonitor.FormatBytes(_systemMonitor.TotalDiskBytes).Replace("GB", " GB").Replace("TB", " TB");
             SetSystemMetric("CPU", _systemMonitor.CpuPercent, _systemMonitor.CpuPercent.ToString("0") + "%");
             SetSystemMetric("RAM", _systemMonitor.RamPercent, ramValue);
             SetSystemMetric("GPU", _systemMonitor.GpuPercent, _systemMonitor.GpuPercent < 0 ? "N/A" : _systemMonitor.GpuPercent.ToString("0") + "%");
