@@ -31,7 +31,6 @@ namespace ChronoDeskWidget
         private readonly Dictionary<string, Label> _rateChangeLabels = new Dictionary<string, Label>();
         private readonly Dictionary<string, string> _rateValues = new Dictionary<string, string>();
         private readonly Dictionary<string, string> _rateChanges = new Dictionary<string, string>();
-        private readonly Dictionary<string, string> _rateErrors = new Dictionary<string, string>();
         private readonly Dictionary<string, bool> _rateFreshThisFetch = new Dictionary<string, bool>();
         private readonly Dictionary<string, bool> _widgetVisibility = new Dictionary<string, bool>(StringComparer.OrdinalIgnoreCase);
         private readonly string[] _widgetKeys = { "clock", "calendar", "tasks", "pomodoro", "notes", "rates", "network", "calculator", "system" };
@@ -82,7 +81,6 @@ namespace ChronoDeskWidget
         private Label _clockLabel;
         private Label _dateEnglishLabel;
         private Label _dateSolarLabel;
-        private Label _clockHintLabel;
         private Label _calendarMonthLabel;
         private RoundedButton _calendarSolarButton;
         private RoundedButton _calendarGregorianButton;
@@ -109,8 +107,6 @@ namespace ChronoDeskWidget
         private NetworkUsageMonitor _networkMonitor;
         private SystemMetricsMonitor _systemMonitor;
         private Label _networkSummaryLabel;
-        private Label _networkSpeedLabel;
-        private Label _networkHistoryLabel;
         private Label _networkDownloadTotalLabel;
         private Label _networkUploadTotalLabel;
         private Label _networkMonthlyDownloadLabel;
@@ -124,6 +120,8 @@ namespace ChronoDeskWidget
         private double _calculatorAccumulator;
         private string _calculatorPending;
         private bool _calculatorStartNew = true;
+        private System.Windows.Forms.Timer _calculatorErrorTimer;
+        private string _calculatorPreviousOutput = "0";
 
         [DllImport("user32.dll")]
         private static extern bool ReleaseCapture();
@@ -163,11 +161,12 @@ namespace ChronoDeskWidget
             foreach (MarketRate rate in _rateDefinitions)
             {
                 _rateValues[rate.Key] = string.Empty;
-                _rateErrors[rate.Key] = string.Empty;
                 _rateFreshThisFetch[rate.Key] = false;
             }
 
             Text = AppName;
+            KeyPreview = true;
+            KeyDown += HandleCalculatorKeyDown;
             FormBorderStyle = FormBorderStyle.None;
             ShowInTaskbar = false;
             StartPosition = FormStartPosition.Manual;
@@ -477,7 +476,6 @@ namespace ChronoDeskWidget
             _clockLabel = null;
             _dateEnglishLabel = null;
             _dateSolarLabel = null;
-            _clockHintLabel = null;
             _calendarMonthLabel = null;
             _calendarSolarButton = null;
             _calendarGregorianButton = null;
@@ -496,8 +494,6 @@ namespace ChronoDeskWidget
             _ratesStatusLabel = null;
             _ratesRefreshButton = null;
             _networkSummaryLabel = null;
-            _networkSpeedLabel = null;
-            _networkHistoryLabel = null;
             _networkDownloadTotalLabel = null;
             _networkUploadTotalLabel = null;
             _networkMonthlyDownloadLabel = null;
@@ -835,20 +831,47 @@ namespace ChronoDeskWidget
         private void CalculatorPress(string key)
         {
             if (_calculatorDisplay == null || _calculatorDisplay.IsDisposed) return;
+            if (_calculatorErrorTimer != null && _calculatorErrorTimer.Enabled)
+            {
+                _calculatorErrorTimer.Stop();
+                _calculatorDisplay.Text = _calculatorPreviousOutput;
+            }
+
             double current;
             if (!double.TryParse(_calculatorDisplay.Text, NumberStyles.Float, CultureInfo.InvariantCulture, out current)) current = 0;
-            if (key == "C") { _calculatorDisplay.Text = "0"; _calculatorAccumulator = 0; _calculatorPending = null; _calculatorStartNew = true; return; }
+            if (key == "C")
+            {
+                _calculatorDisplay.Text = "0";
+                _calculatorAccumulator = 0;
+                _calculatorPending = null;
+                _calculatorStartNew = true;
+                return;
+            }
             if (key == "±") { _calculatorDisplay.Text = (-current).ToString("G12", CultureInfo.InvariantCulture); return; }
-            if (key == ".") { if (_calculatorStartNew) { _calculatorDisplay.Text = "0."; _calculatorStartNew = false; } else if (!_calculatorDisplay.Text.Contains(".")) _calculatorDisplay.Text += "."; return; }
+            if (key == ".")
+            {
+                if (_calculatorStartNew) { _calculatorDisplay.Text = "0."; _calculatorStartNew = false; }
+                else if (!_calculatorDisplay.Text.Contains(".")) _calculatorDisplay.Text += ".";
+                return;
+            }
             if (key.Length == 1 && key[0] >= '0' && key[0] <= '9')
             {
                 if (_calculatorStartNew || _calculatorDisplay.Text == "0") _calculatorDisplay.Text = key;
                 else _calculatorDisplay.Text += key;
-                _calculatorStartNew = false; return;
+                _calculatorStartNew = false;
+                return;
             }
             if (key == "=" || key == "+" || key == "−" || key == "×" || key == "÷")
             {
-                if (_calculatorPending != null && !_calculatorStartNew) current = Calculate(_calculatorAccumulator, current, _calculatorPending);
+                if (_calculatorPending != null && !_calculatorStartNew)
+                {
+                    if (_calculatorPending == "÷" && current == 0)
+                    {
+                        ShowCalculatorDivisionError();
+                        return;
+                    }
+                    current = Calculate(_calculatorAccumulator, current, _calculatorPending);
+                }
                 _calculatorAccumulator = current;
                 _calculatorDisplay.Text = current.ToString("G12", CultureInfo.InvariantCulture);
                 _calculatorPending = key == "=" ? null : key;
@@ -856,9 +879,68 @@ namespace ChronoDeskWidget
             }
         }
 
+        private void ShowCalculatorDivisionError()
+        {
+            _calculatorPreviousOutput = _calculatorDisplay.Text;
+            _calculatorDisplay.Text = "Cannot divide by zero";
+            _calculatorPending = null;
+            _calculatorAccumulator = 0;
+            _calculatorStartNew = true;
+            if (_calculatorErrorTimer == null)
+            {
+                _calculatorErrorTimer = new System.Windows.Forms.Timer();
+                _calculatorErrorTimer.Interval = 3000;
+                _calculatorErrorTimer.Tick += delegate
+                {
+                    _calculatorErrorTimer.Stop();
+                    if (_calculatorDisplay != null && !_calculatorDisplay.IsDisposed)
+                        _calculatorDisplay.Text = _calculatorPreviousOutput;
+                };
+            }
+            _calculatorErrorTimer.Stop();
+            _calculatorErrorTimer.Start();
+        }
+
+        private void HandleCalculatorKeyDown(object sender, KeyEventArgs e)
+        {
+            if (_calculatorDisplay == null || _calculatorDisplay.IsDisposed) return;
+            string key = null;
+            if (e.KeyCode >= Keys.D0 && e.KeyCode <= Keys.D9 && !e.Shift) key = ((int)e.KeyCode - (int)Keys.D0).ToString(CultureInfo.InvariantCulture);
+            else if (e.KeyCode >= Keys.NumPad0 && e.KeyCode <= Keys.NumPad9) key = ((int)e.KeyCode - (int)Keys.NumPad0).ToString(CultureInfo.InvariantCulture);
+            else if (e.KeyCode == Keys.Decimal || e.KeyCode == Keys.OemPeriod) key = ".";
+            else if (e.KeyCode == Keys.Add || (e.KeyCode == Keys.Oemplus && e.Shift)) key = "+";
+            else if (e.KeyCode == Keys.Subtract || e.KeyCode == Keys.OemMinus) key = "−";
+            else if (e.KeyCode == Keys.Multiply) key = "×";
+            else if (e.KeyCode == Keys.Divide || e.KeyCode == Keys.OemQuestion) key = "÷";
+            else if (e.KeyCode == Keys.Enter) key = "=";
+            else if (e.KeyCode == Keys.Escape) key = "C";
+            else if (e.KeyCode == Keys.Back)
+            {
+                if (!_calculatorStartNew && _calculatorDisplay.Text.Length > 1)
+                    _calculatorDisplay.Text = _calculatorDisplay.Text.Substring(0, _calculatorDisplay.Text.Length - 1);
+                else _calculatorDisplay.Text = "0";
+                e.Handled = true;
+                e.SuppressKeyPress = true;
+                return;
+            }
+            if (key != null)
+            {
+                CalculatorPress(key);
+                e.Handled = true;
+                e.SuppressKeyPress = true;
+            }
+        }
+
         private double Calculate(double left, double right, string operation)
         {
-            switch (operation) { case "+": return left + right; case "−": return left - right; case "×": return left * right; case "÷": return right == 0 ? 0 : left / right; default: return right; }
+            switch (operation)
+            {
+                case "+": return left + right;
+                case "−": return left - right;
+                case "×": return left * right;
+                case "÷": return right == 0 ? 0 : left / right;
+                default: return right;
+            }
         }
 
         private void BuildSystemSection()
@@ -1833,12 +1915,6 @@ namespace ChronoDeskWidget
             ApplyScrollBarTheme();
         }
 
-        private Panel FindSectionContaining(Control child)
-        {
-            Control parent = child.Parent;
-            return parent as Panel;
-        }
-
         private void TogglePomodoro()
         {
             if (_timerRunning)
@@ -1959,13 +2035,11 @@ namespace ChronoDeskWidget
                             {
                                 _rateValues[result.Key] = result.Value;
                                 _rateChanges[result.Key] = result.Change ?? string.Empty;
-                                _rateErrors[result.Key] = string.Empty;
-                                _rateFreshThisFetch[result.Key] = true;
+                                                _rateFreshThisFetch[result.Key] = true;
                             }
                             else
                             {
-                                _rateErrors[result.Key] = result.Error ?? T("Unknown error", "خطای نامشخص");
-                                _rateFreshThisFetch[result.Key] = false;
+                                                _rateFreshThisFetch[result.Key] = false;
                             }
                             RenderRates();
                             if (Interlocked.Decrement(ref _remainingRateFetches) == 0)
@@ -2564,7 +2638,11 @@ namespace ChronoDeskWidget
                 {
                     if (key == null) return false;
                     object value = key.GetValue(RunValueName);
-                    return value != null && value.ToString().IndexOf(Path.GetFileName(Application.ExecutablePath), StringComparison.OrdinalIgnoreCase) >= 0;
+                    if (value == null) return false;
+                    string command = value.ToString().Trim();
+                    string executable = Application.ExecutablePath;
+                    return command.StartsWith("\"" + executable + "\"", StringComparison.OrdinalIgnoreCase)
+                        || command.StartsWith(executable, StringComparison.OrdinalIgnoreCase);
                 }
             }
             catch { return false; }
@@ -2577,8 +2655,10 @@ namespace ChronoDeskWidget
                 using (RegistryKey key = Registry.CurrentUser.CreateSubKey(RunKeyPath))
                 {
                     if (key == null) throw new InvalidOperationException("Could not access the current-user Run registry key.");
-                    if (enabled) key.SetValue(RunValueName, "\"" + Application.ExecutablePath + "\"");
-                    else key.DeleteValue(RunValueName, false);
+                    if (enabled)
+                        key.SetValue(RunValueName, "\"" + Application.ExecutablePath + "\" --tray", RegistryValueKind.String);
+                    else
+                        key.DeleteValue(RunValueName, false);
                 }
                 BuildTrayMenu();
             }
