@@ -868,15 +868,6 @@ namespace ChronoDeskWidget
             {
                 string key = keys[i];
                 int y = 37 + i * 47;
-                Label name = new Label();
-                name.Text = key;
-                name.Location = new Point(12, y);
-                name.Size = new Size(32, 15);
-                name.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
-                name.BackColor = panel.BackColor;
-                name.ForeColor = _themeMutedText;
-                name.Font = GetUiFont(7.2F, FontStyle.Bold);
-                panel.Controls.Add(name);
                 ThemedProgressBar bar = new ThemedProgressBar();
                 bar.Location = new Point(12, y + 19);
                 bar.Size = new Size(panel.Width - 24, 12);
@@ -886,13 +877,13 @@ namespace ChronoDeskWidget
                 panel.Controls.Add(bar);
                 _systemBars[key] = bar;
                 Label value = new Label();
-                value.Location = new Point(32, y);
-                value.Size = new Size(panel.Width - 77, 16);
+                value.Location = new Point(12, y);
+                value.Size = new Size(panel.Width - 24, 16);
                 value.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
                 value.BackColor = panel.BackColor;
                 value.ForeColor = _themeText;
-                value.Font = GetUiFont(6.8F, FontStyle.Bold);
-                value.TextAlign = ContentAlignment.MiddleRight;
+                value.Font = GetUiFont(7.0F, FontStyle.Bold);
+                value.TextAlign = ContentAlignment.MiddleLeft;
                 value.AutoEllipsis = true;
                 panel.Controls.Add(value);
                 _systemValues[key] = value;
@@ -909,7 +900,7 @@ namespace ChronoDeskWidget
             panel.Resize += delegate
             {
                 foreach (ThemedProgressBar bar in _systemBars.Values) bar.Width = panel.ClientSize.Width - 24;
-                foreach (Label value in _systemValues.Values) { value.Left = 32; value.Width = panel.ClientSize.Width - 77; }
+                foreach (Label value in _systemValues.Values) { value.Left = 12; value.Width = panel.ClientSize.Width - 24; }
                 _systemUptimeLabel.Width = panel.ClientSize.Width - 24;
             };
         }
@@ -948,7 +939,7 @@ namespace ChronoDeskWidget
             {
                 bar.Value = Math.Max(0, Math.Min(100, (int)Math.Round(percent < 0 ? 0 : percent)));
                 label = _systemValues[key];
-                label.Text = value;
+                label.Text = key + "  |  " + value;
                 if (_toolTip != null) _toolTip.SetToolTip(label, value);
             }
         }
