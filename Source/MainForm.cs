@@ -635,6 +635,7 @@ namespace ChronoDeskWidget
             captionLabel.Text = icon + "  " + caption;
             captionLabel.Location = new Point(8, 4);
             captionLabel.Size = new Size(width - 16, 15);
+            captionLabel.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
             captionLabel.BackColor = card.FillColor;
             captionLabel.ForeColor = _themeMutedText;
             captionLabel.Font = GetUiFont(6.4F, FontStyle.Regular);
@@ -644,6 +645,7 @@ namespace ChronoDeskWidget
             value = new Label();
             value.Location = new Point(8, 21);
             value.Size = new Size(width - 16, 24);
+            value.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
             value.BackColor = card.FillColor;
             value.ForeColor = _themeAccent;
             value.Font = GetUiFont(8.8F, FontStyle.Bold);
