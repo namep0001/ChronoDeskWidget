@@ -32,6 +32,7 @@ namespace ChronoDeskWidget
         public bool Connected { get; private set; }
         public bool InternetConnected { get; private set; }
         private DateTime _nextInternetCheckUtc = DateTime.MinValue;
+        private DateTime _nextUsageSampleUtc = DateTime.MinValue;
         private bool _internetCheckInProgress;
 
         public NetworkUsageMonitor()
@@ -135,8 +136,11 @@ namespace ChronoDeskWidget
                 });
             }
 
-            // Daily collection is intentionally limited to one check per date.
-            if (!_days.ContainsKey(DateTime.Today)) SampleMonthlyUsage();
+            if (DateTime.UtcNow >= _nextUsageSampleUtc)
+            {
+                _nextUsageSampleUtc = DateTime.UtcNow.AddSeconds(5);
+                SampleMonthlyUsage();
+            }
             }
         }
 
