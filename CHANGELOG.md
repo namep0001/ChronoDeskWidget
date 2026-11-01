@@ -6,10 +6,10 @@ All notable changes to ChronoDesk Widget are documented here.
 
 ### Added
 - Network Monitor with live download and upload speeds, internet connectivity status, monthly totals, and daily usage.
-- System Monitor with CPU, memory, GPU, system-drive, battery, and uptime metrics.
+- System Monitor with CPU, memory, GPU, combined usage across all ready fixed drives, and uptime metrics.
 - Calculator widget with basic arithmetic, decimal input, and sign toggle.
 - Three-column widget layout when more than two widgets are visible.
-- Solar Hijri calendar weekday labels in Persian, using the B Roya font in both interface languages.
+- Solar Hijri calendar weekday labels in Persian, using B Roya when installed in both interface languages.
 
 ### Improved
 - Network usage history is sampled while the application is running and stored locally by calendar month.
