@@ -28,8 +28,6 @@ First official release of ChronoDesk Widget.
 - Quick notes with local persistence and UTF-8 text export.
 - USD, EUR, and 18-karat gold market rates from TGJU.
 - Toman and Dollar price display with daily percentage movement indicators.
-- Network Monitor and System Monitor.
-- Calculator widget.
 - System, Light, and Dark themes with Windows accent color support.
 - Adjustable widget opacity and font selection.
 - Independent widget visibility controls and always-on-top behavior.
