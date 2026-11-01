@@ -868,6 +868,7 @@ namespace ChronoDeskWidget
                 {
                     if (_calculatorPending == "÷" && current == 0)
                     {
+                        _calculatorPreviousOutput = _calculatorAccumulator.ToString("G12", CultureInfo.InvariantCulture);
                         ShowCalculatorDivisionError();
                         return;
                     }
@@ -905,6 +906,7 @@ namespace ChronoDeskWidget
         private void HandleCalculatorKeyDown(object sender, KeyEventArgs e)
         {
             if (_calculatorDisplay == null || _calculatorDisplay.IsDisposed) return;
+            if (ActiveControl is TextBox && ActiveControl != _calculatorDisplay) return;
             string key = null;
             if (e.KeyCode >= Keys.D0 && e.KeyCode <= Keys.D9 && !e.Shift) key = ((int)e.KeyCode - (int)Keys.D0).ToString(CultureInfo.InvariantCulture);
             else if (e.KeyCode >= Keys.NumPad0 && e.KeyCode <= Keys.NumPad9) key = ((int)e.KeyCode - (int)Keys.NumPad0).ToString(CultureInfo.InvariantCulture);
