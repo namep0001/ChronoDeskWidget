@@ -16,14 +16,14 @@ A lightweight Windows desktop companion built with C#, Windows Forms, and .NET F
 | Quick Notes | Locally saved notes with UTF-8 text export. |
 | Market Rates | USD, EUR, and 18-karat gold per gram, with Toman or Dollar display and daily movement. |
 | Network Monitor | Live download/upload speeds, internet status, monthly traffic totals, and daily usage. |
-| System Monitor | CPU, RAM, GPU, system-drive usage, optional battery status, and uptime. |
+| System Monitor | CPU, RAM, GPU, combined usage across all ready fixed drives, and uptime. |
 | Calculator | Basic arithmetic, decimal input, and sign toggle. |
 
 ### Personalization
 - English and Persian interface languages.
-- Persian weekday labels and B Roya typography for the Solar Hijri calendar.
+- Persian weekday labels and B Roya typography for the Solar Hijri calendar when that font is installed.
 - System, Light, and Dark themes, including Windows accent color support.
-- Adjustable opacity and font selection.
+- Adjustable opacity and font selection, with Windows font fallback when a selected font is unavailable.
 - Independent widget visibility, always-on-top mode, and optional Windows startup.
 - System-tray controls.
 
