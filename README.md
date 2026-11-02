@@ -32,7 +32,7 @@ A lightweight Windows desktop companion built with C#, Windows Forms, and .NET F
 1. Open the **[GitHub releases page](https://github.com/namep0001/ChronoDeskWidget/releases)**.
 2. Download ChronoDeskWidget-Windows.zip.
 3. Extract the archive.
-4. Run ChronoDeskWidget.exe. The ZIP also includes standalone uninstaller scripts and clearly labeled shortcuts with a dedicated uninstall icon.
+4. Run ChronoDeskWidget.exe. To create clearly labeled uninstall shortcuts with the dedicated icon, run Setup-UninstallerShortcuts.bat once after extracting the ZIP; the standalone uninstaller scripts can also be run directly.
 
 **Requirements:** Windows 10/11 and .NET Framework 4.8. No third-party runtime packages are required.
 

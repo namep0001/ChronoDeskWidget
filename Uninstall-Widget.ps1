@@ -42,18 +42,6 @@ Get-ScheduledTask | Where-Object {
     $_.TaskName -like "*ChronoDeskWidget*" -or $_.TaskName -like "*ChronoDesk Widget*"
 } | Unregister-ScheduledTask -Confirm:$false
 
-# Stop only application processes whose executable is inside this installation.
-$appPath = Join-Path $installDir "ChronoDeskWidget.exe"
-$appProcesses = @()
-Get-Process -Name "ChronoDeskWidget" -ErrorAction SilentlyContinue | ForEach-Object {
-    try {
-        if ($_.Path -and ([System.IO.Path]::GetFullPath($_.Path) -ieq [System.IO.Path]::GetFullPath($appPath))) {
-            $appProcesses += $_.Id
-            Stop-Process -Id $_.Id -Force -ErrorAction SilentlyContinue
-        }
-    } catch { }
-}
-
 # Delete settings, notes, tasks, and logs from the user's profile.
 $localData = Join-Path $env:LOCALAPPDATA "ChronoDeskWidget"
 if (Test-Path -LiteralPath $localData) {
@@ -63,11 +51,12 @@ if (Test-Path -LiteralPath $localData) {
 # A separate temporary command file removes the installation folder after this
 # script and the application have exited. This supports self-deletion on Windows.
 $tempCmd = Join-Path $env:TEMP ("ChronoDeskWidget-Uninstall-" + [guid]::NewGuid().ToString("N") + ".cmd")
-$waitPids = @($appProcesses)
-if ($AppProcessId -gt 0 -and $waitPids -notcontains $AppProcessId) { $waitPids += $AppProcessId }
 $lines = @("@echo off", ":wait")
-foreach ($processId in $waitPids) {
-    $lines += "tasklist /FI `"PID eq $processId`" 2>NUL | findstr `"$processId`" >NUL"
+if ($AppProcessId -gt 0) {
+    $lines += "tasklist /FI `"PID eq $AppProcessId`" 2>NUL | findstr /R /C:`"^[ ]*ChronoDeskWidget.exe[ ]*$`" >NUL"
+    # PID matching is performed by PowerShell before starting this script; wait for
+    # the exact PID using tasklist's filtered output instead of matching image names.
+    $lines[-1] = "tasklist /FI `"PID eq $AppProcessId`" 2>NUL | findstr `"$AppProcessId`" >NUL"
     $lines += "if not errorlevel 1 (timeout /t 1 /nobreak >NUL & goto wait)"
 }
 $escapedDir = $installDir.Replace('"','""')

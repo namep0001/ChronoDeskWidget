@@ -46,8 +46,8 @@ jobs:
             'Uninstall-Widget.bat',
             'Uninstall-Widget.ps1',
             'Uninstall-Widget.ico',
-            'Uninstall ChronoDesk Widget (BAT).lnk',
-            'Uninstall ChronoDesk Widget (PowerShell).lnk'
+            'Create-UninstallerShortcuts.ps1',
+            'Setup-UninstallerShortcuts.bat'
           )
           foreach ($file in $packageFiles) {
             $source = Join-Path 'bin/Release' $file
