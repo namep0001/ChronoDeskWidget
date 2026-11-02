@@ -27,10 +27,11 @@ namespace ChronoDeskWidget
         private readonly Color _muted = Color.FromArgb(143, 158, 178);
         private readonly Color _accent = Color.FromArgb(83, 143, 238);
         private readonly Color _accentSoft = Color.FromArgb(31, 57, 91);
-        private Panel _pageHost, _header;
+        private Panel _pageHost;
         private FlowLayoutPanel _page;
         private Label _pageTitle, _pageDescription;
         private string _active = "General";
+        private Point _dragOrigin;
 
         public SettingsForm(string language, string theme, int opacity, string font, string rateUnit,
             bool topmost, bool startup, IDictionary<string, bool> widgets,
@@ -46,111 +47,96 @@ namespace ChronoDeskWidget
             _setStartup = setStartup; _refreshRates = refreshRates; _setClockFormat = setClockFormat;
             _widgets = new Dictionary<string, bool>(widgets, StringComparer.OrdinalIgnoreCase);
 
-            Text = "ChronoDesk Widget | Settings";
+            Text = "Settings";
             StartPosition = FormStartPosition.CenterParent;
-            Size = new Size(1060, 720);
-            MinimumSize = new Size(900, 620);
+            Size = new Size(1080, 760);
+            MinimumSize = new Size(920, 650);
             BackColor = _background; ForeColor = _text;
             Font = new Font("Segoe UI", 9F);
-            ShowInTaskbar = false; FormBorderStyle = FormBorderStyle.Sizable;
+            ShowInTaskbar = false;
+            FormBorderStyle = FormBorderStyle.None;
             MaximizeBox = false; MinimizeBox = false;
             DoubleBuffered = true;
 
-            Panel shell = new Panel { Dock = DockStyle.Fill, BackColor = _background };
-            Controls.Add(shell);
-
-            Panel sidebar = new Panel { Dock = DockStyle.Left, Width = 224, BackColor = _sidebar, Padding = new Padding(14, 18, 14, 14) };
-            shell.Controls.Add(sidebar);
-            BuildSidebar(sidebar);
-
-            Panel main = new Panel { Dock = DockStyle.Fill, BackColor = _background, Padding = new Padding(30, 24, 30, 18) };
-            shell.Controls.Add(main);
-
-            Panel footer = new Panel { Dock = DockStyle.Bottom, Height = 58, BackColor = _background };
-            main.Controls.Add(footer);
-            Label footerNote = new Label { Text = "Changes are saved automatically", AutoSize = true, ForeColor = _muted, Font = new Font("Segoe UI", 8.5F), Location = new Point(2, 21) };
-            footer.Controls.Add(footerNote);
-            Button close = new Button { Text = "Done", Size = new Size(104, 36), FlatStyle = FlatStyle.Flat, BackColor = _accent, ForeColor = Color.White, Font = new Font("Segoe UI Semibold", 9F), Cursor = Cursors.Hand, Anchor = AnchorStyles.Top | AnchorStyles.Right };
+            Panel topBar = new Panel { Dock = DockStyle.Top, Height = 58, BackColor = _background, Padding = new Padding(22, 0, 14, 0) };
+            Controls.Add(topBar);
+            Panel settingIcon = new Panel { Location = new Point(22, 17), Size = new Size(24, 24), BackColor = Color.Transparent };
+            settingIcon.Paint += delegate(object sender, PaintEventArgs e)
+            {
+                e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+                using (Pen p = new Pen(Color.FromArgb(164, 202, 255), 2.1F))
+                {
+                    e.Graphics.DrawEllipse(p, 7, 7, 10, 10);
+                    e.Graphics.DrawEllipse(p, 10, 10, 4, 4);
+                    e.Graphics.DrawLine(p, 12, 1, 12, 6); e.Graphics.DrawLine(p, 12, 18, 12, 23);
+                    e.Graphics.DrawLine(p, 1, 12, 6, 12); e.Graphics.DrawLine(p, 18, 12, 23, 12);
+                    e.Graphics.DrawLine(p, 4, 4, 7, 7); e.Graphics.DrawLine(p, 17, 17, 20, 20);
+                    e.Graphics.DrawLine(p, 4, 20, 7, 17); e.Graphics.DrawLine(p, 17, 7, 20, 4);
+                }
+            };
+            topBar.Controls.Add(settingIcon);
+            topBar.Controls.Add(new Label { Text = "Setting", Location = new Point(57, 17), AutoSize = true, ForeColor = _text, Font = new Font("Segoe UI Semibold", 13F) });
+            Button close = new Button { Text = "×", Size = new Size(34, 34), Location = new Point(Width - 52, 12), Anchor = AnchorStyles.Top | AnchorStyles.Right, FlatStyle = FlatStyle.Flat, BackColor = _background, ForeColor = _muted, Font = new Font("Segoe UI", 19F), Cursor = Cursors.Hand };
             close.FlatAppearance.BorderSize = 0;
-            close.FlatAppearance.MouseOverBackColor = Color.FromArgb(105, 160, 245);
+            close.FlatAppearance.MouseOverBackColor = Color.FromArgb(174, 55, 65);
+            close.FlatAppearance.MouseDownBackColor = Color.FromArgb(140, 42, 52);
             close.Click += delegate { Close(); };
-            footer.Controls.Add(close);
-            footer.Resize += delegate { close.Location = new Point(footer.ClientSize.Width - close.Width, 10); };
+            topBar.Controls.Add(close);
+            topBar.MouseDown += BeginWindowDrag;
+            settingIcon.MouseDown += BeginWindowDrag;
+            topBar.Controls.Add(new Panel { Dock = DockStyle.Bottom, Height = 1, BackColor = _border });
 
-            _header = new Panel { Dock = DockStyle.Top, Height = 100, BackColor = _background };
-            main.Controls.Add(_header);
-            _pageTitle = new Label { Text = "General", AutoSize = true, Location = new Point(0, 3), ForeColor = _text, Font = new Font("Segoe UI Semibold", 21F) };
-            _pageDescription = new Label { Text = "Manage startup and desktop behavior.", AutoSize = true, Location = new Point(2, 43), ForeColor = _muted, Font = new Font("Segoe UI", 9.5F) };
-            _header.Controls.Add(_pageTitle); _header.Controls.Add(_pageDescription);
-            Panel rule = new Panel { Dock = DockStyle.Bottom, Height = 1, BackColor = _border };
-            _header.Controls.Add(rule);
+            Panel sidebar = new Panel { Dock = DockStyle.Left, Width = 218, BackColor = _sidebar, Padding = new Padding(14, 18, 14, 14) };
+            Controls.Add(sidebar);
+            Panel main = new Panel { Dock = DockStyle.Fill, BackColor = _background, Padding = new Padding(30, 24, 30, 22) };
+            Controls.Add(main);
 
+            FlowLayoutPanel nav = new FlowLayoutPanel { Dock = DockStyle.Fill, FlowDirection = FlowDirection.TopDown, WrapContents = false, AutoScroll = false, BackColor = _sidebar, Padding = new Padding(0, 2, 0, 0) };
+            sidebar.Controls.Add(nav);
+            AddNav(nav, "General", "◉");
+            AddNav(nav, "Appearance", "◐");
+            AddNav(nav, "Layout", "▣");
+            AddNav(nav, "Language", "文");
+            AddNav(nav, "Widget", "▦");
+            AddNav(nav, "Update", "↻");
+            AddNav(nav, "About", "ⓘ");
+
+            Panel heading = new Panel { Dock = DockStyle.Top, Height = 92, BackColor = _background };
+            main.Controls.Add(heading);
+            _pageTitle = new Label { Text = "General", AutoSize = true, Location = new Point(0, 0), ForeColor = _text, Font = new Font("Segoe UI Semibold", 21F) };
+            _pageDescription = new Label { Text = "Manage startup and desktop behavior.", AutoSize = true, Location = new Point(2, 42), ForeColor = _muted, Font = new Font("Segoe UI", 9.5F) };
+            heading.Controls.Add(_pageTitle); heading.Controls.Add(_pageDescription);
+            heading.Controls.Add(new Panel { Dock = DockStyle.Bottom, Height = 1, BackColor = _border });
             _pageHost = new Panel { Dock = DockStyle.Fill, BackColor = _background, Padding = new Padding(0, 18, 4, 0) };
             main.Controls.Add(_pageHost);
-            main.Controls.SetChildIndex(footer, 0);
-            main.Controls.SetChildIndex(_header, 1);
-            main.Controls.SetChildIndex(_pageHost, 2);
-            shell.Controls.SetChildIndex(sidebar, 0);
-            shell.Controls.SetChildIndex(main, 1);
+            main.Controls.SetChildIndex(heading, 0);
+            main.Controls.SetChildIndex(_pageHost, 1);
+            Controls.SetChildIndex(topBar, 0);
+            Controls.SetChildIndex(sidebar, 1);
+            Controls.SetChildIndex(main, 2);
             _pageHost.Resize += delegate { ResizePageItems(); };
             ShowPage("General");
         }
 
-        private void BuildSidebar(Panel host)
+        private void BeginWindowDrag(object sender, MouseEventArgs e)
         {
-            FlowLayoutPanel nav = new FlowLayoutPanel { Dock = DockStyle.Fill, FlowDirection = FlowDirection.TopDown, WrapContents = false, AutoScroll = true, BackColor = _sidebar, Padding = new Padding(0, 7, 0, 5) };
-            host.Controls.Add(nav);
-            Label group = new Label { Text = "PREFERENCES", Width = 194, Height = 28, TextAlign = ContentAlignment.BottomLeft, ForeColor = Color.FromArgb(112, 130, 153), Font = new Font("Segoe UI", 7.5F, FontStyle.Bold), Padding = new Padding(7, 0, 0, 5), Margin = new Padding(0, 0, 0, 3) };
-            nav.Controls.Add(group);
-            AddNav(nav, "General", "⌂");
-            AddNav(nav, "Appearance", "◐");
-            AddNav(nav, "Language", "文");
-            AddNav(nav, "Widgets", "▦");
-            Label widgetGroup = new Label { Text = "WIDGET SETTINGS", Width = 194, Height = 34, TextAlign = ContentAlignment.BottomLeft, ForeColor = Color.FromArgb(112, 130, 153), Font = new Font("Segoe UI", 7.5F, FontStyle.Bold), Padding = new Padding(7, 0, 0, 6), Margin = new Padding(0, 5, 0, 3) };
-            nav.Controls.Add(widgetGroup);
-            AddNav(nav, "Clock", "◷", true);
-            AddNav(nav, "Calendar", "▦", true);
-            AddNav(nav, "Pomodoro", "◴", true);
-            AddNav(nav, "Tasks", "☷", true);
-            AddNav(nav, "Quick Notes", "▤", true);
-            AddNav(nav, "Market Rates", "↗", true);
-            AddNav(nav, "Network Monitor", "⌁", true);
-            AddNav(nav, "Calculator", "＋", true);
-            AddNav(nav, "System Monitor", "▥", true);
-
-            Panel brand = new Panel { Dock = DockStyle.Top, Height = 86, BackColor = _sidebar };
-            Panel mark = new Panel { Location = new Point(2, 3), Size = new Size(42, 42), BackColor = _accentSoft };
-            mark.Paint += delegate(object sender, PaintEventArgs e)
+            if (e.Button == MouseButtons.Left) _dragOrigin = e.Location;
+            if (e.Button == MouseButtons.Left)
             {
-                e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
-                using (Pen p = new Pen(Color.FromArgb(137, 184, 255), 2.2F))
-                {
-                    e.Graphics.DrawEllipse(p, 13, 13, 16, 16);
-                    e.Graphics.DrawLine(p, 21, 4, 21, 13); e.Graphics.DrawLine(p, 21, 29, 21, 38);
-                    e.Graphics.DrawLine(p, 4, 21, 13, 21); e.Graphics.DrawLine(p, 29, 21, 38, 21);
-                }
-            };
-            brand.Controls.Add(mark);
-            brand.Controls.Add(new Label { Text = "ChronoDesk", Location = new Point(54, 5), AutoSize = true, ForeColor = _text, Font = new Font("Segoe UI Semibold", 11F) });
-            brand.Controls.Add(new Label { Text = "WIDGET SETTINGS", Location = new Point(55, 28), AutoSize = true, ForeColor = _muted, Font = new Font("Segoe UI", 7.5F, FontStyle.Bold) });
-            host.Controls.Add(brand);
-
-            Panel bottom = new Panel { Dock = DockStyle.Bottom, Height = 52, BackColor = _sidebar };
-            bottom.Paint += delegate(object sender, PaintEventArgs e) { using (Pen p = new Pen(_border)) e.Graphics.DrawLine(p, 0, 0, bottom.Width, 0); };
-            bottom.Controls.Add(new Label { Text = "●  APPLICATION", Location = new Point(4, 11), AutoSize = true, ForeColor = Color.FromArgb(105, 190, 145), Font = new Font("Segoe UI", 7.5F, FontStyle.Bold) });
-            bottom.Controls.Add(new Label { Text = "ChronoDesk Widget", Location = new Point(4, 28), AutoSize = true, ForeColor = _muted, Font = new Font("Segoe UI", 8F) });
-            host.Controls.Add(bottom);
+                Capture = false;
+                Message m = Message.Create(Handle, 0xA1, new IntPtr(2), IntPtr.Zero);
+                WndProc(ref m);
+            }
         }
 
-        private void AddNav(FlowLayoutPanel parent, string key, string glyph, bool child = false)
+        private void AddNav(FlowLayoutPanel parent, string key, string glyph)
         {
             Button b = new Button {
                 Text = glyph + "     " + key, TextAlign = ContentAlignment.MiddleLeft,
-                Size = new Size(194, child ? 34 : 39), Margin = new Padding(0, 1, 0, 3),
-                FlatStyle = FlatStyle.Flat, BackColor = _sidebar,
-                ForeColor = child ? Color.FromArgb(166, 180, 199) : _text,
-                Font = new Font("Segoe UI", child ? 8.5F : 9F, child ? FontStyle.Regular : FontStyle.Bold),
-                Cursor = Cursors.Hand, Padding = new Padding(child ? 13 : 8, 0, 0, 0)
+                Size = new Size(188, 45), Margin = new Padding(0, 2, 0, 5),
+                FlatStyle = FlatStyle.Flat, BackColor = _sidebar, ForeColor = _text,
+                Font = new Font("Segoe UI", 9.5F), Cursor = Cursors.Hand,
+                Padding = new Padding(10, 0, 0, 0)
             };
             b.FlatAppearance.BorderSize = 0;
             b.FlatAppearance.MouseOverBackColor = _surfaceHover;
@@ -165,7 +151,7 @@ namespace ChronoDeskWidget
             {
                 bool selected = item.Key == key;
                 item.Value.BackColor = selected ? _accentSoft : _sidebar;
-                item.Value.ForeColor = selected ? Color.FromArgb(164, 202, 255) : (IsWidgetPage(item.Key) ? Color.FromArgb(166, 180, 199) : _text);
+                item.Value.ForeColor = selected ? Color.FromArgb(164, 202, 255) : _text;
                 item.Value.FlatAppearance.BorderSize = selected ? 1 : 0;
                 item.Value.FlatAppearance.BorderColor = _accent;
             }
@@ -176,141 +162,239 @@ namespace ChronoDeskWidget
             _pageTitle.Text = key;
             _pageDescription.Text = Subtitle(key);
 
-            if (key == "General") BuildGeneral();
-            else if (key == "Appearance") BuildAppearance();
-            else if (key == "Language") BuildLanguage();
-            else if (key == "Widgets") BuildWidgets();
-            else if (key == "Clock") BuildClock();
-            else if (key == "Market Rates") BuildRates();
-            else
-            {
-                string widgetKey = WidgetKey(key);
-                Section(key, WidgetDescription(key));
-                CheckCard("Show " + key, "Display this panel on your desktop.", IsEnabled(widgetKey), delegate(bool value) { _setWidget(widgetKey, value); });
-                if (key == "Calendar") InfoCard("Calendar formats", "The desktop calendar supports Gregorian and Solar Hijri dates.");
-                else if (key == "Pomodoro") InfoCard("Focus timer", "Use the timer controls on the widget to start, pause, and reset a session.");
-                else if (key == "Tasks") InfoCard("Task list", "Tasks are stored locally on this device.");
-                else if (key == "Quick Notes") InfoCard("Local notes", "Your notes are saved on this device and can be exported as a text file.");
-                else if (key == "Network Monitor") InfoCard("Network activity", "Usage totals are collected while ChronoDesk is running.");
-                else if (key == "Calculator") InfoCard("Calculator", "Use the calculator panel for quick arithmetic.");
-                else if (key == "System Monitor") InfoCard("System metrics", "CPU, memory, GPU, storage, and uptime are shown when available.");
-            }
-        }
-
-        private bool IsWidgetPage(string key) { return key != "General" && key != "Appearance" && key != "Language" && key != "Widgets"; }
-        private bool IsEnabled(string key) { return _widgets.ContainsKey(key) && _widgets[key]; }
-        private string WidgetKey(string name)
-        {
-            switch (name)
-            {
-                case "Quick Notes": return "notes";
-                case "Market Rates": return "rates";
-                case "Network Monitor": return "network";
-                case "System Monitor": return "system";
-                default: return name.ToLowerInvariant();
-            }
-        }
-        private string WidgetDescription(string key)
-        {
             switch (key)
             {
-                case "Clock": return "Control the clock panel and its time display.";
-                case "Calendar": return "Control the calendar panel on your desktop.";
-                case "Pomodoro": return "Control the focus timer panel.";
-                case "Tasks": return "Control your local task list panel.";
-                case "Quick Notes": return "Control your local notes panel.";
-                case "Market Rates": return "Control live market quotes and their display unit.";
-                case "Network Monitor": return "Control live network statistics.";
-                case "Calculator": return "Control the built-in calculator panel.";
-                default: return "Control system usage statistics.";
+                case "General": BuildGeneral(); break;
+                case "Appearance": BuildAppearance(); break;
+                case "Layout": BuildLayout(); break;
+                case "Language": BuildLanguage(); break;
+                case "Widget": BuildWidgets(); break;
+                case "Update": BuildUpdate(); break;
+                case "About": BuildAbout(); break;
             }
+            ResizePageItems();
         }
+
         private string Subtitle(string key)
         {
             switch (key)
             {
-                case "General": return "Manage startup and desktop behavior.";
-                case "Appearance": return "Set the visual style, transparency, and typeface.";
-                case "Language": return "Choose the language used throughout the widget.";
-                case "Widgets": return "Choose which panels are visible on your desktop.";
-                case "Clock": return "Configure the clock display.";
-                case "Calendar": return "Calendar visibility and supported date systems.";
-                case "Pomodoro": return "Focus timer visibility and usage.";
-                case "Tasks": return "Task panel visibility and local storage.";
-                case "Quick Notes": return "Notes panel visibility and local storage.";
-                case "Market Rates": return "Market quote visibility and display currency.";
-                case "Network Monitor": return "Network panel visibility and usage information.";
-                case "Calculator": return "Calculator panel visibility.";
-                default: return "System monitoring panel visibility.";
+                case "General": return "Startup, behavior, and everyday preferences.";
+                case "Appearance": return "Theme, transparency, typography, and visual details.";
+                case "Layout": return "Position, dimensions, spacing, and desktop arrangement.";
+                case "Language": return "Choose the language and regional formats.";
+                case "Widget": return "Manage desktop widgets and each widget's options.";
+                case "Update": return "Update preferences and installed version information.";
+                default: return "Product information, support, and legal details.";
             }
         }
 
         private void BuildGeneral()
         {
-            Section("Startup & desktop", "Control how ChronoDesk behaves when you sign in.");
-            CheckCard("Start with Windows", "Launch ChronoDesk automatically when you sign in to Windows.", _startup, delegate(bool v) { _setStartup(v); });
-            CheckCard("Keep on top", "Keep the desktop widget above other application windows.", _topmost, delegate(bool v) { _setTopmost(v); });
-            Section("Application", "Your preferences are stored locally on this device.");
-            InfoCard("Local settings", "Changes are saved as soon as you make them. Your tasks and notes remain on this device.");
+            Section("Startup", "Choose how ChronoDesk starts and behaves.");
+            CheckCard("Start with Windows", "Launch automatically when you sign in to Windows.", _startup, delegate(bool v) { _setStartup(v); });
+            CheckCard("Keep on top", "Keep the widget above other application windows.", _topmost, delegate(bool v) { _setTopmost(v); });
+            Section("Interaction", "Configure common desktop behavior.");
+            StaticCombo("Close button behavior", "Choose what happens when the main close control is used.", "Exit application", "Exit application", "Minimize to tray");
+            StaticCombo("Launch behavior", "Choose how the widget appears when the application starts.", "Restore last position", "Restore last position", "Open at default position");
+            StaticToggle("Show confirmation before exit", "Ask before closing the application completely.", false);
+            StaticToggle("Remember window position", "Restore the last saved desktop position.", true);
+            Section("Notifications", "Control optional desktop notifications.");
+            StaticToggle("Show update notifications", "Notify when a new application version is available.", true);
+            StaticToggle("Show widget alerts", "Allow widgets to display relevant status messages.", true);
         }
 
         private void BuildAppearance()
         {
-            Section("Color theme", "Choose how the desktop widget looks.");
-            ComboCard("Theme", "Follow Windows appearance or select a fixed theme.", new[] { "System", "Light", "Dark" }, _theme == "light" ? "Light" : _theme == "dark" ? "Dark" : "System",
+            Section("Theme", "Choose the overall visual style.");
+            ComboCard("Color theme", "Follow Windows or use a fixed appearance.", new[] { "System", "Light", "Dark" }, _theme == "light" ? "Light" : _theme == "dark" ? "Dark" : "System",
                 delegate(string v) { _setTheme(v.ToLowerInvariant()); });
-            Section("Transparency & typography", "Adjust the desktop widget's readability.");
+            StaticCombo("Accent color", "Choose the highlight color used for selection and controls.", "Blue", "Blue", "Purple", "Teal", "Green", "Orange", "Custom");
+            Section("Transparency & typography", "Tune contrast and readability.");
             ComboCard("Widget opacity", "Set the transparency level of the desktop widget.", new[] { "100%", "90%", "80%", "70%", "60%", "50%" }, _opacity + "%",
                 delegate(string v) { _setOpacity(int.Parse(v.TrimEnd('%'))); });
             ComboCard("Font family", "Choose the typeface used by widget content.", new[] { "Segoe UI", "Arial", "Calibri", "Tahoma", "Verdana", "Microsoft YaHei UI" }, _font,
                 delegate(string v) { _setFont(v); });
-            InfoCard("System theme", "The System option follows your Windows app theme and accent color.");
+            StaticCombo("Font size", "Set the default text scale across widgets.", "Medium", "Small", "Medium", "Large", "Extra large");
+            StaticToggle("Use compact controls", "Reduce control padding for a denser appearance.", false);
+            StaticToggle("Use animations", "Enable subtle transitions when opening and updating widgets.", true);
+        }
+
+        private void BuildLayout()
+        {
+            Section("Widget position", "Set where the widget sits on the desktop.");
+            StaticCombo("Horizontal alignment", "Choose the default horizontal anchor.", "Right", "Left", "Center", "Right");
+            StaticCombo("Vertical alignment", "Choose the default vertical anchor.", "Top", "Top", "Center", "Bottom");
+            StaticCombo("Screen", "Choose which display hosts the widget.", "Primary display", "Primary display", "Display 2", "Display 3", "Active display");
+            StaticToggle("Remember position per display", "Keep a separate position for each monitor.", true);
+            Section("Dimensions & spacing", "Control the footprint and arrangement of widget panels.");
+            StaticCombo("Widget scale", "Scale widget content without changing display resolution.", "100%", "75%", "85%", "100%", "110%", "125%", "150%");
+            StaticCombo("Widget spacing", "Set the gap between visible widget panels.", "12 px", "4 px", "8 px", "12 px", "16 px", "20 px");
+            StaticCombo("Panel corner radius", "Choose the corner rounding used by widget panels.", "12 px", "0 px", "6 px", "10 px", "12 px", "16 px");
+            StaticToggle("Snap to screen edges", "Align the widget to nearby screen edges when moving it.", true);
+            StaticToggle("Keep widgets inside work area", "Avoid the taskbar and reserved desktop areas.", true);
+            StaticToggle("Lock widget position", "Prevent accidental movement on the desktop.", false);
+            Section("Multi-widget arrangement", "Choose how multiple widgets are organized.");
+            StaticCombo("Widget arrangement", "Select the default panel layout.", "Free placement", "Free placement", "Vertical stack", "Horizontal row", "Grid");
+            StaticToggle("Align widget edges", "Keep neighboring widget edges aligned.", false);
         }
 
         private void BuildLanguage()
         {
-            Section("Interface language", "Select the language used by ChronoDesk.");
-            ComboCard("Application language", "Switch between the currently supported languages.", new[] { "English", "فارسی" }, _language == "fa" ? "فارسی" : "English",
+            Section("Interface language", "Select the language used throughout the application.");
+            ComboCard("Application language", "Switch between currently supported languages.", new[] { "English", "فارسی" }, _language == "fa" ? "فارسی" : "English",
                 delegate(string v) { _setLanguage(v == "فارسی" ? "fa" : "en"); });
-            InfoCard("Supported languages", "English and Persian are currently available.");
+            Section("Regional formats", "Choose how dates, numbers, and time are displayed.");
+            StaticCombo("Date format", "Set the date order and separator.", "System default", "System default", "DD/MM/YYYY", "MM/DD/YYYY", "YYYY/MM/DD");
+            StaticCombo("First day of week", "Choose the first day shown in calendars.", "System default", "System default", "Saturday", "Sunday", "Monday");
+            StaticCombo("Number format", "Choose decimal and thousands separators.", "System default", "System default", "1,234.56", "1.234,56");
+            StaticToggle("Use right-to-left layout when supported", "Apply right-to-left reading direction for supported languages.", true);
+            InfoCard("Available languages", "English and Persian are currently available. Additional translations can be added later.");
         }
 
         private void BuildWidgets()
         {
-            Section("Desktop panels", "Turn panels on or off. Open a panel's section for its available options.");
-            string[] keys = { "clock", "calendar", "tasks", "pomodoro", "notes", "rates", "network", "calculator", "system" };
-            string[] names = { "Clock", "Calendar", "Tasks", "Pomodoro", "Quick Notes", "Market Rates", "Network Monitor", "Calculator", "System Monitor" };
-            string[] descriptions = { "Time and date", "Gregorian and Solar Hijri calendar", "Local task list", "Focus and break timer", "Local text notes", "USD, EUR, and gold quotes", "Live network usage", "Basic arithmetic", "Hardware usage statistics" };
-            for (int i = 0; i < keys.Length; i++)
+            Section("Desktop widgets", "Enable the panels you want on the desktop. Select a widget's options to configure its display.");
+            WidgetCard("Clock", "Time, date, and clock format", "clock", delegate
             {
-                string k = keys[i];
-                CheckCard(names[i], descriptions[i], IsEnabled(k), delegate(bool v) { _setWidget(k, v); });
-            }
+                Section("Clock options", "Display preferences for the clock widget.");
+                StaticCombo("Time format", "Choose the clock convention.", _clockFormat == "12h" ? "12-hour" : "24-hour", "24-hour", "12-hour");
+                StaticToggle("Show seconds", "Display seconds alongside hours and minutes.", false);
+                StaticToggle("Show date", "Display the current date below the time.", true);
+                StaticCombo("Date style", "Choose the date detail shown by the clock.", "Short date", "Short date", "Long date", "Day of week");
+            });
+            WidgetCard("Calendar", "Monthly calendar and date navigation", "calendar", delegate
+            {
+                Section("Calendar options", "Configure calendar appearance and behavior.");
+                StaticCombo("Calendar system", "Choose the calendar used for dates.", "System default", "Gregorian", "Solar Hijri");
+                StaticCombo("Week starts on", "Choose the first weekday.", "System default", "Saturday", "Sunday", "Monday");
+                StaticToggle("Show adjacent month days", "Display days from the previous and next months.", true);
+                StaticToggle("Highlight current day", "Emphasize today's date in the calendar.", true);
+            });
+            WidgetCard("Tasks", "Personal task list and completion tracking", "tasks", delegate
+            {
+                Section("Task options", "Configure task list behavior.");
+                StaticToggle("Show completed tasks", "Keep completed items visible in the list.", true);
+                StaticToggle("Show task count", "Display the number of active tasks.", true);
+                StaticCombo("Default sort order", "Choose how tasks are ordered.", "Manual", "Manual", "Due date", "Creation date", "Priority");
+            });
+            WidgetCard("Pomodoro", "Focus sessions and break timer", "pomodoro", delegate
+            {
+                Section("Pomodoro options", "Set default focus and break durations.");
+                StaticCombo("Focus duration", "Length of a focus session.", "25 minutes", "15 minutes", "20 minutes", "25 minutes", "30 minutes", "45 minutes", "60 minutes");
+                StaticCombo("Short break", "Length of a short break.", "5 minutes", "3 minutes", "5 minutes", "10 minutes");
+                StaticCombo("Long break", "Length of a long break.", "15 minutes", "10 minutes", "15 minutes", "20 minutes", "30 minutes");
+                StaticCombo("Long break interval", "Number of focus sessions before a long break.", "4 sessions", "2 sessions", "3 sessions", "4 sessions", "5 sessions");
+                StaticToggle("Auto-start breaks", "Start a break automatically when focus ends.", false);
+                StaticToggle("Auto-start focus sessions", "Start the next focus session after a break.", false);
+            });
+            WidgetCard("Quick Notes", "Lightweight notes stored on this device", "notes", delegate
+            {
+                Section("Notes options", "Configure the notes panel.");
+                StaticCombo("Default note size", "Choose the initial note dimensions.", "Medium", "Small", "Medium", "Large");
+                StaticToggle("Always on top", "Keep the notes panel above other windows.", false);
+                StaticToggle("Confirm before clearing", "Ask before deleting note content.", true);
+                StaticToggle("Auto-save while typing", "Save note changes automatically.", true);
+            });
+            WidgetCard("Market Rates", "Currency, gold, and market quote panel", "rates", delegate
+            {
+                Section("Market rates options", "Configure displayed quote values.");
+                ComboCard("Display currency", "Choose the unit used for market values.", new[] { "Toman (T)", "Dollar ($)" }, _unit == "$" ? "Dollar ($)" : "Toman (T)",
+                    delegate(string v) { _setRateUnit(v.StartsWith("Dollar", StringComparison.Ordinal) ? "$" : "T"); });
+                StaticCombo("Refresh interval", "How often quotes should be refreshed.", "5 minutes", "1 minute", "5 minutes", "15 minutes", "30 minutes", "1 hour");
+                StaticToggle("Show change percentage", "Display the percentage change beside each quote.", true);
+                StaticToggle("Show last updated time", "Display the most recent quote update time.", true);
+                ActionCard("Refresh market data", "Request the latest available market quotes.", "Refresh now", delegate { _refreshRates(); });
+            });
+            WidgetCard("Network Monitor", "Live upload and download activity", "network", delegate
+            {
+                Section("Network monitor options", "Configure network statistics.");
+                StaticCombo("Speed unit", "Choose the displayed transfer unit.", "MB/s", "KB/s", "MB/s", "Mbps");
+                StaticToggle("Show upload speed", "Display current upload activity.", true);
+                StaticToggle("Show download speed", "Display current download activity.", true);
+                StaticToggle("Show session totals", "Display uploaded and downloaded totals.", true);
+            });
+            WidgetCard("Calculator", "Quick arithmetic and expression input", "calculator", delegate
+            {
+                Section("Calculator options", "Configure calculator behavior.");
+                StaticToggle("Keep calculation history", "Retain recent calculations in the panel.", true);
+                StaticToggle("Use thousands separators", "Format large results for readability.", true);
+                StaticCombo("Precision", "Choose decimal places for displayed results.", "Auto", "Auto", "2", "4", "6", "8");
+            });
+            WidgetCard("System Monitor", "CPU, memory, GPU, and storage usage", "system", delegate
+            {
+                Section("System monitor options", "Choose which system metrics are displayed.");
+                StaticCombo("Refresh interval", "How often system metrics are sampled.", "2 seconds", "1 second", "2 seconds", "5 seconds", "10 seconds");
+                StaticToggle("Show CPU usage", "Display processor utilization.", true);
+                StaticToggle("Show memory usage", "Display physical memory utilization.", true);
+                StaticToggle("Show GPU usage", "Display graphics processor utilization when available.", true);
+                StaticToggle("Show storage usage", "Display disk utilization.", true);
+                StaticToggle("Show system uptime", "Display time since the last system start.", true);
+            });
         }
 
-        private void BuildClock()
+        private void BuildUpdate()
         {
-            Section("Clock display", "Choose the time format shown in the desktop clock.");
-            CheckCard("Show clock", "Show or hide the clock and date panel.", IsEnabled("clock"), delegate(bool v) { _setWidget("clock", v); });
-            ComboCard("Time format", "Choose between a 24-hour and 12-hour clock.", new[] { "24-hour  ·  14:30", "12-hour  ·  02:30 PM" },
-                _clockFormat == "12h" ? "12-hour  ·  02:30 PM" : "24-hour  ·  14:30",
-                delegate(string v) { _setClockFormat(v.StartsWith("12-hour", StringComparison.Ordinal) ? "12h" : "24h"); });
+            Section("Application updates", "Manage how ChronoDesk checks for new versions.");
+            InfoCard("Current version", "Installed version information will be displayed here.");
+            StaticToggle("Check for updates automatically", "Check for a newer version when the application starts.", true);
+            StaticToggle("Include pre-release versions", "Allow optional beta and preview updates.", false);
+            StaticCombo("Update channel", "Choose which releases are offered.", "Stable", "Stable", "Beta");
+            ActionCard("Check for updates", "Check whether a newer version is available.", "Check now", delegate { });
+            Section("Update installation", "Choose how available updates are installed.");
+            StaticToggle("Download updates automatically", "Download update packages when available.", false);
+            StaticToggle("Ask before installing", "Request confirmation before applying an update.", true);
         }
 
-        private void BuildRates()
+        private void BuildAbout()
         {
-            Section("Market data", "Configure the live quote panel.");
-            CheckCard("Show Market Rates", "Show or hide the market rates panel.", IsEnabled("rates"), delegate(bool v) { _setWidget("rates", v); });
-            ComboCard("Display currency", "Choose the unit used for market values.", new[] { "Toman (T)", "Dollar ($)" }, _unit == "$" ? "Dollar ($)" : "Toman (T)",
-                delegate(string v) { _setRateUnit(v.StartsWith("Dollar", StringComparison.Ordinal) ? "$" : "T"); });
-            ActionCard("Refresh market data", "Request the latest available market quotes.", "Refresh now", delegate { _refreshRates(); });
+            Section("ChronoDesk Widget", "Application details.");
+            InfoCard("ChronoDesk Widget", "A configurable desktop workspace with lightweight widgets.");
+            StaticInfo("Version", "Version information will appear here.");
+            StaticInfo("Developer", "Project and maintainer information.");
+            StaticInfo("License", "License information.");
+            Section("Resources", "Project links and support information.");
+            ActionCard("Source code", "View the project repository and source files.", "Open GitHub", delegate { });
+            ActionCard("Documentation", "View setup instructions and feature documentation.", "View docs", delegate { });
+            StaticInfo("Privacy", "Local preferences and widget data are stored on this device unless a feature states otherwise.");
         }
 
-        private void ResizePageItems()
+        private void WidgetCard(string title, string description, string key, Action options)
         {
-            if (_page == null || _page.IsDisposed) return;
-            int width = Math.Max(500, _pageHost.ClientSize.Width - 42);
-            foreach (Control control in _page.Controls) control.Width = width;
+            Panel card = NewCard(92);
+            CardText(card, title, description);
+            CheckBox check = new CheckBox { Checked = IsEnabled(key), AutoSize = false, Size = new Size(44, 26), Location = new Point(card.Width - 62, 17), Anchor = AnchorStyles.Top | AnchorStyles.Right, BackColor = _surface, Cursor = Cursors.Hand };
+            check.CheckedChanged += delegate { _setWidget(key, check.Checked); };
+            card.Controls.Add(check);
+            Button configure = new Button { Text = "Options  ›", Size = new Size(100, 29), Location = new Point(card.Width - 122, 52), Anchor = AnchorStyles.Top | AnchorStyles.Right, FlatStyle = FlatStyle.Flat, BackColor = _surfaceHover, ForeColor = Color.FromArgb(174, 197, 226), Font = new Font("Segoe UI", 8F), Cursor = Cursors.Hand };
+            configure.FlatAppearance.BorderSize = 0;
+            configure.Click += delegate { options(); ResizePageItems(); };
+            card.Controls.Add(configure);
+            _page.Controls.Add(card);
+        }
+
+        private void StaticInfo(string title, string description)
+        {
+            Panel card = NewCard(66);
+            card.Controls.Add(new Label { Text = title, Location = new Point(16, 11), AutoSize = true, ForeColor = _text, Font = new Font("Segoe UI Semibold", 9F) });
+            card.Controls.Add(new Label { Text = description, Location = new Point(17, 34), AutoSize = true, ForeColor = _muted, Font = new Font("Segoe UI", 8.2F) });
+            _page.Controls.Add(card);
+        }
+
+        private void StaticToggle(string title, string description, bool value)
+        {
+            Panel card = NewCard(76); CardText(card, title, description);
+            CheckBox check = new CheckBox { Checked = value, AutoSize = false, Size = new Size(44, 26), Location = new Point(card.Width - 62, 24), Anchor = AnchorStyles.Top | AnchorStyles.Right, BackColor = _surface, Cursor = Cursors.Hand };
+            card.Controls.Add(check); _page.Controls.Add(card);
+        }
+
+        private void StaticCombo(string title, string description, string selected, params string[] values)
+        {
+            Panel card = NewCard(86); CardText(card, title, description);
+            ComboBox combo = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 8.5F), BackColor = _surfaceHover, ForeColor = _text, Width = 210, Height = 30, Location = new Point(card.Width - 238, 27), Anchor = AnchorStyles.Top | AnchorStyles.Right };
+            combo.Items.AddRange(values); combo.SelectedItem = selected;
+            if (combo.SelectedIndex < 0 && combo.Items.Count > 0) combo.SelectedIndex = 0;
+            card.Controls.Add(combo); _page.Controls.Add(card);
         }
 
         private void Section(string title, string description)
@@ -342,8 +426,7 @@ namespace ChronoDeskWidget
             Panel card = NewCard(76); CardText(card, title, description);
             CheckBox check = new CheckBox { Checked = value, AutoSize = false, Size = new Size(44, 26), Location = new Point(card.Width - 62, 24), Anchor = AnchorStyles.Top | AnchorStyles.Right, BackColor = _surface, Cursor = Cursors.Hand };
             check.CheckedChanged += delegate { changed(check.Checked); };
-            card.Controls.Add(check);
-            _page.Controls.Add(card);
+            card.Controls.Add(check); _page.Controls.Add(card);
         }
 
         private void ComboCard(string title, string description, string[] values, string selected, Action<string> changed)
@@ -352,8 +435,7 @@ namespace ChronoDeskWidget
             ComboBox combo = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 8.5F), BackColor = _surfaceHover, ForeColor = _text, Width = 210, Height = 30, Location = new Point(card.Width - 238, 27), Anchor = AnchorStyles.Top | AnchorStyles.Right };
             combo.Items.AddRange(values); combo.SelectedItem = selected;
             combo.SelectedIndexChanged += delegate { if (combo.SelectedItem != null) changed(combo.SelectedItem.ToString()); };
-            card.Controls.Add(combo);
-            _page.Controls.Add(card);
+            card.Controls.Add(combo); _page.Controls.Add(card);
         }
 
         private void ActionCard(string title, string description, string buttonText, Action action)
@@ -376,6 +458,13 @@ namespace ChronoDeskWidget
             card.Controls.Add(new Label { Text = title, Location = new Point(48, 13), AutoSize = true, ForeColor = _text, Font = new Font("Segoe UI Semibold", 9F) });
             card.Controls.Add(new Label { Text = description, Location = new Point(48, 39), AutoSize = true, ForeColor = _muted, Font = new Font("Segoe UI", 8.2F) });
             _page.Controls.Add(card);
+        }
+
+        private void ResizePageItems()
+        {
+            if (_page == null || _page.IsDisposed) return;
+            int width = Math.Max(500, _pageHost.ClientSize.Width - 42);
+            foreach (Control control in _page.Controls) control.Width = width;
         }
     }
 }
