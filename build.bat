@@ -38,6 +38,9 @@ if not exist "bin\Release\ChronoDeskWidget.exe" (
   goto :fail
 )
 
+copy /Y "Uninstall-Widget.ps1" "bin\Release\Uninstall-Widget.ps1" >nul
+copy /Y "Uninstall-Widget.bat" "bin\Release\Uninstall-Widget.bat" >nul
+
 echo.
 echo Build succeeded: %CD%\bin\Release\ChronoDeskWidget.exe
 exit /b 0
