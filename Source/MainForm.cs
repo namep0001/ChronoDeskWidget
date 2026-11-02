@@ -196,6 +196,7 @@ namespace ChronoDeskWidget
 
             BuildContent();
             BuildTrayIcon();
+            RepairStartupRegistration();
             SystemEvents.UserPreferenceChanged += OnSystemPreferenceChanged;
 
             _tickTimer = new System.Windows.Forms.Timer();
@@ -1119,7 +1120,7 @@ namespace ChronoDeskWidget
             panel.Controls.Add(today);
 
             _calendarSolarButton = new RoundedButton();
-            _calendarSolarButton.Text = T("Solar Hijri", "هجری شمسی");
+            _calendarSolarButton.Text = "هجری شمسی";
             _calendarSolarButton.Size = new Size(94, 24);
             _calendarSolarButton.Location = new Point(51, 56);
             _calendarSolarButton.Font = GetUiFont(7.8F, FontStyle.Bold);
@@ -1785,7 +1786,7 @@ namespace ChronoDeskWidget
             if (_showSolarCalendar)
             {
                 first = _persianCalendar.ToDateTime(year, month, 1, 0, 0, 0, 0);
-                monthText = (_language == "fa" ? _solarMonthsFa[month - 1] : _solarMonthsEn[month - 1]) + "  " + (_language == "fa" ? ToPersianDigits(year.ToString()) : year.ToString());
+                monthText = _solarMonthsFa[month - 1] + "  " + (_language == "fa" ? ToPersianDigits(year.ToString()) : year.ToString());
             }
             else
             {
@@ -2396,6 +2397,10 @@ namespace ChronoDeskWidget
             startupItem.Click += delegate { SetStartup(startupItem.Checked); };
             menu.Items.Add(startupItem);
 
+            ToolStripMenuItem uninstallItem = new ToolStripMenuItem(T("Uninstall ChronoDesk Widget", "حذف کامل ChronoDesk Widget"));
+            uninstallItem.Click += delegate { UninstallApplication(); };
+            menu.Items.Add(uninstallItem);
+
             menu.Items.Add(new ToolStripSeparator());
             ToolStripMenuItem exitItem = new ToolStripMenuItem(T("Exit", "خروج"));
             AddTrayImage(exitItem, "exit", ownedImages);
@@ -2669,6 +2674,23 @@ namespace ChronoDeskWidget
             catch { return false; }
         }
 
+        private void RepairStartupRegistration()
+        {
+            try
+            {
+                using (RegistryKey key = Registry.CurrentUser.OpenSubKey(RunKeyPath, true))
+                {
+                    if (key == null) return;
+                    object value = key.GetValue(RunValueName);
+                    if (value == null) return;
+                    string currentCommand = "\"" + Application.ExecutablePath + "\"";
+                    if (!string.Equals(Convert.ToString(value), currentCommand, StringComparison.OrdinalIgnoreCase))
+                        key.SetValue(RunValueName, currentCommand, RegistryValueKind.String);
+                }
+            }
+            catch { }
+        }
+
         private void SetStartup(bool enabled)
         {
             try
@@ -2681,12 +2703,51 @@ namespace ChronoDeskWidget
                     else
                         key.DeleteValue(RunValueName, false);
                 }
+                if (enabled)
+                {
+                    using (RegistryKey approved = Registry.CurrentUser.OpenSubKey(@"Software\Microsoft\Windows\CurrentVersion\Explorer\StartupApproved\Run", true))
+                    {
+                        if (approved != null) approved.DeleteValue(RunValueName, false);
+                    }
+                }
                 BuildTrayMenu();
             }
             catch (Exception ex)
             {
                 MessageBox.Show(T("Could not change startup setting: ", "تغییر تنظیم شروع ویندوز ناموفق بود: ") + ex.Message,
                     AppName, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
+        }
+
+        private void UninstallApplication()
+        {
+            DialogResult answer = MessageBox.Show(
+                T("Uninstall ChronoDesk Widget and delete its settings and application folder?", "ویجت ChronoDesk، تنظیمات و پوشه برنامه به‌طور کامل حذف شوند؟"),
+                AppName, MessageBoxButtons.YesNo, MessageBoxIcon.Warning, MessageBoxDefaultButton.Button2);
+            if (answer != DialogResult.Yes) return;
+
+            string script = Path.Combine(Application.StartupPath, "Uninstall-Widget.ps1");
+            if (!File.Exists(script))
+            {
+                MessageBox.Show(T("Uninstaller file is missing. Run Uninstall-Widget.ps1 from the application folder.", "فایل حذف‌کننده پیدا نشد. فایل Uninstall-Widget.ps1 را از پوشه برنامه اجرا کنید."),
+                    AppName, MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
+
+            try
+            {
+                ProcessStartInfo start = new ProcessStartInfo();
+                start.FileName = "powershell.exe";
+                start.Arguments = "-NoProfile -ExecutionPolicy Bypass -File \"" + script + "\" -Confirmed -AppProcessId " + Process.GetCurrentProcess().Id.ToString(CultureInfo.InvariantCulture);
+                start.UseShellExecute = false;
+                start.CreateNoWindow = true;
+                Process.Start(start);
+                ExitApplication();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(T("Could not start the uninstaller: ", "اجرای حذف‌کننده ناموفق بود: ") + ex.Message,
+                    AppName, MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
