@@ -1649,7 +1649,8 @@ namespace ChronoDeskWidget
             if (_clockLabel == null || IsDisposed) return;
             DateTime now = DateTime.Now;
             CultureInfo english = CultureInfo.GetCultureInfo("en-US");
-            string time = now.ToString("HH:mm", CultureInfo.InvariantCulture);
+            string clockFormat = LocalStore.LoadSetting("clock.format", "24h");
+            string time = now.ToString(clockFormat == "12h" ? "hh:mm tt" : "HH:mm", CultureInfo.InvariantCulture);
             _clockLabel.Text = _language == "fa" ? ToPersianDigits(time) : time;
 
             string gregorian = now.ToString("dddd, dd MMMM yyyy", english);
@@ -2268,141 +2269,52 @@ namespace ChronoDeskWidget
         {
             ContextMenuStrip menu = new ContextMenuStrip();
             menu.Font = GetUiFont(9F, FontStyle.Regular);
-            menu.ForeColor = Color.FromArgb(34, 40, 49);
-            menu.BackColor = Color.White;
             menu.Padding = new Padding(4);
-            menu.ImageScalingSize = new Size(18, 18);
-            menu.ShowImageMargin = true;
-            menu.ShowCheckMargin = true;
-            menu.Renderer = new ToolStripProfessionalRenderer(new WidgetColorTable(
-                Color.White, Color.FromArgb(239, 243, 248), Color.FromArgb(34, 40, 49),
-                Color.FromArgb(105, 113, 125), Color.FromArgb(76, 86, 100), Color.FromArgb(215, 221, 230)));
-
-            List<Image> ownedImages = new List<Image>();
-            menu.Disposed += delegate
-            {
-                foreach (Image image in ownedImages) image.Dispose();
-                ownedImages.Clear();
-            };
-
             ToolStripMenuItem showItem = new ToolStripMenuItem(T("Show widget", "نمایش ویجت"));
             showItem.Enabled = AnyWidgetVisible() && !Visible;
             showItem.Click += delegate { ShowFromTray(); };
-            AddTrayImage(showItem, "show", ownedImages);
             menu.Items.Add(showItem);
-
             ToolStripMenuItem hideItem = new ToolStripMenuItem(T("Hide widget", "مخفی‌کردن ویجت"));
             hideItem.Enabled = Visible;
             hideItem.Click += delegate { HideToTray(); };
-            AddTrayImage(hideItem, "hide", ownedImages);
             menu.Items.Add(hideItem);
             menu.Items.Add(new ToolStripSeparator());
-
-            ToolStripMenuItem widgetsItem = new ToolStripMenuItem(T("Visible widgets", "بخش‌های قابل نمایش"));
-            AddTrayImage(widgetsItem, "widgets", ownedImages);
-            AddWidgetToggle(widgetsItem, "clock", T("Clock and dates", "ساعت و تاریخ"));
-            AddWidgetToggle(widgetsItem, "calendar", T("Calendar", "تقویم"));
-            AddWidgetToggle(widgetsItem, "tasks", T("Tasks", "وظایف"));
-            AddWidgetToggle(widgetsItem, "pomodoro", T("Pomodoro timer", "زمان‌سنج پومودورو"));
-            AddWidgetToggle(widgetsItem, "notes", T("Quick note", "یادداشت سریع"));
-            AddWidgetToggle(widgetsItem, "rates", T("Market rates", "نرخ بازار"));
-            AddWidgetToggle(widgetsItem, "network", T("Network monitor", "پایش شبکه"));
-            AddWidgetToggle(widgetsItem, "calculator", T("Calculator", "ماشین‌حساب"));
-            AddWidgetToggle(widgetsItem, "system", T("System monitor", "پایش سیستم"));
-            menu.Items.Add(widgetsItem);
-
-            ToolStripMenuItem opacityItem = new ToolStripMenuItem(T("Widget opacity", "شفافیت ویجت"));
-            AddTrayImage(opacityItem, "opacity", ownedImages);
-            int[] opacityOptions = { 100, 90, 80, 70, 60, 50 };
-            foreach (int percent in opacityOptions)
-            {
-                int selectedPercent = percent;
-                ToolStripMenuItem opacityOption = new ToolStripMenuItem(percent + "%");
-                opacityOption.Checked = _opacityPercent == percent;
-                opacityOption.Click += delegate { SetWidgetOpacity(selectedPercent); };
-                opacityItem.DropDownItems.Add(opacityOption);
-            }
-            menu.Items.Add(opacityItem);
-
-            ToolStripMenuItem themeItem = new ToolStripMenuItem(T("Theme", "پوسته"));
-            AddTrayImage(themeItem, "theme", ownedImages);
-            ToolStripMenuItem systemTheme = new ToolStripMenuItem(T("System", "هماهنگ با سیستم"));
-            systemTheme.Checked = _themeMode == "system";
-            systemTheme.Click += delegate { SetThemeMode("system"); };
-            ToolStripMenuItem lightTheme = new ToolStripMenuItem(T("Light", "روشن"));
-            lightTheme.Checked = _themeMode == "light";
-            lightTheme.Click += delegate { SetThemeMode("light"); };
-            ToolStripMenuItem darkTheme = new ToolStripMenuItem(T("Dark", "تاریک"));
-            darkTheme.Checked = _themeMode == "dark";
-            darkTheme.Click += delegate { SetThemeMode("dark"); };
-            themeItem.DropDownItems.Add(systemTheme);
-            themeItem.DropDownItems.Add(lightTheme);
-            themeItem.DropDownItems.Add(darkTheme);
-            menu.Items.Add(themeItem);
-
-            ToolStripMenuItem ratesItem = new ToolStripMenuItem(T("Market rates", "نرخ بازار"));
-            AddTrayImage(ratesItem, "rates", ownedImages);
-            ToolStripMenuItem refreshItem = new ToolStripMenuItem(T("Refresh market rates", "به‌روزرسانی نرخ‌ها"));
-            refreshItem.Enabled = IsWidgetVisible("rates");
-            refreshItem.Click += delegate { RefreshRates(); };
-            ratesItem.DropDownItems.Add(refreshItem);
-            ratesItem.DropDownItems.Add(new ToolStripSeparator());
-            ToolStripMenuItem unitDollar = new ToolStripMenuItem("Dollar ($)");
-            unitDollar.Checked = _rateUnit == "$";
-            unitDollar.Click += delegate { SetRateUnit("$"); };
-            ToolStripMenuItem unitToman = new ToolStripMenuItem("Toman (T)");
-            unitToman.Checked = _rateUnit == "T";
-            unitToman.Click += delegate { SetRateUnit("T"); };
-            ratesItem.DropDownItems.Add(unitDollar);
-            ratesItem.DropDownItems.Add(unitToman);
+            ToolStripMenuItem settingsItem = new ToolStripMenuItem(T("Settings", "تنظیمات"));
+            settingsItem.Click += delegate { OpenSettings(); };
+            menu.Items.Add(settingsItem);
+            ToolStripMenuItem ratesItem = new ToolStripMenuItem(T("Refresh market rates", "به‌روزرسانی نرخ‌ها"));
+            ratesItem.Enabled = IsWidgetVisible("rates");
+            ratesItem.Click += delegate { RefreshRates(); };
             menu.Items.Add(ratesItem);
-
-            ToolStripMenuItem languageItem = new ToolStripMenuItem(T("Language", "زبان"));
-            AddTrayImage(languageItem, "language", ownedImages);
-            ToolStripMenuItem englishItem = new ToolStripMenuItem("English");
-            ToolStripMenuItem persianItem = new ToolStripMenuItem("فارسی");
-            AddTrayImage(englishItem, "flag-en", ownedImages);
-            AddTrayImage(persianItem, "flag-fa", ownedImages);
-            englishItem.Checked = _language == "en";
-            persianItem.Checked = _language == "fa";
-            englishItem.Click += delegate { SetLanguage("en"); };
-            persianItem.Click += delegate { SetLanguage("fa"); };
-            languageItem.DropDownItems.Add(englishItem);
-            languageItem.DropDownItems.Add(persianItem);
-            menu.Items.Add(languageItem);
-
-            ToolStripMenuItem fontItem = new ToolStripMenuItem(T("Font", "قلم"));
-            AddTrayImage(fontItem, "font", ownedImages);
-            foreach (string family in _fontFamilies)
-            {
-                string selectedFamily = family;
-                ToolStripMenuItem fontOption = new ToolStripMenuItem(family);
-                fontOption.Checked = string.Equals(_fontFamily, family, StringComparison.OrdinalIgnoreCase);
-                fontOption.Click += delegate { SetFontFamily(selectedFamily); };
-                fontItem.DropDownItems.Add(fontOption);
-            }
-            menu.Items.Add(fontItem);
-
-            ToolStripMenuItem topItem = new ToolStripMenuItem(T("Keep on top", "همیشه روی پنجره‌ها"));
-            AddTrayImage(topItem, "pin", ownedImages);
-            topItem.Checked = _keepOnTop;
-            topItem.CheckOnClick = true;
-            topItem.Click += delegate { SetTopmost(topItem.Checked); };
-            menu.Items.Add(topItem);
-
-            ToolStripMenuItem startupItem = new ToolStripMenuItem(T("Start with Windows", "اجرا هنگام ورود به ویندوز"));
-            AddTrayImage(startupItem, "startup", ownedImages);
-            startupItem.Checked = IsStartupEnabled();
-            startupItem.CheckOnClick = true;
-            startupItem.Click += delegate { SetStartup(startupItem.Checked); };
-            menu.Items.Add(startupItem);
-
             menu.Items.Add(new ToolStripSeparator());
             ToolStripMenuItem exitItem = new ToolStripMenuItem(T("Exit", "خروج"));
-            AddTrayImage(exitItem, "exit", ownedImages);
             exitItem.Click += delegate { ExitApplication(); };
             menu.Items.Add(exitItem);
             return menu;
+        }
+
+        private SettingsForm _settingsForm;
+
+        private void OpenSettings()
+        {
+            if (_settingsForm == null || _settingsForm.IsDisposed)
+            {
+                _settingsForm = new SettingsForm(
+                    _language, _themeMode, _opacityPercent, _fontFamily, _rateUnit,
+                    _keepOnTop, IsStartupEnabled(), _widgetVisibility,
+                    SetWidgetVisibility, SetWidgetOpacity, SetThemeMode, SetFontFamily,
+                    SetRateUnit, SetLanguage, SetTopmost, SetStartup,
+                    delegate { if (IsWidgetVisible("rates")) RefreshRates(); },
+                    LocalStore.LoadSetting("clock.format", "24h"),
+                    delegate(string format) { LocalStore.SaveSetting("clock.format", format); UpdateClock(); });
+            }
+            if (_settingsForm.Visible)
+            {
+                _settingsForm.Activate();
+                return;
+            }
+            _settingsForm.Show(this);
+            _settingsForm.Activate();
         }
 
         private void AddTrayImage(ToolStripMenuItem item, string kind, List<Image> ownedImages)
