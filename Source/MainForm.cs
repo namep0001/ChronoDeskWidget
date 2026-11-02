@@ -2397,10 +2397,6 @@ namespace ChronoDeskWidget
             startupItem.Click += delegate { SetStartup(startupItem.Checked); };
             menu.Items.Add(startupItem);
 
-            ToolStripMenuItem uninstallItem = new ToolStripMenuItem(T("Uninstall ChronoDesk Widget", "حذف کامل ChronoDesk Widget"));
-            uninstallItem.Click += delegate { UninstallApplication(); };
-            menu.Items.Add(uninstallItem);
-
             menu.Items.Add(new ToolStripSeparator());
             ToolStripMenuItem exitItem = new ToolStripMenuItem(T("Exit", "خروج"));
             AddTrayImage(exitItem, "exit", ownedImages);

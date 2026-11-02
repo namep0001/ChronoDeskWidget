@@ -362,7 +362,7 @@ namespace ChronoDeskWidget
 
             if (_kind == "usd")
             {
-                int diameter = Math.Min(Width, Height) - 2;
+                int diameter = Math.Min(Width, Height);
                 Rectangle circle = new Rectangle((Width - diameter) / 2, (Height - diameter) / 2, diameter, diameter);
                 GraphicsState state = g.Save();
                 using (GraphicsPath clip = new GraphicsPath())
