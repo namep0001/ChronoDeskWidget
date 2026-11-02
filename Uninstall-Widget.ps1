@@ -66,8 +66,8 @@ $tempCmd = Join-Path $env:TEMP ("ChronoDeskWidget-Uninstall-" + [guid]::NewGuid(
 $waitPids = @($appProcesses)
 if ($AppProcessId -gt 0 -and $waitPids -notcontains $AppProcessId) { $waitPids += $AppProcessId }
 $lines = @("@echo off", ":wait")
-foreach ($pid in $waitPids) {
-    $lines += "tasklist /FI `"PID eq $pid`" 2>NUL | findstr `"$pid`" >NUL"
+foreach ($processId in $waitPids) {
+    $lines += "tasklist /FI `"PID eq $processId`" 2>NUL | findstr `"$processId`" >NUL"
     $lines += "if not errorlevel 1 (timeout /t 1 /nobreak >NUL & goto wait)"
 }
 $escapedDir = $installDir.Replace('"','""')
