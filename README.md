@@ -50,26 +50,6 @@ A lightweight Windows desktop companion built with C#, Windows Forms, and .NET F
 
 The executable is generated at bin/Release/ChronoDeskWidget.exe. You can also open ChronoDeskWidget.csproj in Visual Studio and build the Release configuration.
 
-## Repository layout
-
-    ChronoDeskWidget/
-    ├── .github/workflows/       # Windows CI and release automation
-    ├── Source/
-    │   ├── AssemblyInfo.cs     # Product and assembly metadata
-    │   ├── Program.cs          # Application entry point
-    │   ├── MainForm.cs         # Main window and widget composition
-    │   ├── WidgetControls.cs   # Reusable controls and drawing
-    │   ├── LocalStore.cs       # Local settings and data persistence
-    │   ├── TgjuClient.cs       # Market quote retrieval and parsing
-    │   ├── SystemWidgets.cs    # Network and system metrics
-    │   └── Generate-AppIcon.ps1
-    ├── ChronoDeskWidget.csproj
-    ├── Start-Widget.bat
-    ├── build.bat
-    ├── CHANGELOG.md
-    ├── index.html              # Project website
-    └── README.md
-
 ## Data and privacy
 
 Tasks, notes, settings, window position, network usage history, and startup error logs are stored locally under:
@@ -78,12 +58,9 @@ Tasks, notes, settings, window position, network usage history, and startup erro
 
 The application does not upload task, note, settings, or network-history data. Network monitoring reads Windows network counters and performs periodic connectivity checks. Usage history is collected only while the application is running; traffic during periods when it is closed cannot be reconstructed.
 
-Market quotes are retrieved from public TGJU pages:
-- [USD](https://www.tgju.org/profile/price_dollar_rl)
-- [EUR](https://www.tgju.org/profile/price_eur)
-- [18-karat gold](https://www.tgju.org/profile/geram18)
+Market quotes are retrieved from public TGJU pages.
 
-TGJU quotes are sourced in Rial. Toman display divides the source value by ten. Dollar display uses the live USD quote as its conversion reference. Market rates require an internet connection; unavailable source data is shown as unavailable.
+TGJU is a Persian website. Market rates require an internet connection; unavailable source data is shown as unavailable.
 
 ## Build and release automation
 
