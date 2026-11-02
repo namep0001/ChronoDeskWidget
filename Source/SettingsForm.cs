@@ -76,14 +76,27 @@ namespace ChronoDeskWidget
             };
             topBar.Controls.Add(settingIcon);
             topBar.Controls.Add(new Label { Text = "Setting", Location = new Point(57, 17), AutoSize = true, ForeColor = _text, Font = new Font("Segoe UI Semibold", 13F) });
-            Button close = new Button { Text = "×", Size = new Size(34, 34), Location = new Point(Width - 52, 12), Anchor = AnchorStyles.Top | AnchorStyles.Right, FlatStyle = FlatStyle.Flat, FlatAppearance = { BorderSize = 0 }, BackColor = _background, ForeColor = _muted, Font = new Font("Segoe UI", 19F), TextAlign = ContentAlignment.MiddleCenter, UseVisualStyleBackColor = false, Cursor = Cursors.Hand };
+            Button close = new Button { Text = "", Size = new Size(34, 34), Location = new Point(Width - 52, 12), Anchor = AnchorStyles.Top | AnchorStyles.Right, FlatStyle = FlatStyle.Flat, FlatAppearance = { BorderSize = 0 }, BackColor = _background, ForeColor = _muted, UseVisualStyleBackColor = false, Cursor = Cursors.Hand };
             close.FlatAppearance.MouseOverBackColor = Color.FromArgb(174, 55, 65);
             close.FlatAppearance.MouseDownBackColor = Color.FromArgb(140, 42, 52);
+            close.Paint += delegate(object sender, PaintEventArgs e)
+            {
+                e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+                float cx = close.ClientSize.Width / 2F;
+                float cy = close.ClientSize.Height / 2F;
+                using (Pen p = new Pen(close.ClientRectangle.Contains(close.PointToClient(Cursor.Position)) ? Color.White : _muted, 1.8F))
+                {
+                    p.StartCap = LineCap.Round; p.EndCap = LineCap.Round;
+                    e.Graphics.DrawLine(p, cx - 5F, cy - 5F, cx + 5F, cy + 5F);
+                    e.Graphics.DrawLine(p, cx + 5F, cy - 5F, cx - 5F, cy + 5F);
+                }
+            };
             close.Click += delegate { Close(); };
             topBar.Controls.Add(close);
             AttachDragHandlers(topBar);
             AttachDragHandlers(settingIcon);
             topBar.Controls.Add(new Panel { Dock = DockStyle.Bottom, Height = 1, BackColor = _border });
+            AttachDragHandlers(topBar);
 
             Panel sidebar = new Panel { Dock = DockStyle.Left, Width = 218, BackColor = _sidebar, Padding = new Padding(14, 18, 14, 14) };
             Controls.Add(sidebar);
@@ -383,7 +396,7 @@ namespace ChronoDeskWidget
         private void WidgetCard(string title, string description, string key, Action options)
         {
             Panel card = NewCard(92);
-            CardText(card, title, description);
+            CardText(card, title, description, 132);
             CheckBox check = new CheckBox { Checked = IsEnabled(key), AutoSize = false, Size = new Size(44, 26), Location = new Point(card.Width - 62, 17), Anchor = AnchorStyles.Top | AnchorStyles.Right, BackColor = _surface, Cursor = Cursors.Hand };
             check.CheckedChanged += delegate { _setWidget(key, check.Checked); };
             card.Controls.Add(check);
@@ -404,14 +417,14 @@ namespace ChronoDeskWidget
 
         private void StaticToggle(string title, string description, bool value)
         {
-            Panel card = NewCard(76); CardText(card, title, description);
+            Panel card = NewCard(76); CardText(card, title, description, 64);
             CheckBox check = new CheckBox { Checked = value, AutoSize = false, Size = new Size(44, 26), Location = new Point(card.Width - 62, 24), Anchor = AnchorStyles.Top | AnchorStyles.Right, BackColor = _surface, Cursor = Cursors.Hand };
             card.Controls.Add(check); _page.Controls.Add(card);
         }
 
         private void StaticCombo(string title, string description, string selected, params string[] values)
         {
-            Panel card = NewCard(86); CardText(card, title, description);
+            Panel card = NewCard(86); CardText(card, title, description, 250);
             ComboBox combo = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 8.5F), BackColor = _surfaceHover, ForeColor = _text, Width = 210, Height = 30, Location = new Point(card.Width - 238, 27), Anchor = AnchorStyles.Top | AnchorStyles.Right };
             combo.Items.AddRange(values); combo.SelectedItem = selected;
             if (combo.SelectedIndex < 0 && combo.Items.Count > 0) combo.SelectedIndex = 0;
@@ -436,15 +449,24 @@ namespace ChronoDeskWidget
             return card;
         }
 
-        private void CardText(Panel card, string title, string description)
+        private void CardText(Panel card, string title, string description, int rightReserve = 0)
         {
-            card.Controls.Add(new Label { Text = title, Location = new Point(16, 14), AutoSize = true, ForeColor = _text, Font = new Font("Segoe UI Semibold", 9.2F) });
-            card.Controls.Add(new Label { Text = description, Location = new Point(17, 39), AutoSize = true, ForeColor = _muted, Font = new Font("Segoe UI", 8.2F) });
+            int textWidth = Math.Max(80, card.ClientSize.Width - 32 - rightReserve);
+            card.Controls.Add(new Label {
+                Text = title, Location = new Point(16, 12), Size = new Size(textWidth, 22),
+                AutoSize = false, AutoEllipsis = true, ForeColor = _text,
+                Font = new Font("Segoe UI Semibold", 9.2F)
+            });
+            card.Controls.Add(new Label {
+                Text = description, Location = new Point(17, 37), Size = new Size(textWidth, 30),
+                AutoSize = false, AutoEllipsis = true, ForeColor = _muted,
+                Font = new Font("Segoe UI", 8.2F)
+            });
         }
 
         private void CheckCard(string title, string description, bool value, Action<bool> changed)
         {
-            Panel card = NewCard(76); CardText(card, title, description);
+            Panel card = NewCard(76); CardText(card, title, description, 64);
             CheckBox check = new CheckBox { Checked = value, AutoSize = false, Size = new Size(44, 26), Location = new Point(card.Width - 62, 24), Anchor = AnchorStyles.Top | AnchorStyles.Right, BackColor = _surface, Cursor = Cursors.Hand };
             check.CheckedChanged += delegate { changed(check.Checked); };
             card.Controls.Add(check); _page.Controls.Add(card);
@@ -461,7 +483,7 @@ namespace ChronoDeskWidget
 
         private void ActionCard(string title, string description, string buttonText, Action action)
         {
-            Panel card = NewCard(86); CardText(card, title, description);
+            Panel card = NewCard(86); CardText(card, title, description, 170);
             Button button = new Button { Text = buttonText, Size = new Size(132, 34), Location = new Point(card.Width - 158, 25), Anchor = AnchorStyles.Top | AnchorStyles.Right, FlatStyle = FlatStyle.Flat, BackColor = _surfaceHover, ForeColor = _text, Font = new Font("Segoe UI Semibold", 8.5F), Cursor = Cursors.Hand };
             button.FlatAppearance.BorderColor = _border; button.FlatAppearance.MouseOverBackColor = _accentSoft;
             button.Click += delegate { action(); };
@@ -484,8 +506,9 @@ namespace ChronoDeskWidget
         private void ResizePageItems()
         {
             if (_page == null || _page.IsDisposed) return;
-            int availableWidth = _page.ClientSize.Width - _page.Padding.Horizontal - SystemInformation.VerticalScrollBarWidth - 8;
-            int width = Math.Max(100, Math.Min(_pageHost.ClientSize.Width - 24, availableWidth));
+            int scrollBarWidth = _page.VerticalScroll.Visible ? SystemInformation.VerticalScrollBarWidth : 0;
+            int availableWidth = _page.ClientSize.Width - _page.Padding.Horizontal - scrollBarWidth - 6;
+            int width = Math.Max(100, availableWidth);
             foreach (Control control in _page.Controls) control.Width = width;
         }
     }
