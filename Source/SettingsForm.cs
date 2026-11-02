@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Windows.Forms;
+using System.Runtime.InteropServices;
 
 namespace ChronoDeskWidget
 {
@@ -31,7 +32,14 @@ namespace ChronoDeskWidget
         private FlowLayoutPanel _page;
         private Label _pageTitle, _pageDescription;
         private string _active = "General";
-        private Point _dragOrigin;
+        private const int WmNcLButtonDown = 0xA1;
+        private const int HtCaption = 2;
+
+        [DllImport("user32.dll")]
+        private static extern bool ReleaseCapture();
+
+        [DllImport("user32.dll")]
+        private static extern IntPtr SendMessage(IntPtr hWnd, int msg, IntPtr wParam, IntPtr lParam);
 
         public SettingsForm(string language, string theme, int opacity, string font, string rateUnit,
             bool topmost, bool startup, IDictionary<string, bool> widgets,
@@ -76,7 +84,7 @@ namespace ChronoDeskWidget
             };
             topBar.Controls.Add(settingIcon);
             topBar.Controls.Add(new Label { Text = "Setting", Location = new Point(57, 17), AutoSize = true, ForeColor = _text, Font = new Font("Segoe UI Semibold", 13F) });
-            Button close = new Button { Text = "", Size = new Size(34, 34), Location = new Point(Width - 52, 12), Anchor = AnchorStyles.Top | AnchorStyles.Right, FlatStyle = FlatStyle.Flat, FlatAppearance = { BorderSize = 0 }, BackColor = _background, ForeColor = _muted, UseVisualStyleBackColor = false, Cursor = Cursors.Hand };
+            Button close = new Button { Text = "", Size = new Size(34, 34), Location = new Point(Width - 70, 12), Anchor = AnchorStyles.Top | AnchorStyles.Right, FlatStyle = FlatStyle.Flat, FlatAppearance = { BorderSize = 0 }, BackColor = _background, ForeColor = _muted, UseVisualStyleBackColor = false, Cursor = Cursors.Hand };
             close.FlatAppearance.MouseOverBackColor = Color.FromArgb(174, 55, 65);
             close.FlatAppearance.MouseDownBackColor = Color.FromArgb(140, 42, 52);
             close.Paint += delegate(object sender, PaintEventArgs e)
@@ -98,10 +106,22 @@ namespace ChronoDeskWidget
             topBar.Controls.Add(new Panel { Dock = DockStyle.Bottom, Height = 1, BackColor = _border });
             AttachDragHandlers(topBar);
 
-            Panel sidebar = new Panel { Dock = DockStyle.Left, Width = 218, BackColor = _sidebar, Padding = new Padding(14, 18, 14, 14) };
-            Controls.Add(sidebar);
-            Panel main = new Panel { Dock = DockStyle.Fill, BackColor = _background, Padding = new Padding(30, 24, 30, 22) };
-            Controls.Add(main);
+            Panel body = new Panel { Dock = DockStyle.Fill, BackColor = _background };
+            Controls.Add(body);
+
+            Panel sidebar = new Panel { Location = Point.Empty, Width = 218, BackColor = _sidebar, Padding = new Padding(14, 18, 14, 14), Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left };
+            body.Controls.Add(sidebar);
+
+            Panel main = new Panel { Location = new Point(sidebar.Width, 0), BackColor = _background, Padding = new Padding(30, 24, 30, 22), Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right };
+            body.Controls.Add(main);
+
+            Action layoutBody = delegate
+            {
+                sidebar.Bounds = new Rectangle(0, 0, 218, body.ClientSize.Height);
+                main.Bounds = new Rectangle(sidebar.Right, 0, Math.Max(0, body.ClientSize.Width - sidebar.Width), body.ClientSize.Height);
+            };
+            body.Resize += delegate { layoutBody(); };
+            layoutBody();
 
             FlowLayoutPanel nav = new FlowLayoutPanel { Dock = DockStyle.Fill, FlowDirection = FlowDirection.TopDown, WrapContents = false, AutoScroll = false, BackColor = _sidebar, Padding = new Padding(0, 2, 0, 0) };
             sidebar.Controls.Add(nav);
@@ -123,11 +143,10 @@ namespace ChronoDeskWidget
             main.Controls.Add(_pageHost);
             main.Controls.SetChildIndex(heading, 0);
             main.Controls.SetChildIndex(_pageHost, 1);
-            Controls.SetChildIndex(topBar, 0);
-            Controls.SetChildIndex(sidebar, 1);
-            Controls.SetChildIndex(main, 2);
+            Controls.SetChildIndex(body, 1);
             _pageHost.Resize += delegate { ResizePageItems(); };
             AttachDragHandlers(main);
+            AttachDragHandlers(body);
             ShowPage("General");
         }
 
@@ -148,13 +167,9 @@ namespace ChronoDeskWidget
 
         private void BeginWindowDrag(object sender, MouseEventArgs e)
         {
-            if (e.Button == MouseButtons.Left) _dragOrigin = e.Location;
-            if (e.Button == MouseButtons.Left)
-            {
-                Capture = false;
-                Message m = Message.Create(Handle, 0xA1, new IntPtr(2), IntPtr.Zero);
-                WndProc(ref m);
-            }
+            if (e.Button != MouseButtons.Left) return;
+            ReleaseCapture();
+            SendMessage(Handle, WmNcLButtonDown, new IntPtr(HtCaption), IntPtr.Zero);
         }
 
         private void AddNav(FlowLayoutPanel parent, string key, string glyph)
