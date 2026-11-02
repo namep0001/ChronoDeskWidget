@@ -145,7 +145,7 @@ namespace ChronoDeskWidget
                 Size = new Size(194, child ? 34 : 39), Margin = new Padding(0, 1, 0, 3),
                 FlatStyle = FlatStyle.Flat, BackColor = _sidebar,
                 ForeColor = child ? Color.FromArgb(166, 180, 199) : _text,
-                Font = new Font("Segoe UI", child ? 8.5F : 9F, child ? FontStyle.Regular : FontStyle.Semibold),
+                Font = new Font("Segoe UI", child ? 8.5F : 9F, child ? FontStyle.Regular : FontStyle.Bold),
                 Cursor = Cursors.Hand, Padding = new Padding(child ? 13 : 8, 0, 0, 0)
             };
             b.FlatAppearance.BorderSize = 0;
