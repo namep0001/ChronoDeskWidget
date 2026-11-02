@@ -2715,38 +2715,6 @@ namespace ChronoDeskWidget
             }
         }
 
-        private void UninstallApplication()
-        {
-            DialogResult answer = MessageBox.Show(
-                T("Uninstall ChronoDesk Widget and delete its settings and application folder?", "ویجت ChronoDesk، تنظیمات و پوشه برنامه به‌طور کامل حذف شوند؟"),
-                AppName, MessageBoxButtons.YesNo, MessageBoxIcon.Warning, MessageBoxDefaultButton.Button2);
-            if (answer != DialogResult.Yes) return;
-
-            string script = Path.Combine(Application.StartupPath, "Uninstall-Widget.ps1");
-            if (!File.Exists(script))
-            {
-                MessageBox.Show(T("Uninstaller file is missing. Run Uninstall-Widget.ps1 from the application folder.", "فایل حذف‌کننده پیدا نشد. فایل Uninstall-Widget.ps1 را از پوشه برنامه اجرا کنید."),
-                    AppName, MessageBoxButtons.OK, MessageBoxIcon.Error);
-                return;
-            }
-
-            try
-            {
-                ProcessStartInfo start = new ProcessStartInfo();
-                start.FileName = "powershell.exe";
-                start.Arguments = "-NoProfile -ExecutionPolicy Bypass -File \"" + script + "\" -Confirmed -AppProcessId " + Process.GetCurrentProcess().Id.ToString(CultureInfo.InvariantCulture);
-                start.UseShellExecute = false;
-                start.CreateNoWindow = true;
-                Process.Start(start);
-                ExitApplication();
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show(T("Could not start the uninstaller: ", "اجرای حذف‌کننده ناموفق بود: ") + ex.Message,
-                    AppName, MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
-        }
-
         private void ShowFromTray()
         {
             if (IsDisposed || !AnyWidgetVisible()) return;

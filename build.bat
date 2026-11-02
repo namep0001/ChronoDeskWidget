@@ -9,8 +9,10 @@ if not exist "Source\MainForm.cs" (
 
 if not exist "bin\Release" mkdir "bin\Release"
 
-echo Generating the application icon...
+echo Generating application and uninstaller icons...
 powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0Source\Generate-AppIcon.ps1"
+if errorlevel 1 goto :fail
+powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0Source\Generate-UninstallerIcon.ps1"
 if errorlevel 1 goto :fail
 
 set "CSC="
@@ -40,6 +42,9 @@ if not exist "bin\Release\ChronoDeskWidget.exe" (
 
 copy /Y "Uninstall-Widget.ps1" "bin\Release\Uninstall-Widget.ps1" >nul
 copy /Y "Uninstall-Widget.bat" "bin\Release\Uninstall-Widget.bat" >nul
+copy /Y "Source\Uninstall-Widget.ico" "bin\Release\Uninstall-Widget.ico" >nul
+powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0Source\Create-UninstallerShortcuts.ps1" -TargetDirectory "%CD%\bin\Release"
+if errorlevel 1 goto :fail
 
 echo.
 echo Build succeeded: %CD%\bin\Release\ChronoDeskWidget.exe
