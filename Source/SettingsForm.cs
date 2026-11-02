@@ -144,8 +144,23 @@ namespace ChronoDeskWidget
             main.Controls.Add(_pageHost);
             Action layoutMain = delegate
             {
-                _heading.Bounds = new Rectangle(0, 0, main.ClientSize.Width, 92);
-                _pageHost.Bounds = new Rectangle(0, 92, main.ClientSize.Width, Math.Max(0, main.ClientSize.Height - 92));
+                // Apply the main panel's intended inset explicitly. Manually positioned
+                // controls do not honor Padding automatically, which previously placed
+                // the page header and cards against the left/top edges.
+                int left = main.Padding.Left;
+                int top = main.Padding.Top;
+                int right = main.Padding.Right;
+                int bottom = main.Padding.Bottom;
+                int contentWidth = Math.Max(0, main.ClientSize.Width - left - right);
+                int contentHeight = Math.Max(0, main.ClientSize.Height - top - bottom);
+                const int headingHeight = 92;
+
+                _heading.Bounds = new Rectangle(left, top, contentWidth, headingHeight);
+                _pageHost.Bounds = new Rectangle(
+                    left,
+                    top + headingHeight,
+                    contentWidth,
+                    Math.Max(0, contentHeight - headingHeight));
             };
             main.Resize += delegate { layoutMain(); };
             layoutMain();
