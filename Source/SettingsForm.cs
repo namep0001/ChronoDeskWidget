@@ -87,13 +87,38 @@ namespace ChronoDeskWidget
 
             _pageHost = new Panel { Dock = DockStyle.Fill, BackColor = _background, Padding = new Padding(0, 18, 4, 0) };
             main.Controls.Add(_pageHost);
+            main.Controls.SetChildIndex(footer, 0);
+            main.Controls.SetChildIndex(_header, 1);
+            main.Controls.SetChildIndex(_pageHost, 2);
+            shell.Controls.SetChildIndex(sidebar, 0);
+            shell.Controls.SetChildIndex(main, 1);
+            _pageHost.Resize += delegate { ResizePageItems(); };
             ShowPage("General");
         }
 
         private void BuildSidebar(Panel host)
         {
+            FlowLayoutPanel nav = new FlowLayoutPanel { Dock = DockStyle.Fill, FlowDirection = FlowDirection.TopDown, WrapContents = false, AutoScroll = true, BackColor = _sidebar, Padding = new Padding(0, 7, 0, 5) };
+            host.Controls.Add(nav);
+            Label group = new Label { Text = "PREFERENCES", Width = 194, Height = 28, TextAlign = ContentAlignment.BottomLeft, ForeColor = Color.FromArgb(112, 130, 153), Font = new Font("Segoe UI", 7.5F, FontStyle.Bold), Padding = new Padding(7, 0, 0, 5), Margin = new Padding(0, 0, 0, 3) };
+            nav.Controls.Add(group);
+            AddNav(nav, "General", "⌂");
+            AddNav(nav, "Appearance", "◐");
+            AddNav(nav, "Language", "文");
+            AddNav(nav, "Widgets", "▦");
+            Label widgetGroup = new Label { Text = "WIDGET SETTINGS", Width = 194, Height = 34, TextAlign = ContentAlignment.BottomLeft, ForeColor = Color.FromArgb(112, 130, 153), Font = new Font("Segoe UI", 7.5F, FontStyle.Bold), Padding = new Padding(7, 0, 0, 6), Margin = new Padding(0, 5, 0, 3) };
+            nav.Controls.Add(widgetGroup);
+            AddNav(nav, "Clock", "◷", true);
+            AddNav(nav, "Calendar", "▦", true);
+            AddNav(nav, "Pomodoro", "◴", true);
+            AddNav(nav, "Tasks", "☷", true);
+            AddNav(nav, "Quick Notes", "▤", true);
+            AddNav(nav, "Market Rates", "↗", true);
+            AddNav(nav, "Network Monitor", "⌁", true);
+            AddNav(nav, "Calculator", "＋", true);
+            AddNav(nav, "System Monitor", "▥", true);
+
             Panel brand = new Panel { Dock = DockStyle.Top, Height = 86, BackColor = _sidebar };
-            host.Controls.Add(brand);
             Panel mark = new Panel { Location = new Point(2, 3), Size = new Size(42, 42), BackColor = _accentSoft };
             mark.Paint += delegate(object sender, PaintEventArgs e)
             {
@@ -108,28 +133,7 @@ namespace ChronoDeskWidget
             brand.Controls.Add(mark);
             brand.Controls.Add(new Label { Text = "ChronoDesk", Location = new Point(54, 5), AutoSize = true, ForeColor = _text, Font = new Font("Segoe UI Semibold", 11F) });
             brand.Controls.Add(new Label { Text = "WIDGET SETTINGS", Location = new Point(55, 28), AutoSize = true, ForeColor = _muted, Font = new Font("Segoe UI", 7.5F, FontStyle.Bold) });
-
-            Label group = new Label { Text = "PREFERENCES", Dock = DockStyle.Top, Height = 28, TextAlign = ContentAlignment.BottomLeft, ForeColor = Color.FromArgb(112, 130, 153), Font = new Font("Segoe UI", 7.5F, FontStyle.Bold), Padding = new Padding(7, 0, 0, 5) };
-            host.Controls.Add(group);
-            FlowLayoutPanel nav = new FlowLayoutPanel { Dock = DockStyle.Fill, FlowDirection = FlowDirection.TopDown, WrapContents = false, AutoScroll = true, BackColor = _sidebar, Padding = new Padding(0, 7, 0, 5) };
-            host.Controls.Add(nav);
-
-            AddNav(nav, "General", "⌂");
-            AddNav(nav, "Appearance", "◐");
-            AddNav(nav, "Language", "文");
-            AddNav(nav, "Widgets", "▦");
-
-            Label widgetGroup = new Label { Text = "WIDGET SETTINGS", Dock = DockStyle.Top, Height = 34, TextAlign = ContentAlignment.BottomLeft, ForeColor = Color.FromArgb(112, 130, 153), Font = new Font("Segoe UI", 7.5F, FontStyle.Bold), Padding = new Padding(7, 0, 0, 6) };
-            host.Controls.Add(widgetGroup);
-            AddNav(nav, "Clock", "◷", true);
-            AddNav(nav, "Calendar", "▦", true);
-            AddNav(nav, "Pomodoro", "◴", true);
-            AddNav(nav, "Tasks", "☷", true);
-            AddNav(nav, "Quick Notes", "▤", true);
-            AddNav(nav, "Market Rates", "↗", true);
-            AddNav(nav, "Network Monitor", "⌁", true);
-            AddNav(nav, "Calculator", "＋", true);
-            AddNav(nav, "System Monitor", "▥", true);
+            host.Controls.Add(brand);
 
             Panel bottom = new Panel { Dock = DockStyle.Bottom, Height = 52, BackColor = _sidebar };
             bottom.Paint += delegate(object sender, PaintEventArgs e) { using (Pen p = new Pen(_border)) e.Graphics.DrawLine(p, 0, 0, bottom.Width, 0); };
@@ -302,6 +306,13 @@ namespace ChronoDeskWidget
             ActionCard("Refresh market data", "Request the latest available market quotes.", "Refresh now", delegate { _refreshRates(); });
         }
 
+        private void ResizePageItems()
+        {
+            if (_page == null || _page.IsDisposed) return;
+            int width = Math.Max(500, _pageHost.ClientSize.Width - 42);
+            foreach (Control control in _page.Controls) control.Width = width;
+        }
+
         private void Section(string title, string description)
         {
             Panel block = new Panel { Width = Math.Max(500, _pageHost.ClientSize.Width - 42), Height = 56, BackColor = _background, Margin = new Padding(0, 0, 0, 8) };
@@ -316,11 +327,6 @@ namespace ChronoDeskWidget
             card.Paint += delegate(object sender, PaintEventArgs e)
             {
                 using (Pen p = new Pen(_border)) e.Graphics.DrawRectangle(p, 0, 0, card.Width - 1, card.Height - 1);
-            };
-            _pageHost.Resize += delegate
-            {
-                if (card.IsDisposed) return;
-                card.Width = Math.Max(500, _pageHost.ClientSize.Width - 42);
             };
             return card;
         }
