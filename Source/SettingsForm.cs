@@ -451,17 +451,26 @@ namespace ChronoDeskWidget
 
         private void CardText(Panel card, string title, string description, int rightReserve = 0)
         {
-            int textWidth = Math.Max(80, card.ClientSize.Width - 32 - rightReserve);
-            card.Controls.Add(new Label {
-                Text = title, Location = new Point(16, 12), Size = new Size(textWidth, 22),
+            Label titleLabel = new Label {
+                Text = title, Location = new Point(16, 12), Height = 22,
                 AutoSize = false, AutoEllipsis = true, ForeColor = _text,
                 Font = new Font("Segoe UI Semibold", 9.2F)
-            });
-            card.Controls.Add(new Label {
-                Text = description, Location = new Point(17, 37), Size = new Size(textWidth, 30),
+            };
+            Label descriptionLabel = new Label {
+                Text = description, Location = new Point(17, 37), Height = 30,
                 AutoSize = false, AutoEllipsis = true, ForeColor = _muted,
                 Font = new Font("Segoe UI", 8.2F)
-            });
+            };
+            Action resizeText = delegate
+            {
+                int textWidth = Math.Max(80, card.ClientSize.Width - 32 - rightReserve);
+                titleLabel.Width = textWidth;
+                descriptionLabel.Width = textWidth;
+            };
+            card.Controls.Add(titleLabel);
+            card.Controls.Add(descriptionLabel);
+            card.Resize += delegate { resizeText(); };
+            resizeText();
         }
 
         private void CheckCard(string title, string description, bool value, Action<bool> changed)
