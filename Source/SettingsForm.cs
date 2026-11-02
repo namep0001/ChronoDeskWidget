@@ -67,7 +67,7 @@ namespace ChronoDeskWidget
             MaximizeBox = false; MinimizeBox = false;
             DoubleBuffered = true;
 
-            Panel topBar = new Panel { Dock = DockStyle.Top, Height = 58, BackColor = _background, Padding = new Padding(22, 0, 14, 0) };
+            Panel topBar = new Panel { Location = Point.Empty, Height = 58, BackColor = _background, Padding = new Padding(22, 0, 14, 0), Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right };
             Controls.Add(topBar);
             Panel settingIcon = new Panel { Location = new Point(22, 17), Size = new Size(24, 24), BackColor = Color.Transparent };
             settingIcon.Paint += delegate(object sender, PaintEventArgs e)
@@ -107,7 +107,7 @@ namespace ChronoDeskWidget
             topBar.Controls.Add(new Panel { Dock = DockStyle.Bottom, Height = 1, BackColor = _border });
             AttachDragHandlers(topBar);
 
-            Panel body = new Panel { Dock = DockStyle.Fill, BackColor = _background };
+            Panel body = new Panel { Location = new Point(0, 58), BackColor = _background, Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right };
             Controls.Add(body);
 
             Panel sidebar = new Panel { Location = Point.Empty, Width = 218, BackColor = _sidebar, Padding = new Padding(14, 18, 14, 14), Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left };
@@ -164,6 +164,18 @@ namespace ChronoDeskWidget
             };
             main.Resize += delegate { layoutMain(); };
             layoutMain();
+            // Keep the window chrome and settings workspace in disjoint rectangles.
+            // DockStyle ordering previously allowed the fill body to occupy the top-bar area.
+            Action layoutWindow = delegate
+            {
+                const int topBarHeight = 58;
+                topBar.Bounds = new Rectangle(0, 0, ClientSize.Width, topBarHeight);
+                body.Bounds = new Rectangle(0, topBarHeight, ClientSize.Width,
+                    Math.Max(0, ClientSize.Height - topBarHeight));
+            };
+            Resize += delegate { layoutWindow(); };
+            layoutWindow();
+            Controls.SetChildIndex(topBar, 0);
             Controls.SetChildIndex(body, 1);
             _pageHost.Resize += delegate { ResizePageItems(); };
             AttachDragHandlers(main);
