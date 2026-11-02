@@ -28,7 +28,8 @@ namespace ChronoDeskWidget
         private readonly Color _muted = Color.FromArgb(143, 158, 178);
         private readonly Color _accent = Color.FromArgb(83, 143, 238);
         private readonly Color _accentSoft = Color.FromArgb(31, 57, 91);
-        private Panel _pageHost;
+        private Panel _pageHost, _heading;
+        private Button _backButton;
         private FlowLayoutPanel _page;
         private Label _pageTitle, _pageDescription;
         private string _active = "General";
@@ -133,16 +134,21 @@ namespace ChronoDeskWidget
             AddNav(nav, "Update", "↻");
             AddNav(nav, "About", "ⓘ");
 
-            Panel heading = new Panel { Dock = DockStyle.Top, Height = 92, BackColor = _background };
-            main.Controls.Add(heading);
+            _heading = new Panel { Location = Point.Empty, Height = 92, BackColor = _background, Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right };
+            main.Controls.Add(_heading);
             _pageTitle = new Label { Text = "General", AutoSize = true, Location = new Point(0, 0), ForeColor = _text, Font = new Font("Segoe UI Semibold", 21F) };
             _pageDescription = new Label { Text = "Manage startup and desktop behavior.", AutoSize = true, Location = new Point(2, 42), ForeColor = _muted, Font = new Font("Segoe UI", 9.5F) };
-            heading.Controls.Add(_pageTitle); heading.Controls.Add(_pageDescription);
-            heading.Controls.Add(new Panel { Dock = DockStyle.Bottom, Height = 1, BackColor = _border });
-            _pageHost = new Panel { Dock = DockStyle.Fill, BackColor = _background, Padding = new Padding(0, 18, 4, 0) };
+            _heading.Controls.Add(_pageTitle); _heading.Controls.Add(_pageDescription);
+            _heading.Controls.Add(new Panel { Dock = DockStyle.Bottom, Height = 1, BackColor = _border });
+            _pageHost = new Panel { BackColor = _background, Padding = new Padding(0, 18, 4, 0), Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right };
             main.Controls.Add(_pageHost);
-            main.Controls.SetChildIndex(heading, 0);
-            main.Controls.SetChildIndex(_pageHost, 1);
+            Action layoutMain = delegate
+            {
+                _heading.Bounds = new Rectangle(0, 0, main.ClientSize.Width, 92);
+                _pageHost.Bounds = new Rectangle(0, 92, main.ClientSize.Width, Math.Max(0, main.ClientSize.Height - 92));
+            };
+            main.Resize += delegate { layoutMain(); };
+            layoutMain();
             Controls.SetChildIndex(body, 1);
             _pageHost.Resize += delegate { ResizePageItems(); };
             AttachDragHandlers(main);
@@ -190,6 +196,14 @@ namespace ChronoDeskWidget
         private void ShowPage(string key)
         {
             _active = key;
+            if (_backButton != null)
+            {
+                _heading.Controls.Remove(_backButton);
+                _backButton.Dispose();
+                _backButton = null;
+            }
+            _pageTitle.Location = new Point(0, 0);
+            _pageDescription.Location = new Point(2, 42);
             foreach (KeyValuePair<string, Button> item in _nav)
             {
                 bool selected = item.Key == key;
@@ -411,15 +425,50 @@ namespace ChronoDeskWidget
         private void WidgetCard(string title, string description, string key, Action options)
         {
             Panel card = NewCard(92);
-            CardText(card, title, description, 132);
+            VectorIconView icon = new VectorIconView(key)
+            {
+                Location = new Point(18, 28), Size = new Size(30, 30),
+                ForeColor = Color.FromArgb(145, 190, 247), BackColor = Color.Transparent
+            };
+            card.Controls.Add(icon);
+            CardText(card, title, description, 132, 48);
             CheckBox check = new CheckBox { Checked = IsEnabled(key), AutoSize = false, Size = new Size(44, 26), Location = new Point(card.Width - 62, 17), Anchor = AnchorStyles.Top | AnchorStyles.Right, BackColor = _surface, Cursor = Cursors.Hand };
             check.CheckedChanged += delegate { _setWidget(key, check.Checked); };
             card.Controls.Add(check);
             Button configure = new Button { Text = "Options  ›", Size = new Size(100, 29), Location = new Point(card.Width - 122, 52), Anchor = AnchorStyles.Top | AnchorStyles.Right, FlatStyle = FlatStyle.Flat, BackColor = _surfaceHover, ForeColor = Color.FromArgb(174, 197, 226), Font = new Font("Segoe UI", 8F), Cursor = Cursors.Hand };
             configure.FlatAppearance.BorderSize = 0;
-            configure.Click += delegate { options(); ResizePageItems(); };
+            configure.Click += delegate { ShowWidgetOptions(title, options); };
             card.Controls.Add(configure);
             _page.Controls.Add(card);
+        }
+
+        private void ShowWidgetOptions(string title, Action buildOptions)
+        {
+            _active = "WidgetOptions";
+            _pageHost.Controls.Clear();
+            _page = new FlowLayoutPanel { Dock = DockStyle.Fill, FlowDirection = FlowDirection.TopDown, WrapContents = false, AutoScroll = true, BackColor = _background, Padding = new Padding(0, 0, 12, 16) };
+            _pageHost.Controls.Add(_page);
+
+            _pageTitle.Text = title;
+            _pageTitle.Location = new Point(54, 0);
+            _pageDescription.Text = "Configure this widget.";
+            _pageDescription.Location = new Point(56, 42);
+
+            _backButton = new Button
+            {
+                Text = "‹", Size = new Size(38, 36), Location = new Point(0, 2),
+                FlatStyle = FlatStyle.Flat, BackColor = _surface, ForeColor = _text,
+                Font = new Font("Segoe UI", 19F), Cursor = Cursors.Hand
+            };
+            _backButton.FlatAppearance.BorderColor = _border;
+            _backButton.FlatAppearance.MouseOverBackColor = _surfaceHover;
+            _backButton.Click += delegate { ShowPage("Widget"); };
+            _heading.Controls.Add(_backButton);
+            _heading.Controls.SetChildIndex(_backButton, 0);
+
+            buildOptions();
+            AttachDragHandlers(_page);
+            ResizePageItems();
         }
 
         private void StaticInfo(string title, string description)
@@ -464,21 +513,21 @@ namespace ChronoDeskWidget
             return card;
         }
 
-        private void CardText(Panel card, string title, string description, int rightReserve = 0)
+        private void CardText(Panel card, string title, string description, int rightReserve = 0, int leftOffset = 0)
         {
             Label titleLabel = new Label {
-                Text = title, Location = new Point(16, 12), Height = 22,
+                Text = title, Location = new Point(16 + leftOffset, 12), Height = 22,
                 AutoSize = false, AutoEllipsis = true, ForeColor = _text,
                 Font = new Font("Segoe UI Semibold", 9.2F)
             };
             Label descriptionLabel = new Label {
-                Text = description, Location = new Point(17, 37), Height = 30,
+                Text = description, Location = new Point(17 + leftOffset, 37), Height = 30,
                 AutoSize = false, AutoEllipsis = true, ForeColor = _muted,
                 Font = new Font("Segoe UI", 8.2F)
             };
             Action resizeText = delegate
             {
-                int textWidth = Math.Max(80, card.ClientSize.Width - 32 - rightReserve);
+                int textWidth = Math.Max(80, card.ClientSize.Width - 32 - rightReserve - leftOffset);
                 titleLabel.Width = textWidth;
                 descriptionLabel.Width = textWidth;
             };
