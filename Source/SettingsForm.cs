@@ -359,6 +359,11 @@ namespace ChronoDeskWidget
             StaticInfo("Privacy", "Local preferences and widget data are stored on this device unless a feature states otherwise.");
         }
 
+        private bool IsEnabled(string key)
+        {
+            return _widgets.ContainsKey(key) && _widgets[key];
+        }
+
         private void WidgetCard(string title, string description, string key, Action options)
         {
             Panel card = NewCard(92);
