@@ -76,14 +76,13 @@ namespace ChronoDeskWidget
             };
             topBar.Controls.Add(settingIcon);
             topBar.Controls.Add(new Label { Text = "Setting", Location = new Point(57, 17), AutoSize = true, ForeColor = _text, Font = new Font("Segoe UI Semibold", 13F) });
-            Button close = new Button { Text = "×", Size = new Size(34, 34), Location = new Point(Width - 52, 12), Anchor = AnchorStyles.Top | AnchorStyles.Right, FlatStyle = FlatStyle.Flat, BackColor = _background, ForeColor = _muted, Font = new Font("Segoe UI", 19F), Cursor = Cursors.Hand };
-            close.FlatAppearance.BorderSize = 0;
+            Button close = new Button { Text = "×", Size = new Size(34, 34), Location = new Point(Width - 52, 12), Anchor = AnchorStyles.Top | AnchorStyles.Right, FlatStyle = FlatStyle.Flat, FlatAppearance = { BorderSize = 0 }, BackColor = _background, ForeColor = _muted, Font = new Font("Segoe UI", 19F), TextAlign = ContentAlignment.MiddleCenter, UseVisualStyleBackColor = false, Cursor = Cursors.Hand };
             close.FlatAppearance.MouseOverBackColor = Color.FromArgb(174, 55, 65);
             close.FlatAppearance.MouseDownBackColor = Color.FromArgb(140, 42, 52);
             close.Click += delegate { Close(); };
             topBar.Controls.Add(close);
-            topBar.MouseDown += BeginWindowDrag;
-            settingIcon.MouseDown += BeginWindowDrag;
+            AttachDragHandlers(topBar);
+            AttachDragHandlers(settingIcon);
             topBar.Controls.Add(new Panel { Dock = DockStyle.Bottom, Height = 1, BackColor = _border });
 
             Panel sidebar = new Panel { Dock = DockStyle.Left, Width = 218, BackColor = _sidebar, Padding = new Padding(14, 18, 14, 14) };
@@ -115,7 +114,23 @@ namespace ChronoDeskWidget
             Controls.SetChildIndex(sidebar, 1);
             Controls.SetChildIndex(main, 2);
             _pageHost.Resize += delegate { ResizePageItems(); };
+            AttachDragHandlers(main);
             ShowPage("General");
+        }
+
+
+        private void AttachDragHandlers(Control root)
+        {
+            if (root == null) return;
+            if (!(root is Button) && !(root is CheckBox) && !(root is ComboBox) &&
+                !(root is TextBox) && !(root is NumericUpDown) && !(root is TrackBar))
+            {
+                root.MouseDown -= BeginWindowDrag;
+                root.MouseDown += BeginWindowDrag;
+            }
+
+            foreach (Control child in root.Controls)
+                AttachDragHandlers(child);
         }
 
         private void BeginWindowDrag(object sender, MouseEventArgs e)
@@ -172,6 +187,7 @@ namespace ChronoDeskWidget
                 case "Update": BuildUpdate(); break;
                 case "About": BuildAbout(); break;
             }
+            AttachDragHandlers(_page);
             ResizePageItems();
         }
 
@@ -404,7 +420,7 @@ namespace ChronoDeskWidget
 
         private void Section(string title, string description)
         {
-            Panel block = new Panel { Width = Math.Max(500, _pageHost.ClientSize.Width - 42), Height = 56, BackColor = _background, Margin = new Padding(0, 0, 0, 8) };
+            Panel block = new Panel { Width = Math.Max(100, _pageHost.ClientSize.Width - 42), Height = 56, BackColor = _background, Margin = new Padding(0, 0, 0, 8) };
             block.Controls.Add(new Label { Text = title, Location = new Point(1, 1), AutoSize = true, ForeColor = _text, Font = new Font("Segoe UI Semibold", 11F) });
             block.Controls.Add(new Label { Text = description, Location = new Point(2, 27), AutoSize = true, ForeColor = _muted, Font = new Font("Segoe UI", 8.5F) });
             _page.Controls.Add(block);
@@ -412,7 +428,7 @@ namespace ChronoDeskWidget
 
         private Panel NewCard(int height)
         {
-            Panel card = new Panel { Width = Math.Max(500, _pageHost.ClientSize.Width - 42), Height = height, BackColor = _surface, Margin = new Padding(0, 0, 0, 9), Padding = new Padding(16) };
+            Panel card = new Panel { Width = Math.Max(100, _pageHost.ClientSize.Width - 42), Height = height, BackColor = _surface, Margin = new Padding(0, 0, 0, 9), Padding = new Padding(16) };
             card.Paint += delegate(object sender, PaintEventArgs e)
             {
                 using (Pen p = new Pen(_border)) e.Graphics.DrawRectangle(p, 0, 0, card.Width - 1, card.Height - 1);
@@ -468,7 +484,8 @@ namespace ChronoDeskWidget
         private void ResizePageItems()
         {
             if (_page == null || _page.IsDisposed) return;
-            int width = Math.Max(500, _pageHost.ClientSize.Width - 42);
+            int availableWidth = _page.ClientSize.Width - _page.Padding.Horizontal - SystemInformation.VerticalScrollBarWidth - 8;
+            int width = Math.Max(100, Math.Min(_pageHost.ClientSize.Width - 24, availableWidth));
             foreach (Control control in _page.Controls) control.Width = width;
         }
     }
