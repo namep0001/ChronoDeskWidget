@@ -85,7 +85,7 @@ namespace ChronoDeskWidget
             };
             topBar.Controls.Add(settingIcon);
             topBar.Controls.Add(new Label { Text = "Setting", Location = new Point(57, 17), AutoSize = true, ForeColor = _text, Font = new Font("Segoe UI Semibold", 13F) });
-            Button close = new Button { Text = "", Size = new Size(34, 34), Location = new Point(Width - 70, 12), Anchor = AnchorStyles.Top | AnchorStyles.Right, FlatStyle = FlatStyle.Flat, FlatAppearance = { BorderSize = 0 }, BackColor = _background, ForeColor = _muted, UseVisualStyleBackColor = false, Cursor = Cursors.Hand };
+            Button close = new Button { Text = "", Size = new Size(36, 36), Location = new Point(Width - 70, 11), Anchor = AnchorStyles.Top | AnchorStyles.Right, FlatStyle = FlatStyle.Flat, FlatAppearance = { BorderSize = 0 }, BackColor = _background, ForeColor = _muted, UseVisualStyleBackColor = false, Cursor = Cursors.Hand };\n            close.Region = new Region(new GraphicsPath());\n            using (GraphicsPath closeCircle = new GraphicsPath()) { closeCircle.AddEllipse(0, 0, close.Width, close.Height); close.Region = new Region(closeCircle); }
             close.FlatAppearance.MouseOverBackColor = Color.FromArgb(174, 55, 65);
             close.FlatAppearance.MouseDownBackColor = Color.FromArgb(140, 42, 52);
             close.Paint += delegate(object sender, PaintEventArgs e)
@@ -483,12 +483,28 @@ namespace ChronoDeskWidget
 
             _backButton = new Button
             {
-                Text = "‹", Size = new Size(38, 36), Location = new Point(0, 2),
+                Text = "", Size = new Size(38, 38), Location = new Point(0, 1),
                 FlatStyle = FlatStyle.Flat, BackColor = _surface, ForeColor = _text,
-                Font = new Font("Segoe UI", 19F), Cursor = Cursors.Hand
+                Font = new Font("Segoe UI", 19F), Cursor = Cursors.Hand,
+                UseVisualStyleBackColor = false
             };
             _backButton.FlatAppearance.BorderColor = _border;
             _backButton.FlatAppearance.MouseOverBackColor = _surfaceHover;
+            using (GraphicsPath backCircle = new GraphicsPath())
+            {
+                backCircle.AddEllipse(0, 0, _backButton.Width, _backButton.Height);
+                _backButton.Region = new Region(backCircle);
+            }
+            _backButton.Paint += delegate(object sender, PaintEventArgs e)
+            {
+                e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+                using (Font arrowFont = new Font("Segoe UI Symbol", 18F, FontStyle.Regular, GraphicsUnit.Point))
+                using (Brush arrowBrush = new SolidBrush(_text))
+                using (StringFormat centered = new StringFormat { Alignment = StringAlignment.Center, LineAlignment = StringAlignment.Center })
+                {
+                    e.Graphics.DrawString("‹", arrowFont, arrowBrush, new RectangleF(0, -1, _backButton.ClientSize.Width, _backButton.ClientSize.Height), centered);
+                }
+            };
             _backButton.Click += delegate { ShowPage("Widget"); };
             _heading.Controls.Add(_backButton);
             _heading.Controls.SetChildIndex(_backButton, 0);
