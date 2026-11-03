@@ -85,7 +85,7 @@ namespace ChronoDeskWidget
             };
             topBar.Controls.Add(settingIcon);
             topBar.Controls.Add(new Label { Text = "Setting", Location = new Point(57, 17), AutoSize = true, ForeColor = _text, Font = new Font("Segoe UI Semibold", 13F) });
-            Button close = new Button { Text = "", Size = new Size(36, 36), Location = new Point(Width - 70, 11), Anchor = AnchorStyles.Top | AnchorStyles.Right, FlatStyle = FlatStyle.Flat, FlatAppearance = { BorderSize = 0 }, BackColor = _background, ForeColor = _muted, UseVisualStyleBackColor = false, Cursor = Cursors.Hand };
+            Button close = new Button { Text = "", Size = new Size(36, 36), Location = new Point(Math.Max(12, topBar.ClientSize.Width - 50), 11), Anchor = AnchorStyles.Top | AnchorStyles.Right, FlatStyle = FlatStyle.Flat, FlatAppearance = { BorderSize = 0 }, BackColor = _background, ForeColor = _muted, UseVisualStyleBackColor = false, Cursor = Cursors.Hand };
             using (GraphicsPath closeCircle = new GraphicsPath()) { closeCircle.AddEllipse(0, 0, close.Width, close.Height); close.Region = new Region(closeCircle); }
             close.FlatAppearance.MouseOverBackColor = Color.FromArgb(174, 55, 65);
             close.FlatAppearance.MouseDownBackColor = Color.FromArgb(140, 42, 52);
@@ -106,6 +106,8 @@ namespace ChronoDeskWidget
             AttachDragHandlers(topBar);
             AttachDragHandlers(settingIcon);
             topBar.Controls.Add(new Panel { Dock = DockStyle.Bottom, Height = 1, BackColor = _border });
+            topBar.Resize += delegate { close.Location = new Point(Math.Max(12, topBar.ClientSize.Width - close.Width - 14), 11); };
+            close.BringToFront();
             AttachDragHandlers(topBar);
 
             Panel body = new Panel { Location = new Point(0, 58), BackColor = _background, Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right };
